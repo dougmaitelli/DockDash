@@ -1,0 +1,51 @@
+{
+  "name": "dockdash",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:server": "tsx --watch --tsconfig tsconfig.server.json src/server/index.ts",
+    "dev:client": "vite",
+    "dev": "concurrently \"tsx --watch --tsconfig tsconfig.server.json src/server/index.ts\" \"vite\"",
+    "build": "tsc -p tsconfig.client.json && vite build",
+    "start": "tsx dist/server/index.js",
+    "lint": "eslint src/ && prettier --check \"src/\"",
+    "lint:fix": "eslint --fix src/ && prettier --write \"src/\"",
+    "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit"
+  },
+  "dependencies": {
+    "axios": "^1.16.1",
+    "better-sqlite3": "^12.10.0",
+    "cors": "^2.8.5",
+    "dockerode": "4.0.1",
+    "express": "^5.2.1",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-router-dom": "^7.15.1",
+    "styled-components": "^6.1.8",
+    "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.17",
+    "@types/dockerode": "^4.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.8.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^11.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.59.3",
+    "@typescript-eslint/parser": "^8.59.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^9.2.1",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.8.3",
+    "tsx": "^4.22.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.13"
+  }
+}

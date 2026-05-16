@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./src/client/src/*"],
+      "@shared": ["./src/shared-types"],
+      "@shared/*": ["./src/shared-types/*"]
+    }
+  },
+  "include": ["src/client/src", "shared-types/**/*"],
+  "exclude": ["node_modules"]
+}

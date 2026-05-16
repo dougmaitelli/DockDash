@@ -1,0 +1,28 @@
+services:
+  dockdash:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dockdash
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3001}:3001"
+    environment:
+      - PORT=3001
+      - DOCKER_HOST=${DOCKER_HOST:-unix:///var/run/docker.sock}
+      - DOCKER_TLS_CERTDIR=${DOCKER_TLS_CERTDIR:-}
+      - NETWORK_CIDRS=${NETWORK_CIDRS:-192.168.1.0/24}
+      - SCAN_PORTS=${SCAN_PORTS:-80,443,3000,3001,5432,6379,8080,8443,9090,27017,22,3306}
+      - DB_PATH=/app/data/dockdash.db
+      - REFRESH_INTERVAL=${REFRESH_INTERVAL:-30000}
+    volumes:
+      - dockdash-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  dockdash-data:

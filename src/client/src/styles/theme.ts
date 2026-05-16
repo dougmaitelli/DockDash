@@ -1,0 +1,16 @@
+export const colors = {
+  bgPrimary: "var(--bg-primary)",
+  bgSecondary: "var(--bg-secondary)",
+  bgTertiary: "var(--bg-tertiary)",
+  bgCard: "var(--bg-card)",
+  border: "var(--border-color)",
+  textPrimary: "var(--text-primary)",
+  textSecondary: "var(--text-secondary)",
+  textMuted: "var(--text-muted)",
+  accentBlue: "var(--accent-blue)",
+  accentGreen: "var(--accent-green)",
+  accentRed: "var(--accent-red)",
+  accentYellow: "var(--accent-yellow)",
+  accentPurple: "var(--accent-purple)",
+  accentCyan: "var(--accent-cyan)",
+} as const;

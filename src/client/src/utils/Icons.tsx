@@ -1,0 +1,94 @@
+import type { SVGProps, CSSProperties } from "react";
+
+type IconProps = SVGProps<SVGSVGElement> & { size?: number };
+
+const defaults = (size: number, strokeWidth: number) => ({
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none" as const,
+  stroke: "currentColor" as const,
+  strokeWidth,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  style: { display: "block", flexShrink: 0 } as CSSProperties,
+});
+
+export function IconPlus({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.5)} {...props}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+export function IconMinus({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.5)} {...props}>
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  );
+}
+
+export function IconTrash({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.5)} {...props}>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+
+export function IconRefresh({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.2)} {...props}>
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+      <path d="M3 21v-5h5" />
+    </svg>
+  );
+}
+
+export function IconCheckCircle({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.2)} {...props}>
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  );
+}
+
+export function IconResetView({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.2)} {...props}>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+    </svg>
+  );
+}
+
+export function IconX({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.5)} {...props}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+export function IconServer({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 1.5)} {...props}>
+      <rect x="2" y="3" width="20" height="18" rx="3" />
+      <path d="M8 3v18" />
+      <path d="M16 8h2" />
+      <path d="M16 12h2" />
+      <path d="M16 16h2" />
+    </svg>
+  );
+}
