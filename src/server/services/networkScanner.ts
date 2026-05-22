@@ -48,10 +48,12 @@ async function portScan(ip: string, port: number, timeout = 1000): Promise<boole
       socket.destroy();
       resolve(true);
     });
+
     socket.once("error", () => {
       clearTimeout(timer);
       resolve(false);
     });
+
     socket.connect(port, ip);
   });
 }
@@ -75,16 +77,21 @@ async function detectService(
         });
 
         const title = resp.data?.match(/<title>([^<]+)/i);
+
         if (title?.[1]) return title[1].trim();
 
         // Check common health/status endpoints
         const endpoints = ["/health", "/healthz", "/status", "/api/health"];
+
         for (const ep of endpoints) {
           try {
             const healthResp = await axios.get(`${baseUrl}${ep}`, { timeout: 1000 });
+
             if (healthResp.status === 200 && healthResp.data) {
               const healthTitle = healthResp.data?.match(/<title>([^<]+)/i);
+
               if (healthTitle) return healthTitle[1].trim();
+
               return `${ip}:${port} (healthy)`;
             }
           } catch {
@@ -94,6 +101,7 @@ async function detectService(
       } catch {
         // fall through
       }
+
       return `${ip}:${port}`;
     }
 
@@ -142,12 +150,15 @@ export async function scanNetwork(cidr: string, ports: number[]): Promise<Networ
     // Scan each port concurrently with parallelism limit
     const portPromises = ports.map(async (port) => {
       const isOpen = await portScan(ip, port);
+
       if (isOpen) {
         const protocol = ["http", "https", "ssh"].includes(detectProtocolByPort(port))
           ? detectProtocolByPort(port)
           : "tcp";
+
         return { port, protocol } as PortInfo;
       }
+
       return null;
     });
 
@@ -158,6 +169,7 @@ export async function scanNetwork(cidr: string, ports: number[]): Promise<Networ
     const services = await Promise.all(
       validPorts.map(async (p) => {
         const name = await detectService(ip, p.port, p.protocol);
+
         return { ...p, serviceName: name || p.protocol };
       }),
     );
@@ -180,6 +192,7 @@ function detectProtocolByPort(port: number): string {
     5000: "http",
     22: "ssh",
   };
+
   return map[port] || "tcp";
 }
 
@@ -189,6 +202,7 @@ export function convertToServices(hosts: NetworkHost[]): Service[] {
   for (const host of hosts) {
     for (const portInfo of host.ports) {
       const protocol = portInfo.protocol || "http";
+
       services.push({
         id: `net-${uuidv4()}`,
         name: portInfo.serviceName || `${host.ip}:${portInfo.port}`,

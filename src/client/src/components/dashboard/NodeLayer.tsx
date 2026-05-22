@@ -56,6 +56,7 @@ export function NodeLayer({
           const col = idx % cols;
           const gapX = 60;
           const gapY = 80;
+
           x = 100 + col * (NODE_WIDTH + gapX) + dragX;
           y = 120 + row * (NODE_HEIGHT + gapY) + dragY;
         }

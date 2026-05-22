@@ -8,7 +8,6 @@ export const Page = styled.div`
   gap: 20px;
 `;
 
-
 export const CanvasWrapper = styled.div`
   flex: 1;
   position: relative;

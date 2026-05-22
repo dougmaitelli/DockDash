@@ -30,6 +30,7 @@ const TextArea = styled.textarea`
 
 function getLinkColor(type: string): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
+
   return linkType?.color || "#6b7280";
 }
 

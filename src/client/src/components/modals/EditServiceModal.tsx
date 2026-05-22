@@ -51,9 +51,11 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
 
   const handleConfirm = () => {
     const portVal = editNodePort.trim() === "" ? null : parseInt(editNodePort, 10);
+
     if (isNaN(portVal as number)) {
       return;
     }
+
     onSave({ name: editNodeName, host: editNodeHost, port: portVal, protocol: editNodeProtocol });
   };
 

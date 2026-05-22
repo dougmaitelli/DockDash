@@ -33,21 +33,26 @@ export async function scanDockerContainers(docker: Docker): Promise<Service[]> {
     let protocol = "http";
 
     const ports = container.Ports || [];
+
     for (const p of ports) {
       if (p.PublicPort) {
         host = p.IP || "localhost";
         port = p.PublicPort;
+
         if (p.Type === "tcp") {
           protocol = detectProtocol(port);
         }
+
         break;
       }
     }
 
     if (!port && inspect.Config) {
       const exposedPorts = Object.keys(inspect.Config.ExposedPorts || {});
+
       if (exposedPorts.length > 0) {
         const portMatch = exposedPorts[0].match(/\/(\w+)/);
+
         if (portMatch) {
           protocol = detectProtocol(parseInt(portMatch[1], 10));
         }
@@ -91,6 +96,7 @@ export async function scanDockerContainers(docker: Docker): Promise<Service[]> {
 
 export async function scanDockerNetworks(docker: Docker) {
   const networks = await docker.listNetworks();
+
   return networks.map((net) => ({
     id: net.Id,
     name: net.Name,
@@ -120,5 +126,6 @@ function detectProtocol(port: number): string {
     2375: "http",
     2376: "https",
   };
+
   return protocolMap[port] || "http";
 }

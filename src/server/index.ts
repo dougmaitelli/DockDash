@@ -50,6 +50,7 @@ app.listen(PORT, () => {
   const healthCheckInterval = setInterval(async () => {
     try {
       const result = await checkAllServices();
+
       if (result.updated > 0 || result.errors > 0) {
         console.log(`Health check: ${result.updated} updated, ${result.errors} errors`);
       }

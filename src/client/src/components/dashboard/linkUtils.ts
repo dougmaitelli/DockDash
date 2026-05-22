@@ -11,6 +11,7 @@ export interface LinkPath {
 
 export function getLinkColor(type: string): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
+
   return linkType?.color || "#6b7280";
 }
 
@@ -53,12 +54,14 @@ export function orthogonalPath(
     // Same side — U-shape that goes around the outside
     if (isHorizExit) {
       const outerX = exitSide === "right" ? Math.max(ex, enx) : Math.min(ex, enx);
+
       midPoints = [
         [outerX, ey],
         [outerX, eny],
       ];
     } else {
       const outerY = exitSide === "bottom" ? Math.max(ey, eny) : Math.min(ey, eny);
+
       midPoints = [
         [ex, outerY],
         [enx, outerY],
@@ -67,15 +70,18 @@ export function orthogonalPath(
   } else if (isHorizExit && isHorizEntry) {
     // Both horizontal (right→left or left→right)
     const stubsCross = (exitSide === "right" && ex > enx) || (exitSide === "left" && ex < enx);
+
     if (stubsCross) {
       // Nodes too close — route around via horizontal midY to avoid 180° turn
       const midY = (y1 + y2) / 2;
+
       midPoints = [
         [ex, midY],
         [enx, midY],
       ];
     } else {
       const midX = (ex + enx) / 2;
+
       midPoints = [
         [midX, ey],
         [midX, eny],
@@ -84,15 +90,18 @@ export function orthogonalPath(
   } else if (!isHorizExit && !isHorizEntry) {
     // Both vertical (top→bottom or bottom→top)
     const stubsCross = (exitSide === "bottom" && ey > eny) || (exitSide === "top" && ey < eny);
+
     if (stubsCross) {
       // Nodes too close — route around via vertical midX
       const midX = (x1 + x2) / 2;
+
       midPoints = [
         [midX, ey],
         [midX, eny],
       ];
     } else {
       const midY = (ey + eny) / 2;
+
       midPoints = [
         [ex, midY],
         [enx, midY],
@@ -146,6 +155,7 @@ function buildRoundedPath(points: [number, number][], r: number): string {
   }
 
   const [lx, ly] = points[points.length - 1];
+
   d += ` L ${lx} ${ly}`;
 
   return d;

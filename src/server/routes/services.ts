@@ -97,6 +97,7 @@ router.post("/links", (req, res) => {
       type: type || ServiceLinkType.COMMUNICATION,
       description: description || "",
     });
+
     res.json(link);
   } catch (err) {
     res.status(409).json({ error: err instanceof Error ? err.message : String(err) });
@@ -113,6 +114,7 @@ router.put("/links/:id", (req, res) => {
       type: type ?? ServiceLinkType.COMMUNICATION,
       description: description ?? "",
     });
+
     res.json(link);
   } catch (err) {
     res.status(404).json({ error: err instanceof Error ? err.message : String(err) });

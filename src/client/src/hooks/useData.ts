@@ -12,6 +12,7 @@ export function useDiscovery() {
       setLoading(true);
       setError(null);
       const res = await serviceApi.getAll();
+
       setServices(res.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -29,12 +30,15 @@ export function useDiscovery() {
       setLoading(true);
       setError(null);
       let res;
+
       if (type === ServiceSource.DOCKER) {
         res = await discoveryApi.dockerScan();
       } else {
         res = await discoveryApi.networkScan();
       }
+
       await refresh();
+
       return res.data;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -51,7 +55,9 @@ export function useDiscovery() {
 
   const importService = async (data: Partial<Service> & { name: string; host: string }) => {
     const res = await serviceApi.importService(data);
+
     setServices((prev) => [...prev, res.data]);
+
     return res.data;
   };
 
@@ -65,7 +71,6 @@ export function useDiscovery() {
     importService,
   };
 }
-
 
 export function useDockerHealth() {
   const [health, setHealth] = useState<{
@@ -83,6 +88,7 @@ export function useDockerHealth() {
     try {
       setLoading(true);
       const res = await discoveryApi.dockerHealth();
+
       setHealth(res.data);
     } catch {
       setHealth({ connected: false });
@@ -109,12 +115,15 @@ export function useDashboard() {
       setLoading(true);
       setError(null);
       const res = await dashboardApi.get();
+
       setData(res.data);
       const statuses = await dashboardApi.serviceStatuses();
       const statusObj: Record<string, ServiceStatus> = {};
+
       for (const s of statuses.data) {
         statusObj[s.id] = s.status;
       }
+
       setServiceStatuses(statusObj);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -132,24 +141,30 @@ export function useDashboard() {
       try {
         const res = await dashboardApi.serviceStatuses();
         const statusObj: Record<string, ServiceStatus> = {};
+
         for (const s of res.data) {
           statusObj[s.id] = s.status;
         }
+
         setServiceStatuses(statusObj);
       } catch {
         // ignore
       }
     }, 5000);
+
     return () => clearInterval(interval);
   }, []);
 
   const addService = useCallback(
     async (data: Partial<Service> & { name: string; host: string }) => {
       const res = await serviceApi.importService(data);
+
       setData((prev) => {
         if (!prev) return prev;
+
         return { ...prev, services: [...prev.services, { ...res.data, position: null }] };
       });
+
       return res.data;
     },
     [],
@@ -158,8 +173,10 @@ export function useDashboard() {
   const updateService = useCallback(
     async (id: string, data: Pick<Service, "name" | "host" | "port" | "protocol">) => {
       const res = await serviceApi.update(id, data);
+
       setData((prev) => {
         if (!prev) return prev;
+
         return {
           ...prev,
           services: prev.services.map((s) => (s.id === id ? { ...s, ...res.data } : s)),
@@ -173,6 +190,7 @@ export function useDashboard() {
     await positionApi.save([{ service_id: serviceId, x, y }]);
     setData((prev) => {
       if (!prev) return prev;
+
       return {
         ...prev,
         services: prev.services.map((s) =>
@@ -186,14 +204,17 @@ export function useDashboard() {
     await serviceApi.delete(id);
     setData((prev) => {
       if (!prev) return prev;
+
       return { ...prev, services: prev.services.filter((s) => s.id !== id) };
     });
   }, []);
 
   const addLink = useCallback(async (data: Omit<ServiceLink, "id" | "created_at">) => {
     const res = await linkApi.create(data);
+
     setData((prev) => {
       if (!prev) return prev;
+
       return { ...prev, links: [...prev.links, res.data] };
     });
   }, []);
@@ -201,8 +222,10 @@ export function useDashboard() {
   const updateLink = useCallback(
     async (id: string, data: Pick<ServiceLink, "label" | "type" | "description">) => {
       const res = await linkApi.update(id, data);
+
       setData((prev) => {
         if (!prev) return prev;
+
         return { ...prev, links: prev.links.map((l) => (l.id === id ? res.data : l)) };
       });
     },
@@ -213,6 +236,7 @@ export function useDashboard() {
     await linkApi.delete(id);
     setData((prev) => {
       if (!prev) return prev;
+
       return { ...prev, links: prev.links.filter((l) => l.id !== id) };
     });
   }, []);

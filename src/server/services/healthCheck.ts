@@ -13,6 +13,7 @@ async function checkTcp(host: string, port: number): Promise<boolean> {
       socket.destroy();
       resolve(false);
     }, TCP_TIMEOUT);
+
     socket.once("connect", () => {
       clearTimeout(timer);
       socket.destroy();
@@ -34,6 +35,7 @@ async function checkHttp(host: string, port: number, protocol: string): Promise<
       validateStatus: () => true,
       headers: { "User-Agent": "DockDash/1.0" },
     });
+
     return resp.status < 500;
   } catch {
     return false;
@@ -54,19 +56,23 @@ export async function checkService(service: {
     if (["http", "https", "tcp", "ssh"].includes(service.protocol)) {
       return (await checkTcp(service.host, service.port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
     }
+
     return ServiceStatus.UNKNOWN;
   }
 
   // Network services: check HTTP first, fall back to TCP
   if (["http", "https"].includes(service.protocol)) {
     const httpOk = await checkHttp(service.host, service.port, service.protocol);
+
     if (httpOk) return ServiceStatus.UP;
+
     // HTTP probe failed, try raw TCP
     return (await checkTcp(service.host, service.port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
   }
 
   // Non-HTTP protocols: TCP check
   const open = await checkTcp(service.host, service.port);
+
   return open ? ServiceStatus.UP : ServiceStatus.DOWN;
 }
 
@@ -86,6 +92,7 @@ export async function checkSingleService(serviceId: string): Promise<ServiceStat
     });
 
     const oldStatus = service.status;
+
     db.updateServiceStatus(service.id || "", status);
 
     if (oldStatus !== status) {
@@ -98,6 +105,7 @@ export async function checkSingleService(serviceId: string): Promise<ServiceStat
       `Health check failed for service "${service.name}" (${serviceId}):`,
       err instanceof Error ? err.message : String(err),
     );
+
     return null;
   }
 }
@@ -109,6 +117,7 @@ export async function checkAllServices(): Promise<{ updated: number; errors: num
 
   for (const service of services) {
     const status = await checkSingleService(service.id || "");
+
     if (status === null) {
       errors++;
     } else if (status !== service.status) {

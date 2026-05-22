@@ -246,6 +246,7 @@ export default function Discovery() {
     setDockerResults([]);
     try {
       const res = await importFromDiscovery(ServiceSource.DOCKER);
+
       setDockerResults(res.services);
       showToast(`Discovered ${res.discovered} Docker containers`);
       await refresh();
@@ -263,6 +264,7 @@ export default function Discovery() {
         cidrs,
         scanPorts ? scanPorts.split(",").map(Number) : undefined,
       );
+
       setNetworkResults(res.data.services);
       showToast(`Discovered ${res.data.discovered} network services`);
       await refresh();
@@ -274,28 +276,40 @@ export default function Discovery() {
 
   const isValidCIDR = (value: string) => {
     const parts = value.split("/");
+
     if (parts.length !== 2) return false;
+
     const [ip, prefix] = parts;
     const prefixNum = parseInt(prefix, 10);
+
     if (isNaN(prefixNum) || prefixNum < 0 || prefixNum > 32) return false;
+
     const octets = ip.split(".");
+
     if (octets.length !== 4) return false;
+
     return octets.every((o) => {
       const n = parseInt(o, 10);
+
       return !isNaN(n) && n >= 0 && n <= 255 && String(n) === o;
     });
   };
 
   const addCidr = () => {
     if (!newCidr) return;
+
     if (!isValidCIDR(newCidr)) {
       setCidrError("Invalid CIDR — expected format: 192.168.1.0/24");
+
       return;
     }
+
     if (cidrs.includes(newCidr)) {
       setCidrError("This CIDR is already in the list");
+
       return;
     }
+
     setCidrs([...cidrs, newCidr]);
     setNewCidr("");
     setCidrError("");
@@ -372,6 +386,7 @@ export default function Discovery() {
             </div>
             {dockerResults.map((svc) => {
               const imported = existingIds.has(svc.id);
+
               return (
                 <ResultItem key={svc.id}>
                   <ResultInfo>
@@ -486,6 +501,7 @@ export default function Discovery() {
             </div>
             {networkResults.map((svc) => {
               const imported = existingIds.has(svc.id);
+
               return (
                 <ResultItem key={svc.id}>
                   <ResultInfo>

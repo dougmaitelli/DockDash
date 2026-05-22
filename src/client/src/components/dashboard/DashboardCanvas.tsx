@@ -154,12 +154,15 @@ export function DashboardCanvas({
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
+
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
   useEffect(() => {
     if (initialFitDone.current) return;
+
     if (services.length === 0) return;
+
     if (canvasDimensions.w === 0 || canvasDimensions.h === 0) return;
 
     const PADDING = 60;
@@ -170,6 +173,7 @@ export function DashboardCanvas({
 
     services.forEach((service, idx) => {
       let x: number, y: number;
+
       if (service.position) {
         x = service.position.x;
         y = service.position.y;
@@ -177,12 +181,15 @@ export function DashboardCanvas({
         const cols = Math.max(3, Math.ceil(Math.sqrt(services.length)));
         const row = Math.floor(idx / cols);
         const col = idx % cols;
+
         x = 100 + col * (NODE_WIDTH + 60);
         y = 120 + row * (NODE_HEIGHT + 80);
       }
+
       const size = service.id ? getNodeSize(service.id) : null;
       const nodeW = size?.w ?? NODE_WIDTH;
       const nodeH = size?.h ?? NODE_HEIGHT;
+
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       maxX = Math.max(maxX, x + nodeW);
@@ -197,6 +204,7 @@ export function DashboardCanvas({
 
     const bboxCenterX = (minX + maxX) / 2;
     const bboxCenterY = (minY + maxY) / 2;
+
     setPanOffset({
       x: canvasDimensions.w / 2 - bboxCenterX * fitZoom,
       y: canvasDimensions.h / 2 - bboxCenterY * fitZoom,
@@ -219,9 +227,12 @@ export function DashboardCanvas({
       e.preventDefault();
 
       const canvas = canvasRef.current;
+
       if (!canvas) return;
+
       const rect = canvas.getBoundingClientRect();
       const portPos = getPortPosition(serviceId, side, services, dragOffsets);
+
       if (!portPos) return;
 
       setConnectingSource({ serviceId, side });
@@ -238,6 +249,7 @@ export function DashboardCanvas({
   const handlePortMouseEnter = useCallback(
     (serviceId: string) => {
       if (!connectingSource || connectingSource.serviceId === serviceId) return;
+
       setConnectingTarget(serviceId);
     },
     [connectingSource],
@@ -261,6 +273,7 @@ export function DashboardCanvas({
 
   const handlePortMouseLeave = useCallback(() => {
     if (nodeHoverRef.current) return;
+
     setConnectingTarget(null);
   }, []);
 
@@ -270,8 +283,11 @@ export function DashboardCanvas({
 
     const handleMouseMove = (e: MouseEvent) => {
       const canvas = canvasRef.current;
+
       if (!canvas) return;
+
       const rect = canvas.getBoundingClientRect();
+
       setMouseCanvasPos({
         x: (e.clientX - rect.left - panOffset.x) / zoomLevel,
         y: (e.clientY - rect.top - panOffset.y) / zoomLevel,
@@ -283,6 +299,7 @@ export function DashboardCanvas({
         const alreadyLinked = links.some(
           (l) => l.source_id === connectingSource.serviceId && l.target_id === connectingTarget,
         );
+
         if (!alreadyLinked) {
           try {
             await addLink({
@@ -298,6 +315,7 @@ export function DashboardCanvas({
           }
         }
       }
+
       setConnectingSource(null);
       setConnectingTarget(null);
       setMouseCanvasPos(null);
@@ -305,6 +323,7 @@ export function DashboardCanvas({
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
@@ -323,6 +342,7 @@ export function DashboardCanvas({
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       const { draggedId, nodeX, nodeY, grabOffsetX, grabOffsetY } = dragState.current;
+
       if (!draggedId || !canvasRef.current) return;
 
       const rect = canvasRef.current.getBoundingClientRect();
@@ -339,6 +359,7 @@ export function DashboardCanvas({
 
     const handleMouseUp = async (e: MouseEvent) => {
       const { draggedId, grabOffsetX, grabOffsetY } = dragState.current;
+
       if (!draggedId || !canvasRef.current) return;
 
       const rect = canvasRef.current.getBoundingClientRect();
@@ -350,7 +371,9 @@ export function DashboardCanvas({
       await updatePosition(draggedId, finalNodeX, finalNodeY);
       setDragOffsets((prev) => {
         const copy = { ...prev };
+
         delete copy[draggedId];
+
         return copy;
       });
       dragState.current.draggedId = null;
@@ -358,6 +381,7 @@ export function DashboardCanvas({
 
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
@@ -368,9 +392,12 @@ export function DashboardCanvas({
     (e: React.MouseEvent, serviceId: string) => {
       if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a"))
         return;
+
       e.stopPropagation();
       const canvas = canvasRef.current;
+
       if (!canvas) return;
+
       const rect = canvas.getBoundingClientRect();
       const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
       const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
@@ -378,6 +405,7 @@ export function DashboardCanvas({
       const pos = services.find((s) => s.id === serviceId)?.position;
       let nodeX: number;
       let nodeY: number;
+
       if (pos) {
         nodeX = pos.x;
         nodeY = pos.y;
@@ -388,6 +416,7 @@ export function DashboardCanvas({
         const col = idx % cols;
         const gapX = 60;
         const gapY = 80;
+
         nodeX = 100 + col * (NODE_WIDTH + gapX);
         nodeY = 120 + row * (NODE_HEIGHT + gapY);
       }
@@ -404,7 +433,9 @@ export function DashboardCanvas({
       };
       setDragOffsets((prev) => {
         const copy = { ...prev };
+
         delete copy[serviceId];
+
         return copy;
       });
       e.preventDefault();
@@ -417,13 +448,16 @@ export function DashboardCanvas({
     (e: WheelEvent) => {
       e.preventDefault();
       const rect = canvasRef.current?.getBoundingClientRect();
+
       if (!rect) return;
+
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
       const currentZoom = zoomLevel;
       const delta = -e.deltaY * 0.001;
       const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, currentZoom * (1 + delta)));
       const zoomRatio = newZoom / currentZoom;
+
       setPanOffset({
         x: mouseX - (mouseX - panOffset.x) * zoomRatio,
         y: mouseY - (mouseY - panOffset.y) * zoomRatio,
@@ -437,7 +471,9 @@ export function DashboardCanvas({
   const handleCanvasMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest(".draggable-node")) return;
+
       if (e.button !== 0) return;
+
       setSelectedId(null);
       setIsPanning(true);
       setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
@@ -447,12 +483,15 @@ export function DashboardCanvas({
 
   useEffect(() => {
     if (!isPanning) return;
+
     const handleMouseMove = (e: MouseEvent) => {
       setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
     };
     const handleMouseUp = () => setIsPanning(false);
+
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
@@ -461,15 +500,20 @@ export function DashboardCanvas({
 
   useEffect(() => {
     const canvas = canvasRef.current;
+
     if (!canvas) return;
+
     canvas.addEventListener("wheel", handleWheel, { passive: false });
 
     const updateDimensions = () => {
       setCanvasDimensions({ w: canvas.clientWidth || 1000, h: canvas.clientHeight || 600 });
     };
+
     updateDimensions();
     const resizeObserver = new ResizeObserver(updateDimensions);
+
     resizeObserver.observe(canvas);
+
     return () => {
       canvas.removeEventListener("wheel", handleWheel);
       resizeObserver.disconnect();
@@ -565,6 +609,7 @@ export function DashboardCanvas({
       services,
       dragOffsets,
     );
+
     if (!srcPort) return null;
 
     const sx = srcPort.x * zoomLevel + panOffset.x;
@@ -575,6 +620,7 @@ export function DashboardCanvas({
     const pdx = tx - sx;
     const pdy = ty - sy;
     let entrySide: PortSide;
+
     if (Math.abs(pdx) >= Math.abs(pdy)) {
       entrySide = pdx >= 0 ? "left" : "right";
     } else {
@@ -592,6 +638,7 @@ export function DashboardCanvas({
 
   const handleLinkEditSave = async (data: Pick<ServiceLink, "label" | "type" | "description">) => {
     if (!editingLink) return;
+
     await updateLink(editingLink.id, data);
     setEditingLink(null);
     await refresh();
@@ -599,6 +646,7 @@ export function DashboardCanvas({
 
   const handleLinkEditDelete = async () => {
     if (!editingLink) return;
+
     await removeLink(editingLink.id);
     setEditingLink(null);
     await refresh();
@@ -612,6 +660,7 @@ export function DashboardCanvas({
     data: Pick<Service, "name" | "host" | "port" | "protocol">,
   ) => {
     if (!editingNode) return;
+
     await updateService(editingNode.id!, data);
     setEditingNode(null);
     await refresh();
@@ -619,6 +668,7 @@ export function DashboardCanvas({
 
   const handleEditNodeDelete = async () => {
     if (!editingNode) return;
+
     await removeService(editingNode.id!);
     setEditingNode(null);
     await refresh();

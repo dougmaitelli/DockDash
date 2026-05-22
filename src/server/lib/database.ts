@@ -20,12 +20,14 @@ export class DatabaseService {
 
   constructor() {
     const dbPath = process.env.DB_PATH || path.join(rootDir, "dockdash.db");
+
     this.db = new Database(dbPath);
 
     this.db.pragma("journal_mode = WAL");
     this.db.pragma("foreign_keys = ON");
 
     const schema = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf-8");
+
     this.db.exec(schema);
   }
 
@@ -67,6 +69,7 @@ export class DatabaseService {
     data: { name?: string; host?: string; port?: number | null; protocol?: string },
   ): Service {
     const existing = this.getService(id);
+
     if (!existing) throw new Error("Service not found");
 
     const now = new Date().toISOString();
@@ -89,6 +92,7 @@ export class DatabaseService {
 
   updateServiceStatus(id: string, status: ServiceStatus, lastChecked?: string): void {
     const now = lastChecked || new Date().toISOString();
+
     this.db
       .prepare(
         `
@@ -138,6 +142,7 @@ export class DatabaseService {
 
   getServicePositions(): ServicePosition[] {
     const stmt = this.db.prepare("SELECT * FROM service_positions");
+
     return stmt.all() as ServicePosition[];
   }
 
@@ -151,6 +156,7 @@ export class DatabaseService {
       JOIN services s2 ON sl.target_id = s2.id
       ORDER BY sl.created_at DESC
     `);
+
     return stmt.all() as ServiceLink[];
   }
 
@@ -213,9 +219,9 @@ export class DatabaseService {
 
   getServiceStatuses(): ServiceStatusItem[] {
     const stmt = this.db.prepare("SELECT id, status FROM services");
+
     return stmt.all() as ServiceStatusItem[];
   }
-
 }
 
 export const db = new DatabaseService();

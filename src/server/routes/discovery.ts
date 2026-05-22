@@ -19,6 +19,7 @@ router.get("/docker/health", async (_req, res) => {
   try {
     const docker = await createDockerClient();
     const info = await docker.info();
+
     res.json({
       connected: true,
       containers: info.Containers,
@@ -57,6 +58,7 @@ router.get("/docker/networks", async (_req, res) => {
   try {
     const docker = await createDockerClient();
     const networks = await scanDockerNetworks(docker);
+
     res.json(networks);
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
@@ -75,6 +77,7 @@ router.post("/network/scan", async (req, res) => {
 
     for (const cidr of cidrList) {
       const hosts = await scanNetwork(cidr, portList);
+
       allResults.push({ cidr, hosts });
     }
 
