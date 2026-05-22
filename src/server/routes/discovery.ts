@@ -80,7 +80,9 @@ router.get("/network/scan/stream", async (req, res) => {
     portsParam
       ?.split(",")
       .map(Number)
-      .filter((n) => !isNaN(n)) ?? config[0]?.ports ?? [];
+      .filter((n) => !isNaN(n)) ??
+    config[0]?.ports ??
+    [];
 
   let closed = false;
 
@@ -116,7 +118,6 @@ router.get("/network/scan/stream", async (req, res) => {
     res.end();
   }
 });
-
 
 // Get Docker networks
 router.get("/docker/networks", async (_req, res) => {

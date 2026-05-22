@@ -22,7 +22,7 @@ services:
       - "3001:3001"
     environment:
       - DOCKER_HOST=unix:///var/run/docker.sock
-      - NETWORK_CIDRS=192.168.1.0/24
+      - NETWORK_CIDRS=192.168.0.1/24
       - SCAN_PORTS=80,443,3000,8080,8443
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -48,8 +48,8 @@ All configuration is done via environment variables. Changes require a container
 |---|---|---|
 | `PORT` | `3001` | Port the server listens on |
 | `DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker daemon socket or TCP address |
-| `NETWORK_CIDRS` | `192.168.1.0/24` | Comma-separated CIDR ranges to scan |
-| `SCAN_PORTS` | `80,443,3000,3001,5432,6379,8080,8443,9090,27017,22,3306` | Ports checked during network scans |
+| `NETWORK_CIDRS` | `192.168.0.1/24` | Comma-separated CIDR ranges to scan |
+| `SCAN_PORTS` | *(see [default ports](#default-ports))* | Ports checked during network scans |
 | `DB_PATH` | `/app/data/dockdash.db` | Path to the SQLite database file |
 | `REFRESH_INTERVAL` | `30000` | Discovery refresh interval in milliseconds |
 | `HEALTH_CHECK_INTERVAL` | `30000` | How often the server re-checks service health (ms) |
@@ -77,9 +77,26 @@ TLS is supported via the standard `DOCKER_TLS_CERTDIR` variable.
 Set `NETWORK_CIDRS` to one or more comma-separated CIDR ranges. DockDash will probe every address in those ranges on the ports listed in `SCAN_PORTS`:
 
 ```
-NETWORK_CIDRS=192.168.1.0/24,10.0.0.0/16
+NETWORK_CIDRS=192.168.0.1/24,10.0.0.0/16
 SCAN_PORTS=80,443,3000,8080,9090
 ```
+
+#### Default ports
+
+| Port | Service |
+|---|---|
+| 22 | SSH |
+| 80 | HTTP |
+| 443 | HTTPS |
+| 3000 | HTTP (dev) |
+| 3001 | HTTP (dev) |
+| 3306 | MySQL |
+| 5432 | PostgreSQL |
+| 6379 | Redis |
+| 8080 | HTTP (alt) |
+| 8443 | HTTPS (alt) |
+| 9090 | Prometheus |
+| 27017 | MongoDB |
 
 ## Development
 

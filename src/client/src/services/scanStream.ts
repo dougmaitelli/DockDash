@@ -7,7 +7,12 @@ interface ScanStreamOptions {
   onError: (message: string) => void;
 }
 
-export function startScanStream({ url, onService, onDone, onError }: ScanStreamOptions): EventSource {
+export function startScanStream({
+  url,
+  onService,
+  onDone,
+  onError,
+}: ScanStreamOptions): EventSource {
   const es = new EventSource(url);
 
   es.addEventListener("message", (e) => {
