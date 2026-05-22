@@ -8,49 +8,6 @@ export const Page = styled.div`
   gap: 20px;
 `;
 
-export const StatsBar = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-`;
-
-export const StatCard = styled.div`
-  background: #1e2230;
-  border: 1px solid #2d3348;
-  border-radius: 10px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  .stat-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-  }
-
-  .stat-info {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .stat-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #e8eaf0;
-  }
-
-  .stat-label {
-    font-size: 0.75rem;
-    color: #6b7290;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-`;
 
 export const CanvasWrapper = styled.div`
   flex: 1;

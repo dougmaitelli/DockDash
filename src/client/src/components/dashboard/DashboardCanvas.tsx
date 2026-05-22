@@ -13,7 +13,7 @@ import {
 } from "../../styles/Dashboard.styles";
 import type { Service, ServiceLink, ServiceWithPosition } from "@shared";
 import { orthogonalPath, getLinkColor, type LinkPath } from "./linkUtils";
-import { ServiceLinkType } from "@shared";
+import { ServiceLinkType, ServiceStatus } from "@shared";
 import {
   getNodeCenter,
   getNodeSize,
@@ -113,6 +113,8 @@ export function DashboardCanvas({
 }: DashboardCanvasProps) {
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 3;
+
+  const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
 
   const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -626,9 +628,10 @@ export function DashboardCanvas({
     <CanvasWrapper>
       <ToolbarInner>
         <ToolbarGroup>
-          <span style={{ fontSize: "0.75rem", color: "#6b7290", marginRight: 8 }}>
-            Drag between port dots to connect · Double-click a node or link to edit
+          <span style={{ fontSize: "0.85rem", color: "#e8eaf0", fontWeight: 600 }}>
+            {servicesOnline} / {services.length}
           </span>
+          <span style={{ fontSize: "0.75rem", color: "#6b7290" }}>Online</span>
         </ToolbarGroup>
         <ToolbarGroup>
           <SecondaryButton onClick={() => navigate("/discover")}>

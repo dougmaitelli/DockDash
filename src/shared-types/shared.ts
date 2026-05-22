@@ -55,16 +55,7 @@ export interface ServiceLink {
   created_at: string;
 }
 
-export interface DiscoveryStats {
-  docker: number;
-  network: number;
-  up: number;
-  total: number;
-  totalLinks: number;
-}
-
 export interface DashboardData {
   services: ServiceWithPosition[];
   links: ServiceLink[];
-  stats: DiscoveryStats;
 }

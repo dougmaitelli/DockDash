@@ -1,7 +1,7 @@
-import type { ServiceSource, ServicePosition, DiscoveryStats } from "@shared";
+import type { ServiceSource, ServicePosition } from "@shared";
 import { ServiceLinkType } from "@shared";
 
-export type { ServiceSource, ServicePosition, DiscoveryStats };
+export type { ServiceSource, ServicePosition };
 export { ServiceLinkType };
 
 export interface LinkType {

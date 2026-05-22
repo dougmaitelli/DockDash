@@ -3,7 +3,6 @@ import type {
   Service,
   ServiceLink,
   ServicePosition,
-  DiscoveryStats,
   DashboardData,
   ServiceStatusItem,
 } from "@shared";
@@ -47,11 +46,6 @@ export const linkApi = {
 export const positionApi = {
   save: (positions: { service_id: string; x: number; y: number }[]) =>
     api.post<SavePositionsResponse>("/positions", { positions }),
-};
-
-// Stats API
-export const statsApi = {
-  get: () => api.get<DiscoveryStats>("/stats"),
 };
 
 // Dashboard API

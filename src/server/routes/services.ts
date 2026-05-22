@@ -139,17 +139,6 @@ router.post("/positions", (req, res) => {
   res.json({ positions: allPositions });
 });
 
-// Dashboard stats
-router.get("/stats", (_req, res) => {
-  const stats = db.getDiscoveryStats();
-  const links = db.getLinks();
-
-  res.json({
-    ...stats,
-    totalLinks: links.length,
-  });
-});
-
 // Dashboard data (services with positions, links, and stats in one request)
 router.get("/dashboard", (_req, res) => {
   const data = db.getDashboardData();

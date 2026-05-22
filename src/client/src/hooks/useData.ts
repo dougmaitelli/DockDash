@@ -1,13 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  serviceApi,
-  linkApi,
-  positionApi,
-  statsApi,
-  discoveryApi,
-  dashboardApi,
-} from "../services/api";
-import type { DiscoveryStats } from "../types";
+import { serviceApi, linkApi, positionApi, discoveryApi, dashboardApi } from "../services/api";
 import { DashboardData, Service, ServiceLink, ServiceSource, ServiceStatus } from "@shared";
 
 export function useDiscovery() {
@@ -74,20 +66,6 @@ export function useDiscovery() {
   };
 }
 
-export function useStats() {
-  const [stats, setStats] = useState<DiscoveryStats | null>(null);
-
-  const refresh = useCallback(async () => {
-    const res = await statsApi.get();
-    setStats(res.data);
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { stats, refresh };
-}
 
 export function useDockerHealth() {
   const [health, setHealth] = useState<{
@@ -247,7 +225,6 @@ export function useDashboard() {
   return {
     services: servicesWithStatus,
     links: data?.links ?? [],
-    stats: data?.stats ?? null,
     loading,
     error,
     refresh,

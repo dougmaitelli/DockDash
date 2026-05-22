@@ -5,7 +5,6 @@ import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
 import type {
   ServicePosition,
-  DiscoveryStats,
   Service,
   ServiceLink,
   DashboardData,
@@ -202,7 +201,6 @@ export class DatabaseService {
     const rawPositions = this.getServicePositions();
     const positionMap = new Map(rawPositions.map((p) => [p.service_id, p]));
     const links = this.getLinks();
-    const stats = this.getDiscoveryStats();
 
     return {
       services: services.map((service) => ({
@@ -210,7 +208,6 @@ export class DatabaseService {
         position: positionMap.get(service.id ?? "") ?? null,
       })),
       links,
-      stats,
     };
   }
 
@@ -219,30 +216,6 @@ export class DatabaseService {
     return stmt.all() as ServiceStatusItem[];
   }
 
-  getDiscoveryStats(): DiscoveryStats {
-    const docker = this.db
-      .prepare("SELECT COUNT(*) as count FROM services WHERE source = 'docker'")
-      .get() as { count: number };
-    const network = this.db
-      .prepare("SELECT COUNT(*) as count FROM services WHERE source = 'network'")
-      .get() as { count: number };
-    const up = this.db
-      .prepare("SELECT COUNT(*) as count FROM services WHERE status = 'up'")
-      .get() as { count: number };
-    const total = this.db.prepare("SELECT COUNT(*) as count FROM services").get() as {
-      count: number;
-    };
-    const totalLinks = this.db.prepare("SELECT COUNT(*) as count FROM service_links").get() as {
-      count: number;
-    };
-    return {
-      docker: docker.count,
-      network: network.count,
-      up: up.count,
-      total: total.count,
-      totalLinks: totalLinks.count,
-    };
-  }
 }
 
 export const db = new DatabaseService();
