@@ -17,6 +17,7 @@ export async function createDockerClient(): Promise<Docker> {
 
 export async function* scanDockerContainers(docker: Docker): AsyncGenerator<Service> {
   const containers = await docker.listContainers({ all: true });
+  const now = new Date().toISOString();
 
   for (const container of containers) {
     if (!container.Id || !container.Names) continue;
@@ -83,8 +84,8 @@ export async function* scanDockerContainers(docker: Docker): AsyncGenerator<Serv
         labels: inspect.Config?.Labels ? Object.values(inspect.Config.Labels) : [],
         hostPorts: hostPorts,
       },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     };
   }
 }

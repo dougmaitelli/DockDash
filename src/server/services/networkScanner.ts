@@ -9,7 +9,6 @@ interface CIDRConfig {
   ports: number[];
 }
 
-
 interface PortInfo {
   port: number;
   protocol: string;
@@ -142,6 +141,7 @@ export async function* scanNetworkStream(cidr: string, ports: number[]): AsyncGe
   const networkNum = ipToNumber(network);
   const hostCount = Math.pow(2, 32 - maskBits) - 2;
   const maxHosts = Math.min(hostCount, 254);
+  const now = new Date().toISOString();
 
   for (let i = 1; i <= maxHosts && i <= 254; i++) {
     const ip = numberToIp(networkNum + i);
@@ -181,8 +181,8 @@ export async function* scanNetworkStream(cidr: string, ports: number[]): AsyncGe
       protocol: p.protocol,
       source: ServiceSource.NETWORK,
       status: ServiceStatus.UP,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     }));
   }
 }
