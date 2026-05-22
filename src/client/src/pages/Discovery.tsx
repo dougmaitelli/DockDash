@@ -532,6 +532,9 @@ export default function Discovery() {
                       </Tag>
                       {svc.host}
                       {svc.port && `:${svc.port}`}
+                      <Tag bg="rgba(245, 158, 11, 0.1)" color={colors.accentYellow}>
+                        {svc.protocol}
+                      </Tag>
                     </ResultMeta>
                   </ResultInfo>
                   {imported ? (
