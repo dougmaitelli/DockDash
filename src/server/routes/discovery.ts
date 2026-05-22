@@ -10,7 +10,6 @@ import {
   parseCIDRConfig,
   NetworkHost,
 } from "../services/networkScanner.js";
-import { db } from "../lib/database.js";
 
 const router = Router();
 
@@ -38,11 +37,6 @@ router.post("/docker/scan", async (_req, res) => {
   try {
     const docker = await createDockerClient();
     const containers = await scanDockerContainers(docker);
-
-    // Upsert all discovered containers
-    for (const container of containers) {
-      db.upsertService(container);
-    }
 
     res.json({
       discovered: containers.length,
@@ -82,11 +76,6 @@ router.post("/network/scan", async (req, res) => {
     }
 
     const services = convertToServices(allResults.flatMap((r) => r.hosts.map((h) => h)));
-
-    // Upsert discovered network services
-    for (const svc of services) {
-      db.upsertService(svc);
-    }
 
     res.json({
       discovered: services.length,

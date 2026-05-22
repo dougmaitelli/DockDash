@@ -18,6 +18,6 @@
       "@shared/*": ["./src/shared-types/*"]
     }
   },
-  "include": ["src/client/src", "shared-types/**/*"],
+  "include": ["src/client/src", "src/shared-types/**/*"],
   "exclude": ["node_modules"]
 }

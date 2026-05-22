@@ -319,9 +319,9 @@ export default function Discovery() {
     setCidrs(cidrs.filter((_, i) => i !== index));
   };
 
-  const existingIds = new Set(services.map((s) => s.id));
-  const availableDocker = dockerResults.filter((s) => !existingIds.has(s.id));
-  const availableNetwork = networkResults.filter((s) => !existingIds.has(s.id));
+  const existingKeys = new Set(services.map((s) => `${s.host}:${s.port}`));
+  const availableDocker = dockerResults.filter((s) => !existingKeys.has(`${s.host}:${s.port}`));
+  const availableNetwork = networkResults.filter((s) => !existingKeys.has(`${s.host}:${s.port}`));
 
   return (
     <Page>
@@ -385,7 +385,7 @@ export default function Discovery() {
               <span>{availableDocker.length} not on dashboard</span>
             </div>
             {dockerResults.map((svc) => {
-              const imported = existingIds.has(svc.id);
+              const imported = existingKeys.has(`${svc.host}:${svc.port}`);
 
               return (
                 <ResultItem key={svc.id}>
@@ -500,7 +500,7 @@ export default function Discovery() {
               <span>{availableNetwork.length} not on dashboard</span>
             </div>
             {networkResults.map((svc) => {
-              const imported = existingIds.has(svc.id);
+              const imported = existingKeys.has(`${svc.host}:${svc.port}`);
 
               return (
                 <ResultItem key={svc.id}>

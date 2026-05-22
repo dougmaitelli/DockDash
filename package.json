@@ -7,8 +7,8 @@
     "dev:server": "tsx --watch --tsconfig tsconfig.server.json src/server/index.ts",
     "dev:client": "vite",
     "dev": "concurrently \"tsx --watch --tsconfig tsconfig.server.json src/server/index.ts\" \"vite\"",
-    "build": "tsc -p tsconfig.client.json && vite build",
-    "start": "tsx dist/server/index.js",
+    "build": "tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json && tsc -p tsconfig.client.json && vite build",
+    "start": "node dist/server/index.js",
     "lint": "eslint src/ && prettier --check \"src/\"",
     "lint:fix": "eslint --fix src/ && prettier --write \"src/\"",
     "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit"
@@ -44,6 +44,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "prettier": "^3.8.3",
+    "tsc-alias": "^1.8.17",
     "tsx": "^4.22.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.13"

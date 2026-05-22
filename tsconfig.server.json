@@ -4,7 +4,8 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2022"],
-    "outDir": "./dist/server",
+    "rootDir": "src",
+    "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -14,10 +15,10 @@
     "declarationMap": true,
     "sourceMap": true,
     "paths": {
-      "@shared": ["./src/shared-types"],
-      "@shared/*": ["./src/shared-types/*"]
+      "@shared": ["./src/shared-types/index.js"],
+      "@shared/*": ["./src/shared-types/*.js"]
     }
   },
-  "include": ["src/server/**/*", "shared-types/**/*", "shared-types/index.d.ts"],
+  "include": ["src/server/**/*", "src/shared-types/**/*"],
   "exclude": ["node_modules"]
 }
