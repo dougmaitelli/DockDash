@@ -4,12 +4,7 @@ import {
   scanDockerContainers,
   scanDockerNetworks,
 } from "../services/dockerService.js";
-import {
-  scanNetwork,
-  convertToServices,
-  parseCIDRConfig,
-  NetworkHost,
-} from "../services/networkScanner.js";
+import { scanNetworkStream, parseCIDRConfig } from "../services/networkScanner.js";
 
 const router = Router();
 
@@ -32,20 +27,96 @@ router.get("/docker/health", async (_req, res) => {
   }
 });
 
-// Scan Docker containers
-router.post("/docker/scan", async (_req, res) => {
+// Stream Docker container scan results via SSE
+router.get("/docker/scan/stream", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  let closed = false;
+
+  req.on("close", () => {
+    closed = true;
+  });
+
+  let count = 0;
+
   try {
     const docker = await createDockerClient();
-    const containers = await scanDockerContainers(docker);
 
-    res.json({
-      discovered: containers.length,
-      services: containers,
-    });
+    for await (const service of scanDockerContainers(docker)) {
+      if (closed) break;
+
+      res.write(`data: ${JSON.stringify(service)}\n\n`);
+      count++;
+    }
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    if (!closed) {
+      res.write(
+        `event: scan-error\ndata: ${JSON.stringify({ message: err instanceof Error ? err.message : String(err) })}\n\n`,
+      );
+    }
+  }
+
+  if (!closed) {
+    res.write(`event: done\ndata: ${JSON.stringify({ count })}\n\n`);
+    res.end();
   }
 });
+
+// Stream network scan results via SSE
+router.get("/network/scan/stream", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const cidrParam = req.query.cidrs as string | undefined;
+  const portsParam = req.query.ports as string | undefined;
+  const config = parseCIDRConfig();
+  const cidrList = cidrParam?.split(",").filter(Boolean) ?? config.map((c) => c.cidr);
+  const portList =
+    portsParam
+      ?.split(",")
+      .map(Number)
+      .filter((n) => !isNaN(n)) ?? config[0]?.ports ?? [];
+
+  let closed = false;
+
+  req.on("close", () => {
+    closed = true;
+  });
+
+  let count = 0;
+
+  try {
+    for (const cidr of cidrList) {
+      if (closed) break;
+
+      for await (const services of scanNetworkStream(cidr, portList)) {
+        if (closed) break;
+
+        for (const svc of services) {
+          res.write(`data: ${JSON.stringify(svc)}\n\n`);
+          count++;
+        }
+      }
+    }
+  } catch (err) {
+    if (!closed) {
+      res.write(
+        `event: scan-error\ndata: ${JSON.stringify({ message: err instanceof Error ? err.message : String(err) })}\n\n`,
+      );
+    }
+  }
+
+  if (!closed) {
+    res.write(`event: done\ndata: ${JSON.stringify({ count })}\n\n`);
+    res.end();
+  }
+});
+
 
 // Get Docker networks
 router.get("/docker/networks", async (_req, res) => {
@@ -54,34 +125,6 @@ router.get("/docker/networks", async (_req, res) => {
     const networks = await scanDockerNetworks(docker);
 
     res.json(networks);
-  } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
-  }
-});
-
-// Scan network
-router.post("/network/scan", async (req, res) => {
-  try {
-    const { cidrs, ports } = req.body as { cidrs?: string[]; ports?: number[] };
-    const config = parseCIDRConfig();
-    const cidrList = cidrs?.length ? cidrs : config.map((c) => c.cidr);
-    const portList = ports?.length ? ports : (config[0]?.ports ?? []);
-
-    const allResults: { cidr: string; hosts: NetworkHost[] }[] = [];
-
-    for (const cidr of cidrList) {
-      const hosts = await scanNetwork(cidr, portList);
-
-      allResults.push({ cidr, hosts });
-    }
-
-    const services = convertToServices(allResults.flatMap((r) => r.hosts.map((h) => h)));
-
-    res.json({
-      discovered: services.length,
-      cidrs: allResults,
-      services,
-    });
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }

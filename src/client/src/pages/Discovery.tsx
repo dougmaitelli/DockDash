@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { colors } from "../styles/theme";
 import { IconPlus, IconX } from "../utils/Icons";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
-import { discoveryApi } from "../services/api";
+import { startScanStream } from "../services/scanStream";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 const Page = styled.div`
@@ -224,7 +224,7 @@ const Tag = styled.span<{ bg: string; color: string }>`
 `;
 
 export default function Discovery() {
-  const { services, refresh, importFromDiscovery, importService } = useDiscovery();
+  const { services, refresh, importService } = useDiscovery();
   const { health } = useDockerHealth();
 
   const [scanning, setScanning] = useState<string | null>(null);
@@ -235,43 +235,61 @@ export default function Discovery() {
   const [cidrError, setCidrError] = useState("");
   const [scanPorts, setScanPorts] = useState("");
   const [toast, setToast] = useState<string | null>(null);
+  const scanSourceRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    return () => {
+      scanSourceRef.current?.close();
+    };
+  }, []);
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleDockerScan = async () => {
+  const handleDockerScan = () => {
+    scanSourceRef.current?.close();
     setScanning("docker");
     setDockerResults([]);
-    try {
-      const res = await importFromDiscovery(ServiceSource.DOCKER);
 
-      setDockerResults(res.services);
-      showToast(`Discovered ${res.discovered} Docker containers`);
-      await refresh();
-    } catch (e) {
-      showToast(`Docker scan failed: ${e instanceof Error ? e.message : String(e)}`);
-    }
-    setScanning(null);
+    scanSourceRef.current = startScanStream({
+      url: "/api/docker/scan/stream",
+      onService: (svc) => setDockerResults((prev) => [...prev, svc]),
+      onDone: async (count) => {
+        setScanning(null);
+        showToast(`Discovered ${count} Docker containers`);
+        await refresh();
+      },
+      onError: (msg) => {
+        setScanning(null);
+        showToast(`Docker scan failed: ${msg}`);
+      },
+    });
   };
 
-  const handleNetworkScan = async () => {
+  const handleNetworkScan = () => {
+    scanSourceRef.current?.close();
     setScanning("network");
     setNetworkResults([]);
-    try {
-      const res = await discoveryApi.networkScan(
-        cidrs,
-        scanPorts ? scanPorts.split(",").map(Number) : undefined,
-      );
 
-      setNetworkResults(res.data.services);
-      showToast(`Discovered ${res.data.discovered} network services`);
-      await refresh();
-    } catch (e) {
-      showToast(`Network scan failed: ${e instanceof Error ? e.message : String(e)}`);
-    }
-    setScanning(null);
+    const params = new URLSearchParams({ cidrs: cidrs.join(",") });
+
+    if (scanPorts) params.set("ports", scanPorts);
+
+    scanSourceRef.current = startScanStream({
+      url: `/api/network/scan/stream?${params}`,
+      onService: (svc) => setNetworkResults((prev) => [...prev, svc]),
+      onDone: async (count) => {
+        setScanning(null);
+        showToast(`Discovered ${count} network services`);
+        await refresh();
+      },
+      onError: (msg) => {
+        setScanning(null);
+        showToast(`Network scan failed: ${msg}`);
+      },
+    });
   };
 
   const isValidCIDR = (value: string) => {

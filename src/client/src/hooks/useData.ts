@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { serviceApi, linkApi, positionApi, discoveryApi, dashboardApi } from "../services/api";
-import { DashboardData, Service, ServiceLink, ServiceSource, ServiceStatus } from "@shared";
+import { DashboardData, Service, ServiceLink, ServiceStatus } from "@shared";
 
 export function useDiscovery() {
   const [services, setServices] = useState<Service[]>([]);
@@ -25,29 +25,6 @@ export function useDiscovery() {
     refresh();
   }, [refresh]);
 
-  const importFromDiscovery = async (type: ServiceSource) => {
-    try {
-      setLoading(true);
-      setError(null);
-      let res;
-
-      if (type === ServiceSource.DOCKER) {
-        res = await discoveryApi.dockerScan();
-      } else {
-        res = await discoveryApi.networkScan();
-      }
-
-      await refresh();
-
-      return res.data;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      throw e;
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const removeService = async (id: string) => {
     await serviceApi.delete(id);
     setServices((prev) => prev.filter((s) => s.id !== id));
@@ -66,7 +43,6 @@ export function useDiscovery() {
     loading,
     error,
     refresh,
-    importFromDiscovery,
     removeService,
     importService,
   };

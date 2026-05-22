@@ -15,9 +15,7 @@ const api = axios.create({
 // Discovery APIs
 export const discoveryApi = {
   dockerHealth: () => api.get<DockerHealth>("/docker/health"),
-  dockerScan: () => api.post<{ discovered: number; services: Service[] }>("/docker/scan"),
   dockerNetworks: () => api.get("/docker/networks"),
-  networkScan: (cidrs?: string[], ports?: number[]) => api.post("/network/scan", { cidrs, ports }),
   getConfig: () => api.get<DashboardConfig>("/config"),
 };
 

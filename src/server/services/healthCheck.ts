@@ -2,6 +2,7 @@ import net from "net";
 import axios from "axios";
 import { db } from "../lib/database.js";
 import { ServiceSource, ServiceStatus } from "@shared";
+import { USER_AGENT } from "../lib/constants.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -33,7 +34,7 @@ async function checkHttp(host: string, port: number, protocol: string): Promise<
     const resp = await axios.get(url, {
       timeout: HTTP_TIMEOUT,
       validateStatus: () => true,
-      headers: { "User-Agent": "DockDash/1.0" },
+      headers: { "User-Agent": USER_AGENT },
     });
 
     return resp.status < 500;

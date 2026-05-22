@@ -2,21 +2,26 @@ import axios from "axios";
 import net from "net";
 import { v4 as uuidv4 } from "uuid";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
+import { USER_AGENT } from "../lib/constants.js";
 
 interface CIDRConfig {
   cidr: string;
   ports: number[];
 }
 
-export interface NetworkHost {
-  ip: string;
-  ports: PortInfo[];
-}
 
 interface PortInfo {
   port: number;
   protocol: string;
   serviceName?: string;
+}
+
+function ipToNumber(ip: string): number {
+  return ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+}
+
+function numberToIp(num: number): string {
+  return [(num >>> 24) & 255, (num >>> 16) & 255, (num >>> 8) & 255, num & 255].join(".");
 }
 
 export function parseCIDRConfig(): CIDRConfig[] {
@@ -73,7 +78,7 @@ async function detectService(
         const resp = await axios.get(baseUrl, {
           timeout,
           validateStatus: () => true,
-          headers: { "User-Agent": "DockDash/1.0" },
+          headers: { "User-Agent": USER_AGENT },
         });
 
         const title = resp.data?.match(/<title>([^<]+)/i);
@@ -131,23 +136,16 @@ async function detectService(
   }
 }
 
-export async function scanNetwork(cidr: string, ports: number[]): Promise<NetworkHost[]> {
-  const results: NetworkHost[] = [];
-
-  // Parse CIDR to get IP range
+export async function* scanNetworkStream(cidr: string, ports: number[]): AsyncGenerator<Service[]> {
   const [network, mask] = cidr.split("/");
   const maskBits = parseInt(mask, 10);
   const networkNum = ipToNumber(network);
-
-  // Calculate host range (skip network and broadcast addresses)
   const hostCount = Math.pow(2, 32 - maskBits) - 2;
-  const maxHosts = Math.min(hostCount, 254); // Cap for performance
+  const maxHosts = Math.min(hostCount, 254);
 
-  // Scan first 254 IPs per CIDR by default
   for (let i = 1; i <= maxHosts && i <= 254; i++) {
     const ip = numberToIp(networkNum + i);
 
-    // Scan each port concurrently with parallelism limit
     const portPromises = ports.map(async (port) => {
       const isOpen = await portScan(ip, port);
 
@@ -165,8 +163,9 @@ export async function scanNetwork(cidr: string, ports: number[]): Promise<Networ
     const portResults = await Promise.all(portPromises);
     const validPorts = portResults.filter((p): p is PortInfo => p !== null);
 
-    // Detect services on open ports
-    const services = await Promise.all(
+    if (validPorts.length === 0) continue;
+
+    const detectedPorts = await Promise.all(
       validPorts.map(async (p) => {
         const name = await detectService(ip, p.port, p.protocol);
 
@@ -174,12 +173,18 @@ export async function scanNetwork(cidr: string, ports: number[]): Promise<Networ
       }),
     );
 
-    if (services.length > 0) {
-      results.push({ ip, ports: services });
-    }
+    yield detectedPorts.map((p) => ({
+      id: `net-${uuidv4()}`,
+      name: p.serviceName || `${ip}:${p.port}`,
+      host: ip,
+      port: p.port,
+      protocol: p.protocol,
+      source: ServiceSource.NETWORK,
+      status: ServiceStatus.UP,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
   }
-
-  return results;
 }
 
 function detectProtocolByPort(port: number): string {
@@ -194,36 +199,4 @@ function detectProtocolByPort(port: number): string {
   };
 
   return map[port] || "tcp";
-}
-
-export function convertToServices(hosts: NetworkHost[]): Service[] {
-  const services: Service[] = [];
-
-  for (const host of hosts) {
-    for (const portInfo of host.ports) {
-      const protocol = portInfo.protocol || "http";
-
-      services.push({
-        id: `net-${uuidv4()}`,
-        name: portInfo.serviceName || `${host.ip}:${portInfo.port}`,
-        host: host.ip,
-        port: portInfo.port,
-        protocol,
-        source: ServiceSource.NETWORK,
-        status: ServiceStatus.UP,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      });
-    }
-  }
-
-  return services;
-}
-
-function ipToNumber(ip: string): number {
-  return ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
-}
-
-function numberToIp(num: number): string {
-  return [(num >>> 24) & 255, (num >>> 16) & 255, (num >>> 8) & 255, num & 255].join(".");
 }

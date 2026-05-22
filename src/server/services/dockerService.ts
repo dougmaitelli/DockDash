@@ -15,10 +15,8 @@ export async function createDockerClient(): Promise<Docker> {
   return docker;
 }
 
-export async function scanDockerContainers(docker: Docker): Promise<Service[]> {
+export async function* scanDockerContainers(docker: Docker): AsyncGenerator<Service> {
   const containers = await docker.listContainers({ all: true });
-
-  const services: Service[] = [];
 
   for (const container of containers) {
     if (!container.Id || !container.Names) continue;
@@ -61,10 +59,9 @@ export async function scanDockerContainers(docker: Docker): Promise<Service[]> {
 
     const networks = inspect.NetworkSettings?.Networks || {};
     const networkNames = Object.keys(networks);
-
     const hostPorts = ports.map((p) => p.PublicPort ?? 0);
 
-    services.push({
+    yield {
       id: `docker-${uuidv4()}`,
       name,
       host,
@@ -88,10 +85,8 @@ export async function scanDockerContainers(docker: Docker): Promise<Service[]> {
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    });
+    };
   }
-
-  return services;
 }
 
 export async function scanDockerNetworks(docker: Docker) {
