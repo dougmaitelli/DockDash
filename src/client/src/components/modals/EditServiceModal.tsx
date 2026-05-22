@@ -37,17 +37,17 @@ const Row = styled.div`
 `;
 
 interface EditServiceModalProps {
-  service: Service;
+  service?: Service;
   onSave: (data: Pick<Service, "name" | "host" | "port" | "protocol">) => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onCancel: () => void;
 }
 
 export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditServiceModalProps) {
-  const [editNodeName, setEditNodeName] = useState(service.name);
-  const [editNodeHost, setEditNodeHost] = useState(service.host);
-  const [editNodePort, setEditNodePort] = useState(service.port?.toString() || "");
-  const [editNodeProtocol, setEditNodeProtocol] = useState(service.protocol);
+  const [editNodeName, setEditNodeName] = useState(service?.name ?? "");
+  const [editNodeHost, setEditNodeHost] = useState(service?.host ?? "");
+  const [editNodePort, setEditNodePort] = useState(service?.port?.toString() ?? "");
+  const [editNodeProtocol, setEditNodeProtocol] = useState(service?.protocol ?? "http");
 
   const handleConfirm = () => {
     const portVal = editNodePort.trim() === "" ? null : parseInt(editNodePort, 10);
@@ -61,30 +61,32 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
 
   return (
     <BaseModal
-      title="Edit Service"
+      title={service ? "Edit Service" : "Add Service"}
       onClose={onCancel}
       width={400}
       actions={
         <ModalActions>
-          <DangerButton onClick={onDelete}>Delete</DangerButton>
+          {onDelete && <DangerButton onClick={onDelete}>Delete</DangerButton>}
           <ModalActionsRight>
             <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
-            <PrimaryButton onClick={handleConfirm}>Save</PrimaryButton>
+            <PrimaryButton onClick={handleConfirm}>{service ? "Save" : "Add"}</PrimaryButton>
           </ModalActionsRight>
         </ModalActions>
       }
     >
-      <NodeInfo>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: "1.2rem" }}>
-            {service.source === ServiceSource.DOCKER ? "🐳" : "🌐"}
-          </span>
-          <div>
-            <div style={{ fontWeight: 600, color: "#e8eaf0" }}>{service.name}</div>
-            <NodeId>{service.id}</NodeId>
+      {service && (
+        <NodeInfo>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: "1.2rem" }}>
+              {service.source === ServiceSource.DOCKER ? "🐳" : "🌐"}
+            </span>
+            <div>
+              <div style={{ fontWeight: 600, color: "#e8eaf0" }}>{service.name}</div>
+              <NodeId>{service.id}</NodeId>
+            </div>
           </div>
-        </div>
-      </NodeInfo>
+        </NodeInfo>
+      )}
       <FormGroup>
         <Label>Name</Label>
         <StyledInput

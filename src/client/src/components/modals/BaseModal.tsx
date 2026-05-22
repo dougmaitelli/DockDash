@@ -5,6 +5,7 @@ const ModalOverlay = styled.div`
   position: absolute;
   inset: 0;
   z-index: 199;
+  background: rgba(0, 0, 0, 0.5);
 `;
 
 const ModalPanel = styled.div<{ $width: number }>`
@@ -50,6 +51,7 @@ export const ModalActions = styled.div`
 export const ModalActionsRight = styled.div`
   display: flex;
   gap: 8px;
+  margin-left: auto;
 `;
 
 interface BaseModalProps {

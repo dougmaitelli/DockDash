@@ -121,6 +121,7 @@ export function DashboardCanvas({
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [editingLink, setEditingLink] = useState<ServiceLink | null>(null);
   const [editingNode, setEditingNode] = useState<Service | null>(null);
+  const [addingService, setAddingService] = useState(false);
 
   // Connection dragging state
   const [connectingSource, setConnectingSource] = useState<{
@@ -684,7 +685,7 @@ export function DashboardCanvas({
           <span style={{ fontSize: "0.75rem", color: "#6b7290" }}>Online</span>
         </ToolbarGroup>
         <ToolbarGroup>
-          <SecondaryButton onClick={() => navigate("/discover")}>
+          <SecondaryButton onClick={() => setAddingService(true)}>
             <IconPlus size={13} />
             Add Service
           </SecondaryButton>
@@ -761,6 +762,16 @@ export function DashboardCanvas({
           setZoomLevel(1);
         }}
       />
+
+      {addingService && (
+        <EditServiceModal
+          onSave={async (data) => {
+            await addService(data);
+            setAddingService(false);
+          }}
+          onCancel={() => setAddingService(false)}
+        />
+      )}
 
       {editingLink && (
         <EditLinkModal
