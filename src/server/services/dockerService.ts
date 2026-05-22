@@ -1,6 +1,7 @@
 import Docker from "dockerode";
 import { v4 as uuidv4 } from "uuid";
-import { Service, ServiceSource, ServiceStatus } from "@shared";
+import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
+import { PORT_INFO_MAP } from "../lib/constants.js";
 
 export async function createDockerClient(): Promise<Docker> {
   const dockerHost = process.env.DOCKER_HOST || "unix:///var/run/docker.sock";
@@ -29,7 +30,7 @@ export async function* scanDockerContainers(docker: Docker): AsyncGenerator<Serv
 
     let host = "localhost";
     let port: number | null = null;
-    let protocol = "http";
+    let protocol: ServiceProtocol = ServiceProtocol.HTTP;
 
     const ports = container.Ports || [];
 
@@ -102,26 +103,6 @@ export async function scanDockerNetworks(docker: Docker) {
   }));
 }
 
-function detectProtocol(port: number): string {
-  const protocolMap: Record<number, string> = {
-    80: "http",
-    443: "https",
-    8080: "http",
-    8443: "https",
-    3000: "http",
-    5000: "http",
-    22: "ssh",
-    3306: "mysql",
-    5432: "postgresql",
-    6379: "redis",
-    27017: "mongodb",
-    9200: "http",
-    9300: "http",
-    8500: "http",
-    8600: "dns",
-    2375: "http",
-    2376: "https",
-  };
-
-  return protocolMap[port] || "http";
+function detectProtocol(port: number): ServiceProtocol {
+  return PORT_INFO_MAP[port]?.protocol ?? ServiceProtocol.HTTP;
 }

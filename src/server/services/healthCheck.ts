@@ -1,8 +1,8 @@
 import net from "net";
 import axios from "axios";
 import { db } from "../lib/database.js";
-import { ServiceSource, ServiceStatus } from "@shared";
-import { USER_AGENT } from "../lib/constants.js";
+import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
+import { USER_AGENT, HTTP_PROTOCOLS, TCP_CHECKABLE_PROTOCOLS } from "../lib/constants.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -47,14 +47,14 @@ export async function checkService(service: {
   id: string;
   host: string;
   port: number | null;
-  protocol: string;
+  protocol: ServiceProtocol;
   source: ServiceSource;
 }): Promise<ServiceStatus> {
   if (service.port === null) return ServiceStatus.UNKNOWN;
 
   // Docker containers: check by port (protocol already set from scan)
   if (service.source === ServiceSource.DOCKER) {
-    if (["http", "https", "tcp", "ssh"].includes(service.protocol)) {
+    if (TCP_CHECKABLE_PROTOCOLS.includes(service.protocol)) {
       return (await checkTcp(service.host, service.port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
     }
 
@@ -62,7 +62,7 @@ export async function checkService(service: {
   }
 
   // Network services: check HTTP first, fall back to TCP
-  if (["http", "https"].includes(service.protocol)) {
+  if (HTTP_PROTOCOLS.includes(service.protocol)) {
     const httpOk = await checkHttp(service.host, service.port, service.protocol);
 
     if (httpOk) return ServiceStatus.UP;

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import styled from "styled-components";
 import type { Service } from "@shared";
-import { ServiceSource } from "@shared";
+import { ServiceProtocol, ServiceSource } from "@shared";
+import { SERVICE_PROTOCOLS } from "../../types";
 import {
   PrimaryButton,
   SecondaryButton,
@@ -47,7 +48,9 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
   const [editNodeName, setEditNodeName] = useState(service?.name ?? "");
   const [editNodeHost, setEditNodeHost] = useState(service?.host ?? "");
   const [editNodePort, setEditNodePort] = useState(service?.port?.toString() ?? "");
-  const [editNodeProtocol, setEditNodeProtocol] = useState(service?.protocol ?? "http");
+  const [editNodeProtocol, setEditNodeProtocol] = useState<ServiceProtocol>(
+    service?.protocol ?? ServiceProtocol.HTTP,
+  );
 
   const handleConfirm = () => {
     const portVal = editNodePort.trim() === "" ? null : parseInt(editNodePort, 10);
@@ -119,18 +122,13 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
           <Label>Protocol</Label>
           <StyledSelect
             value={editNodeProtocol}
-            onChange={(e) => setEditNodeProtocol(e.target.value)}
+            onChange={(e) => setEditNodeProtocol(e.target.value as ServiceProtocol)}
           >
-            <option value="http">http</option>
-            <option value="https">https</option>
-            <option value="tcp">tcp</option>
-            <option value="udp">udp</option>
-            <option value="postgresql">postgresql</option>
-            <option value="mysql">mysql</option>
-            <option value="redis">redis</option>
-            <option value="grpc">grpc</option>
-            <option value="websocket">websocket</option>
-            <option value="custom">custom</option>
+            {SERVICE_PROTOCOLS.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
           </StyledSelect>
         </FormGroup>
       </Row>

@@ -1,8 +1,8 @@
 import type { ServiceSource, ServicePosition } from "@shared";
-import { ServiceLinkType } from "@shared";
+import { ServiceLinkType, ServiceProtocol } from "@shared";
 
 export type { ServiceSource, ServicePosition };
-export { ServiceLinkType };
+export { ServiceLinkType, ServiceProtocol };
 
 export interface LinkType {
   value: ServiceLinkType;
@@ -10,6 +10,8 @@ export interface LinkType {
   color: string;
   icon: string;
 }
+
+export const SERVICE_PROTOCOLS: ServiceProtocol[] = Object.values(ServiceProtocol);
 
 export const LINK_TYPES: LinkType[] = [
   { value: ServiceLinkType.COMMUNICATION, label: "Communication", color: "#3b82f6", icon: "↔" },

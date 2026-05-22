@@ -1,8 +1,14 @@
 import axios from "axios";
 import net from "net";
 import { v4 as uuidv4 } from "uuid";
-import { Service, ServiceSource, ServiceStatus } from "@shared";
-import { USER_AGENT, DEFAULT_NETWORK_CIDRS, DEFAULT_SCAN_PORTS } from "../lib/constants.js";
+import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
+import {
+  USER_AGENT,
+  DEFAULT_NETWORK_CIDRS,
+  DEFAULT_SCAN_PORTS,
+  PORT_INFO_MAP,
+  HTTP_PROTOCOLS,
+} from "../lib/constants.js";
 
 interface CIDRConfig {
   cidr: string;
@@ -11,7 +17,7 @@ interface CIDRConfig {
 
 interface PortInfo {
   port: number;
-  protocol: string;
+  protocol: ServiceProtocol;
   serviceName?: string;
 }
 
@@ -65,13 +71,13 @@ async function portScan(ip: string, port: number, timeout = 1000): Promise<boole
 async function detectService(
   ip: string,
   port: number,
-  protocol: string,
+  protocol: ServiceProtocol,
 ): Promise<string | undefined> {
   try {
     const timeout = 2000;
 
     // HTTP services
-    if (["http", "https"].includes(protocol)) {
+    if (HTTP_PROTOCOLS.includes(protocol)) {
       try {
         const baseUrl = `${protocol}://${ip}:${port}`;
         const resp = await axios.get(baseUrl, {
@@ -110,24 +116,11 @@ async function detectService(
     }
 
     // SSH
-    if (protocol === "ssh" || port === 22) {
+    if (protocol === ServiceProtocol.SSH || port === 22) {
       return "SSH Server";
     }
 
-    // Database protocols
-    const dbMap: Record<number, string> = {
-      3306: "MySQL",
-      5432: "PostgreSQL",
-      6379: "Redis",
-      27017: "MongoDB",
-      9200: "Elasticsearch",
-      11211: "Memcached",
-      1433: "MSSQL",
-      5672: "RabbitMQ",
-      15672: "RabbitMQ Management",
-    };
-
-    if (dbMap[port]) return dbMap[port];
+    if (PORT_INFO_MAP[port]) return PORT_INFO_MAP[port].name;
 
     return undefined;
   } catch {
@@ -150,9 +143,11 @@ export async function* scanNetworkStream(cidr: string, ports: number[]): AsyncGe
       const isOpen = await portScan(ip, port);
 
       if (isOpen) {
-        const protocol = ["http", "https", "ssh"].includes(detectProtocolByPort(port))
+        const protocol = [...HTTP_PROTOCOLS, ServiceProtocol.SSH].includes(
+          detectProtocolByPort(port),
+        )
           ? detectProtocolByPort(port)
-          : "tcp";
+          : ServiceProtocol.TCP;
 
         return { port, protocol } as PortInfo;
       }
@@ -187,16 +182,6 @@ export async function* scanNetworkStream(cidr: string, ports: number[]): AsyncGe
   }
 }
 
-function detectProtocolByPort(port: number): string {
-  const map: Record<number, string> = {
-    80: "http",
-    443: "https",
-    8080: "http",
-    8443: "https",
-    3000: "http",
-    5000: "http",
-    22: "ssh",
-  };
-
-  return map[port] || "tcp";
+function detectProtocolByPort(port: number): ServiceProtocol {
+  return PORT_INFO_MAP[port]?.protocol ?? ServiceProtocol.TCP;
 }

@@ -1,9 +1,3 @@
-export enum ServiceLinkType {
-  COMMUNICATION = "communication",
-  DEPENDENCY = "dependency",
-  OTHER = "other",
-}
-
 export enum ServiceSource {
   DOCKER = "docker",
   NETWORK = "network",
@@ -15,12 +9,33 @@ export enum ServiceStatus {
   UNKNOWN = "unknown",
 }
 
+export enum ServiceProtocol {
+  HTTP = "http",
+  HTTPS = "https",
+  TCP = "tcp",
+  UDP = "udp",
+  SSH = "ssh",
+  FTP = "ftp",
+  SMTP = "smtp",
+  DNS = "dns",
+  MQTT = "mqtt",
+  GRPC = "grpc",
+  WEBSOCKET = "websocket",
+  CUSTOM = "custom",
+}
+
+export enum ServiceLinkType {
+  COMMUNICATION = "communication",
+  DEPENDENCY = "dependency",
+  OTHER = "other",
+}
+
 export interface Service {
   id?: string;
   name: string;
   host: string;
   port: number | null;
-  protocol: string;
+  protocol: ServiceProtocol;
   source: ServiceSource;
   status: ServiceStatus;
   metadata?: Record<string, string | number | boolean | string[] | number[]>;
