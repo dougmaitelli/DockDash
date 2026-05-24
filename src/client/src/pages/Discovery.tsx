@@ -373,7 +373,7 @@ export default function Discovery() {
           )}
         </div>
         <ButtonRow>
-          <PrimaryButton onClick={handleDockerScan} disabled={scanning === "docker"}>
+          <PrimaryButton onClick={handleDockerScan} disabled={scanning === "docker" || !health?.connected}>
             <IconScan size={13} />
             {scanning === "docker" ? "Scanning..." : "Scan Docker"}
           </PrimaryButton>
