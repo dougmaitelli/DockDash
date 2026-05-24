@@ -181,7 +181,8 @@ export default function Discovery() {
   const { services, refresh, importService } = useDiscovery();
   const { health } = useDockerHealth();
 
-  const [scanning, setScanning] = useState<string | null>(null);
+  const [scanningDocker, setScanningDocker] = useState(false);
+  const [scanningNetwork, setScanningNetwork] = useState(false);
   const [dockerResults, setDockerResults] = useState<Service[]>([]);
   const [networkResults, setNetworkResults] = useState<Service[]>([]);
   const [cidrs, setCidrs] = useState<string[]>([]);
@@ -189,13 +190,15 @@ export default function Discovery() {
   const [cidrError, setCidrError] = useState("");
   const [scanPorts, setScanPorts] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  const scanSourceRef = useRef<EventSource | null>(null);
+  const dockerScanRef = useRef<EventSource | null>(null);
+  const networkScanRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     discoveryApi.getConfig().then((res) => setCidrs(res.data.networkCidrs));
 
     return () => {
-      scanSourceRef.current?.close();
+      dockerScanRef.current?.close();
+      networkScanRef.current?.close();
     };
   }, []);
 
@@ -205,44 +208,42 @@ export default function Discovery() {
   };
 
   const handleDockerScan = () => {
-    scanSourceRef.current?.close();
-    setScanning("docker");
+    setScanningDocker(true);
     setDockerResults([]);
 
-    scanSourceRef.current = startScanStream({
+    dockerScanRef.current = startScanStream({
       url: "/api/docker/scan/stream",
       onService: (svc) => setDockerResults((prev) => [...prev, svc]),
       onDone: async (count) => {
-        setScanning(null);
+        setScanningDocker(false);
         showToast(`Discovered ${count} Docker containers`);
         await refresh();
       },
       onError: (msg) => {
-        setScanning(null);
+        setScanningDocker(false);
         showToast(`Docker scan failed: ${msg}`);
       },
     });
   };
 
   const handleNetworkScan = () => {
-    scanSourceRef.current?.close();
-    setScanning("network");
+    setScanningNetwork(true);
     setNetworkResults([]);
 
     const params = new URLSearchParams({ cidrs: cidrs.join(",") });
 
     if (scanPorts) params.set("ports", scanPorts);
 
-    scanSourceRef.current = startScanStream({
+    networkScanRef.current = startScanStream({
       url: `/api/network/scan/stream?${params}`,
       onService: (svc) => setNetworkResults((prev) => [...prev, svc]),
       onDone: async (count) => {
-        setScanning(null);
+        setScanningNetwork(false);
         showToast(`Discovered ${count} network services`);
         await refresh();
       },
       onError: (msg) => {
-        setScanning(null);
+        setScanningNetwork(false);
         showToast(`Network scan failed: ${msg}`);
       },
     });
@@ -373,11 +374,11 @@ export default function Discovery() {
           )}
         </div>
         <ButtonRow>
-          <PrimaryButton onClick={handleDockerScan} disabled={scanning === "docker" || !health?.connected}>
+          <PrimaryButton onClick={handleDockerScan} disabled={scanningDocker || !health?.connected}>
             <IconScan size={13} />
-            {scanning === "docker" ? "Scanning..." : "Scan Docker"}
+            {scanningDocker ? "Scanning..." : "Scan Docker"}
           </PrimaryButton>
-          {availableDocker.length > 0 && scanning !== "docker" && (
+          {availableDocker.length > 0 && !scanningDocker && (
             <SecondaryButton onClick={handleImportAllDocker}>
               Import All ({availableDocker.length})
             </SecondaryButton>
@@ -499,11 +500,11 @@ export default function Discovery() {
           />
         </div>
         <ButtonRow>
-          <PrimaryButton onClick={handleNetworkScan} disabled={scanning === "network"}>
+          <PrimaryButton onClick={handleNetworkScan} disabled={scanningNetwork}>
             <IconScan size={13} />
-            {scanning === "network" ? "Scanning..." : "Scan Network"}
+            {scanningNetwork ? "Scanning..." : "Scan Network"}
           </PrimaryButton>
-          {availableNetwork.length > 0 && scanning !== "network" && (
+          {availableNetwork.length > 0 && !scanningNetwork && (
             <SecondaryButton onClick={handleImportAllNetwork}>
               Import All ({availableNetwork.length})
             </SecondaryButton>
