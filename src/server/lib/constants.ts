@@ -1,7 +1,6 @@
 import { ServiceProtocol } from "@shared";
 
 export const USER_AGENT = "DockDash/1.0";
-export const DEFAULT_NETWORK_CIDRS = "192.168.0.1/24";
 
 export interface PortInfo {
   protocol: ServiceProtocol;
@@ -40,8 +39,6 @@ export const PORT_INFO_MAP: Record<number, PortInfo> = {
   15672: { protocol: ServiceProtocol.HTTP,  name: "RabbitMQ Management" },
   27017: { protocol: ServiceProtocol.TCP,   name: "MongoDB" },
 };
-
-export const DEFAULT_SCAN_PORTS = [...Object.keys(PORT_INFO_MAP).map(Number), 3001, 9090];
 
 export const HTTP_PROTOCOLS = [ServiceProtocol.HTTP, ServiceProtocol.HTTPS];
 export const TCP_CHECKABLE_PROTOCOLS = [

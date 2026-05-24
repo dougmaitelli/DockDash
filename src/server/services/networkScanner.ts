@@ -2,13 +2,8 @@ import axios from "axios";
 import net from "net";
 import { v4 as uuidv4 } from "uuid";
 import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
-import {
-  USER_AGENT,
-  DEFAULT_NETWORK_CIDRS,
-  DEFAULT_SCAN_PORTS,
-  PORT_INFO_MAP,
-  HTTP_PROTOCOLS,
-} from "../lib/constants.js";
+import { USER_AGENT, PORT_INFO_MAP, HTTP_PROTOCOLS } from "../lib/constants.js";
+import { config } from "../lib/config.js";
 
 interface CIDRConfig {
   cidr: string;
@@ -30,17 +25,8 @@ function numberToIp(num: number): string {
 }
 
 export function parseCIDRConfig(): CIDRConfig[] {
-  const cidrs = process.env.NETWORK_CIDRS || DEFAULT_NETWORK_CIDRS;
-
-  const portList = process.env.SCAN_PORTS
-    ? process.env.SCAN_PORTS.split(",")
-        .map((p) => parseInt(p.trim(), 10))
-        .filter((p) => !isNaN(p))
-    : DEFAULT_SCAN_PORTS;
-  const cidrList = cidrs
-    .split(",")
-    .map((c) => c.trim())
-    .filter((c) => c.length > 0);
+  const portList = config.scanPorts;
+  const cidrList = config.networkCidrs;
 
   return cidrList.map((cidr) => ({ cidr, ports: portList }));
 }

@@ -2,9 +2,10 @@ import Docker from "dockerode";
 import { v4 as uuidv4 } from "uuid";
 import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 import { PORT_INFO_MAP } from "../lib/constants.js";
+import { config } from "../lib/config.js";
 
 export async function createDockerClient(): Promise<Docker> {
-  const dockerHost = process.env.DOCKER_HOST || "unix:///var/run/docker.sock";
+  const dockerHost = config.dockerHost;
 
   if (dockerHost.startsWith("unix://")) {
     return new Docker({ socketPath: dockerHost.replace("unix://", "") });

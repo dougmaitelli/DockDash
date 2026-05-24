@@ -4,6 +4,7 @@ import { colors } from "../styles/theme";
 import { IconPlus, IconX } from "../utils/Icons";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
+import { discoveryApi } from "../services/api";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 const Page = styled.div`
@@ -230,7 +231,7 @@ export default function Discovery() {
   const [scanning, setScanning] = useState<string | null>(null);
   const [dockerResults, setDockerResults] = useState<Service[]>([]);
   const [networkResults, setNetworkResults] = useState<Service[]>([]);
-  const [cidrs, setCidrs] = useState<string[]>(["192.168.1.0/24"]);
+  const [cidrs, setCidrs] = useState<string[]>([]);
   const [newCidr, setNewCidr] = useState("");
   const [cidrError, setCidrError] = useState("");
   const [scanPorts, setScanPorts] = useState("");
@@ -238,6 +239,8 @@ export default function Discovery() {
   const scanSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
+    discoveryApi.getConfig().then((res) => setCidrs(res.data.networkCidrs));
+
     return () => {
       scanSourceRef.current?.close();
     };
@@ -317,7 +320,7 @@ export default function Discovery() {
     if (!newCidr) return;
 
     if (!isValidCIDR(newCidr)) {
-      setCidrError("Invalid CIDR — expected format: 192.168.1.0/24");
+      setCidrError("Invalid CIDR — expected format: x.x.x.x/xx");
 
       return;
     }

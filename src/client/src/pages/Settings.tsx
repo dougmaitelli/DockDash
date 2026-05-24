@@ -1,4 +1,7 @@
+import { useState, useEffect } from "react";
 import styled from "styled-components";
+import { discoveryApi } from "../services/api";
+import type { DashboardConfig } from "../types";
 
 const Page = styled.div`
   padding: 24px;
@@ -52,6 +55,12 @@ const HelpText = styled.p`
 `;
 
 export default function Settings() {
+  const [config, setConfig] = useState<DashboardConfig | null>(null);
+
+  useEffect(() => {
+    discoveryApi.getConfig().then((res) => setConfig(res.data));
+  }, []);
+
   return (
     <Page>
       <Section>
@@ -64,19 +73,23 @@ export default function Settings() {
         <div style={{ marginTop: 16 }}>
           <ConfigItem>
             <ConfigKey>DOCKER_HOST</ConfigKey>
-            <ConfigValue>unix:///var/run/docker.sock</ConfigValue>
+            <ConfigValue>{config?.dockerHost}</ConfigValue>
           </ConfigItem>
           <ConfigItem>
             <ConfigKey>NETWORK_CIDRS</ConfigKey>
-            <ConfigValue>192.168.1.0/24</ConfigValue>
+            <ConfigValue>{config?.networkCidrs.join(",")}</ConfigValue>
           </ConfigItem>
           <ConfigItem>
             <ConfigKey>SCAN_PORTS</ConfigKey>
-            <ConfigValue>80,443,3000,3001,5432,6379,8080,8443,9090</ConfigValue>
+            <ConfigValue>{config?.scanPorts.join(",")}</ConfigValue>
           </ConfigItem>
           <ConfigItem>
             <ConfigKey>REFRESH_INTERVAL</ConfigKey>
-            <ConfigValue>30000</ConfigValue>
+            <ConfigValue>{config?.refreshInterval}</ConfigValue>
+          </ConfigItem>
+          <ConfigItem>
+            <ConfigKey>HEALTH_CHECK_INTERVAL</ConfigKey>
+            <ConfigValue>{config?.healthCheckInterval}</ConfigValue>
           </ConfigItem>
         </div>
       </Section>

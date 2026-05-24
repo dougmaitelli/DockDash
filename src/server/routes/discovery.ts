@@ -5,6 +5,7 @@ import {
   scanDockerNetworks,
 } from "../services/dockerService.js";
 import { scanNetworkStream, parseCIDRConfig } from "../services/networkScanner.js";
+import { config } from "../lib/config.js";
 
 const router = Router();
 
@@ -134,12 +135,11 @@ router.get("/docker/networks", async (_req, res) => {
 // Get configuration
 router.get("/config", (_req, res) => {
   res.json({
-    dockerHost: process.env.DOCKER_HOST || "unix:///var/run/docker.sock",
-    networkCidrs: (process.env.NETWORK_CIDRS || "192.168.1.0/24").split(","),
-    scanPorts: (process.env.SCAN_PORTS || "80,443,3000,3001,5432,6379,8080,8443,9090,27017,22,3306")
-      .split(",")
-      .map(Number),
-    refreshInterval: parseInt(process.env.REFRESH_INTERVAL || "30000", 10),
+    dockerHost: config.dockerHost,
+    networkCidrs: config.networkCidrs,
+    scanPorts: config.scanPorts,
+    refreshInterval: config.refreshInterval,
+    healthCheckInterval: config.healthCheckInterval,
   });
 });
 

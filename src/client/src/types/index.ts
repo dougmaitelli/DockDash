@@ -24,6 +24,7 @@ export interface DashboardConfig {
   networkCidrs: string[];
   scanPorts: number[];
   refreshInterval: number;
+  healthCheckInterval: number;
 }
 
 export interface DockerHealth {

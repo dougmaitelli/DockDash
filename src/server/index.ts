@@ -5,11 +5,12 @@ import { fileURLToPath } from "url";
 import discoveryRoutes from "./routes/discovery.js";
 import serviceRoutes from "./routes/services.js";
 import { checkAllServices } from "./services/healthCheck.js";
+import { config } from "./lib/config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = parseInt(process.env.PORT || "3001", 10);
-const HEALTH_CHECK_INTERVAL = parseInt(process.env.HEALTH_CHECK_INTERVAL || "30000", 10);
+const PORT = config.port;
+const HEALTH_CHECK_INTERVAL = config.healthCheckInterval;
 
 // Middleware
 app.use(cors());
@@ -42,8 +43,8 @@ app.use(
 
 app.listen(PORT, () => {
   console.log(`DockDash server running on http://localhost:${PORT}`);
-  console.log(`Docker host: ${process.env.DOCKER_HOST || "unix:///var/run/docker.sock"}`);
-  console.log(`Network CIDRs: ${process.env.NETWORK_CIDRS || "192.168.1.0/24"}`);
+  console.log(`Docker host: ${config.dockerHost}`);
+  console.log(`Network CIDRs: ${config.networkCidrs.join(",")}`);
   console.log(`Health check interval: ${HEALTH_CHECK_INTERVAL}ms`);
 
   // Background health check job
