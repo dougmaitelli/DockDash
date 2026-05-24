@@ -297,6 +297,40 @@ export default function Discovery() {
   const availableDocker = dockerResults.filter((s) => !existingKeys.has(`${s.host}:${s.port}`));
   const availableNetwork = networkResults.filter((s) => !existingKeys.has(`${s.host}:${s.port}`));
 
+  const handleImportAllDocker = async () => {
+    await Promise.all(
+      availableDocker.map((svc) =>
+        importService({
+          name: svc.name,
+          host: svc.host,
+          port: svc.port,
+          protocol: svc.protocol,
+          source: ServiceSource.DOCKER,
+          status: svc.status,
+          metadata: svc.metadata,
+        }),
+      ),
+    );
+    showToast(`Imported ${availableDocker.length} services`);
+  };
+
+  const handleImportAllNetwork = async () => {
+    await Promise.all(
+      availableNetwork.map((svc) =>
+        importService({
+          name: svc.name,
+          host: svc.host,
+          port: svc.port,
+          protocol: svc.protocol,
+          source: ServiceSource.NETWORK,
+          status: svc.status,
+          metadata: svc.metadata,
+        }),
+      ),
+    );
+    showToast(`Imported ${availableNetwork.length} services`);
+  };
+
   return (
     <Page>
       {toast && (
@@ -343,6 +377,11 @@ export default function Discovery() {
             <IconScan size={13} />
             {scanning === "docker" ? "Scanning..." : "Scan Docker"}
           </PrimaryButton>
+          {availableDocker.length > 0 && scanning !== "docker" && (
+            <SecondaryButton onClick={handleImportAllDocker}>
+              Import All ({availableDocker.length})
+            </SecondaryButton>
+          )}
         </ButtonRow>
 
         {dockerResults.length > 0 && (
@@ -464,6 +503,11 @@ export default function Discovery() {
             <IconScan size={13} />
             {scanning === "network" ? "Scanning..." : "Scan Network"}
           </PrimaryButton>
+          {availableNetwork.length > 0 && scanning !== "network" && (
+            <SecondaryButton onClick={handleImportAllNetwork}>
+              Import All ({availableNetwork.length})
+            </SecondaryButton>
+          )}
         </ButtonRow>
 
         {networkResults.length > 0 && (
