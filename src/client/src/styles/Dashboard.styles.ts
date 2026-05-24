@@ -73,19 +73,3 @@ export const SectionTitle = styled.h2`
   font-weight: 600;
   color: ${colors.textPrimary};
 `;
-
-export const EmptyState = styled.div`
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: ${colors.textMuted};
-  gap: 12px;
-  font-size: 0.9rem;
-
-  > svg {
-    opacity: 0.3;
-  }
-`;

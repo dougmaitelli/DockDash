@@ -10,9 +10,9 @@ import {
   Canvas,
   Toolbar,
   ToolButton,
-  EmptyState,
 } from "../../styles/Dashboard.styles";
 import { ErrorOverlay } from "./ErrorOverlay";
+import { EmptyOverlay } from "./EmptyOverlay";
 import type { Service, ServiceLink, ServiceWithPosition } from "@shared";
 import { orthogonalPath, getLinkColor, type LinkPath } from "./linkUtils";
 import { ServiceLinkType, ServiceStatus } from "@shared";
@@ -27,7 +27,7 @@ import {
 import { LinkLayer } from "./LinkLayer";
 import { NodeLayer } from "./NodeLayer";
 import { ZoomControls } from "./ZoomControls";
-import { IconPlus, IconTrash, IconRefresh, IconCheckCircle, IconServer, IconScan } from "../../utils/Icons";
+import { IconPlus, IconTrash, IconRefresh, IconCheckCircle } from "../../utils/Icons";
 
 interface DashboardCanvasProps {
   services: ServiceWithPosition[];
@@ -800,13 +800,7 @@ export function DashboardCanvas({
         />
       )}
 
-      {services.length === 0 && !editingLink && !error && (
-        <EmptyState>
-          <IconServer size={48} />
-          <span>No services yet. Go to Discovery to find services.</span>
-          <PrimaryButton onClick={() => navigate("/discover")}><IconScan size={13} /> Go to Discovery</PrimaryButton>
-        </EmptyState>
-      )}
+      {services.length === 0 && !editingLink && !error && <EmptyOverlay />}
 
       {error && !loading && <ErrorOverlay message={error} onRetry={refresh} />}
     </CanvasWrapper>
