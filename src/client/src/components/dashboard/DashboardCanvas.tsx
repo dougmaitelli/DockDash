@@ -593,6 +593,8 @@ export function DashboardCanvas({
         return {
           id: link.id,
           d: orthogonalPath(x1, y1, exitSide, x2, y2, entrySide, zoomLevel),
+          midX: (x1 + x2) / 2,
+          midY: (y1 + y2) / 2,
           link,
           color: getLinkColor(link.type),
         };

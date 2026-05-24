@@ -57,6 +57,22 @@ export function LinkLayer({
             strokeOpacity={0.4}
             style={{ pointerEvents: "none" }}
           />
+          {p.link.label && (
+            <text
+              x={p.midX}
+              y={p.midY}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize={15}
+              fill={p.color}
+              stroke="#0f1117"
+              strokeWidth={3}
+              paintOrder="stroke"
+              style={{ pointerEvents: "none", userSelect: "none" }}
+            >
+              {p.link.label}
+            </text>
+          )}
         </g>
       ))}
 

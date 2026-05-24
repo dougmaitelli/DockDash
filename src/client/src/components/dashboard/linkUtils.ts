@@ -5,6 +5,8 @@ import type { PortSide } from "./nodeGeometry";
 export interface LinkPath {
   id: string;
   d: string;
+  midX: number;
+  midY: number;
   link: ServiceLink;
   color: string;
 }
