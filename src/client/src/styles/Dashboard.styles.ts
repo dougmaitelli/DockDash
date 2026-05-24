@@ -75,11 +75,12 @@ export const SectionTitle = styled.h2`
 `;
 
 export const EmptyState = styled.div`
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
   color: ${colors.textMuted};
   gap: 12px;
   font-size: 0.9rem;

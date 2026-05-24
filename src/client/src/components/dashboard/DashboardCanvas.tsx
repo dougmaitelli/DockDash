@@ -12,6 +12,7 @@ import {
   ToolButton,
   EmptyState,
 } from "../../styles/Dashboard.styles";
+import { ErrorOverlay } from "./ErrorOverlay";
 import type { Service, ServiceLink, ServiceWithPosition } from "@shared";
 import { orthogonalPath, getLinkColor, type LinkPath } from "./linkUtils";
 import { ServiceLinkType, ServiceStatus } from "@shared";
@@ -31,6 +32,8 @@ import { IconPlus, IconTrash, IconRefresh, IconCheckCircle, IconServer } from ".
 interface DashboardCanvasProps {
   services: ServiceWithPosition[];
   links: ServiceLink[];
+  loading: boolean;
+  error: string | null;
   refresh: () => Promise<void>;
   updatePosition: (serviceId: string, x: number, y: number) => Promise<void>;
   addService: (data: Partial<Service> & { name: string; host: string }) => Promise<Service>;
@@ -103,6 +106,8 @@ const DangerButton = styled(ActionButton)`
 export function DashboardCanvas({
   services,
   links,
+  loading,
+  error,
   refresh,
   updatePosition,
   addService,
@@ -794,13 +799,15 @@ export function DashboardCanvas({
         />
       )}
 
-      {services.length === 0 && !editingLink && (
+      {services.length === 0 && !editingLink && !error && (
         <EmptyState>
           <IconServer size={48} />
           <span>No services yet. Go to Discovery to find services.</span>
           <PrimaryButton onClick={() => navigate("/discover")}>⚡ Go to Discovery</PrimaryButton>
         </EmptyState>
       )}
+
+      {error && !loading && <ErrorOverlay message={error} onRetry={refresh} />}
     </CanvasWrapper>
   );
 }

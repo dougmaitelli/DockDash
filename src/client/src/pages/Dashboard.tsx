@@ -6,6 +6,8 @@ export default function Dashboard() {
   const {
     services,
     links,
+    loading,
+    error,
     refresh,
     updatePosition,
     addService,
@@ -21,6 +23,8 @@ export default function Dashboard() {
       <DashboardCanvas
         services={services}
         links={links}
+        loading={loading}
+        error={error}
         refresh={refresh}
         updatePosition={updatePosition}
         addService={addService}
