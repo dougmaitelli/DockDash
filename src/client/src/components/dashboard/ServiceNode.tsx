@@ -129,7 +129,6 @@ const PortDot = styled.div<{ $isSource?: boolean; $isTarget?: boolean }>`
   .draggable-node:hover &:hover,
   .connection-port:hover {
     opacity: 1;
-    transform: scale(1.4);
     box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
   }
 
@@ -137,24 +136,28 @@ const PortDot = styled.div<{ $isSource?: boolean; $isTarget?: boolean }>`
     left: -7px;
     top: 50%;
     transform: translateY(-50%);
+    &:hover { transform: translateY(-50%) scale(1.4); }
   }
 
   &.port-right {
     right: -7px;
     top: 50%;
     transform: translateY(-50%);
+    &:hover { transform: translateY(-50%) scale(1.4); }
   }
 
   &.port-top {
     top: -7px;
     left: 50%;
     transform: translateX(-50%);
+    &:hover { transform: translateX(-50%) scale(1.4); }
   }
 
   &.port-bottom {
     bottom: -7px;
     left: 50%;
     transform: translateX(-50%);
+    &:hover { transform: translateX(-50%) scale(1.4); }
   }
 
   ${(props) =>
