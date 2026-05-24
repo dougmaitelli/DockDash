@@ -81,6 +81,15 @@ export function IconX({ size = 14, ...props }: IconProps) {
   );
 }
 
+export function IconScan({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.8)} {...props}>
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
+    </svg>
+  );
+}
+
 export function IconServer({ size = 14, ...props }: IconProps) {
   return (
     <svg {...defaults(size, 1.5)} {...props}>

@@ -27,7 +27,7 @@ import {
 import { LinkLayer } from "./LinkLayer";
 import { NodeLayer } from "./NodeLayer";
 import { ZoomControls } from "./ZoomControls";
-import { IconPlus, IconTrash, IconRefresh, IconCheckCircle, IconServer } from "../../utils/Icons";
+import { IconPlus, IconTrash, IconRefresh, IconCheckCircle, IconServer, IconScan } from "../../utils/Icons";
 
 interface DashboardCanvasProps {
   services: ServiceWithPosition[];
@@ -76,6 +76,7 @@ const ActionButton = styled.button`
 const PrimaryButton = styled(ActionButton)`
   background: ${colors.accentBlue};
   color: white;
+  justify-content: center;
 
   &:hover {
     background: ${colors.accentBlueDark};
@@ -803,7 +804,7 @@ export function DashboardCanvas({
         <EmptyState>
           <IconServer size={48} />
           <span>No services yet. Go to Discovery to find services.</span>
-          <PrimaryButton onClick={() => navigate("/discover")}>⚡ Go to Discovery</PrimaryButton>
+          <PrimaryButton onClick={() => navigate("/discover")}><IconScan size={13} /> Go to Discovery</PrimaryButton>
         </EmptyState>
       )}
 

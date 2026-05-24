@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { colors } from "../styles/theme";
-import { IconPlus, IconX } from "../utils/Icons";
+import { IconPlus, IconX, IconScan } from "../utils/Icons";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
 import { discoveryApi } from "../services/api";
@@ -50,6 +50,7 @@ const PrimaryButton = styled.button`
   transition: all 0.15s;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   background: ${colors.accentBlue};
   color: white;
@@ -387,7 +388,8 @@ export default function Discovery() {
         </div>
         <ButtonRow>
           <PrimaryButton onClick={handleDockerScan} disabled={scanning === "docker"}>
-            {scanning === "docker" ? "⏳ Scanning..." : "⚡ Scan Docker"}
+            <IconScan size={13} />
+            {scanning === "docker" ? "Scanning..." : "Scan Docker"}
           </PrimaryButton>
         </ButtonRow>
 
@@ -507,7 +509,8 @@ export default function Discovery() {
         </div>
         <ButtonRow>
           <PrimaryButton onClick={handleNetworkScan} disabled={scanning === "network"}>
-            {scanning === "network" ? "⏳ Scanning..." : "⚡ Scan Network"}
+            <IconScan size={13} />
+            {scanning === "network" ? "Scanning..." : "Scan Network"}
           </PrimaryButton>
         </ButtonRow>
 

@@ -85,7 +85,7 @@ export const EmptyState = styled.div`
   gap: 12px;
   font-size: 0.9rem;
 
-  svg {
+  > svg {
     opacity: 0.3;
   }
 `;
