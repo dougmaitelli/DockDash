@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { colors } from "../../styles/theme";
 import { IconPlus, IconMinus, IconResetView } from "../../utils/Icons";
 
 const Wrapper = styled.div`
@@ -19,17 +20,17 @@ const ZoomButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1a1f35;
-  border: 1px solid #2d3348;
+  background: ${colors.bgSecondary};
+  border: 1px solid ${colors.border};
   border-radius: 6px;
-  color: #9ca3b8;
+  color: ${colors.textSecondary};
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.15s;
 
   &:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
+    border-color: ${colors.accentBlue};
+    color: ${colors.accentBlue};
   }
 `;
 
@@ -41,7 +42,7 @@ const ResetButton = styled(ZoomButton)`
 const ZoomLabel = styled.span`
   font-size: 0.7rem;
   font-weight: 600;
-  color: #c8cad8;
+  color: ${colors.textLight};
   min-width: 32px;
   text-align: center;
   letter-spacing: 0.3px;

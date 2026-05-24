@@ -3,6 +3,7 @@ import styled from "styled-components";
 import type { Service } from "@shared";
 import { ServiceProtocol, ServiceSource } from "@shared";
 import { SERVICE_PROTOCOLS } from "../../types";
+import { colors } from "../../styles/theme";
 import {
   PrimaryButton,
   SecondaryButton,
@@ -14,16 +15,16 @@ import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./
 
 const NodeInfo = styled.div`
   font-size: 0.85rem;
-  color: #9ca3b8;
+  color: ${colors.textSecondary};
   margin-bottom: 16px;
   padding: 10px 12px;
-  background: #0f1117;
+  background: ${colors.bgPrimary};
   border-radius: 6px;
 `;
 
 const NodeId = styled.div`
   font-size: 0.7rem;
-  color: #6b7290;
+  color: ${colors.textMuted};
   font-family: "SF Mono", "Fira Code", monospace;
   margin-top: 4px;
 `;
@@ -84,7 +85,7 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
               {service.source === ServiceSource.DOCKER ? "🐳" : "🌐"}
             </span>
             <div>
-              <div style={{ fontWeight: 600, color: "#e8eaf0" }}>{service.name}</div>
+              <div style={{ fontWeight: 600, color: colors.textPrimary }}>{service.name}</div>
               <NodeId>{service.id}</NodeId>
             </div>
           </div>

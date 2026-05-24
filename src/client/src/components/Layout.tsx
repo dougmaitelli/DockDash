@@ -1,5 +1,6 @@
 import { useLocation, Link } from "react-router-dom";
 import styled from "styled-components";
+import { colors, rawColors } from "../styles/theme";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,9 +12,9 @@ const Nav = styled.nav`
   left: 0;
   right: 0;
   height: 56px;
-  background: rgba(26, 29, 39, 0.95);
+  background: ${colors.bgSecondaryAlpha95};
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid #2d3348;
+  border-bottom: 1px solid ${colors.border};
   display: flex;
   align-items: center;
   padding: 0 24px;
@@ -23,7 +24,7 @@ const Nav = styled.nav`
 const Logo = styled(Link)`
   font-size: 1.25rem;
   font-weight: 700;
-  color: #3b82f6;
+  color: ${colors.accentBlue};
   text-decoration: none;
   display: flex;
   align-items: center;
@@ -31,7 +32,7 @@ const Logo = styled(Link)`
   margin-right: 40px;
 
   span {
-    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    background: linear-gradient(135deg, ${colors.accentBlue}, ${colors.accentBlueLighter});
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
@@ -48,17 +49,17 @@ const NavLink = styled(Link).withConfig({
   shouldForwardProp: (prop) => !["active"].includes(prop),
 })<{ active: boolean }>`
   padding: 8px 16px;
-  color: ${(props) => (props.active ? "#3b82f6" : "#9ca3b8")};
+  color: ${(props) => (props.active ? colors.accentBlue : colors.textSecondary)};
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
   border-radius: 6px;
   transition: all 0.15s;
-  background: ${(props) => (props.active ? "rgba(59, 130, 246, 0.1)" : "transparent")};
+  background: ${(props) => (props.active ? colors.accentBlueAlpha10 : "transparent")};
 
   &:hover {
-    color: #e8eaf0;
-    background: rgba(59, 130, 246, 0.05);
+    color: ${colors.textPrimary};
+    background: ${colors.accentBlueAlpha05};
   }
 `;
 
@@ -79,7 +80,7 @@ function Layout({ children }: LayoutProps) {
             height="24"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#3b82f6"
+            stroke={rawColors.accentBlue}
             strokeWidth="2"
           >
             <rect x="2" y="3" width="20" height="18" rx="3" />

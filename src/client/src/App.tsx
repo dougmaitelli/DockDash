@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "styled-components";
 import { GlobalStyles } from "./styles/GlobalStyles";
+import { rawColors } from "./styles/theme";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Discovery from "./pages/Discovery";
@@ -8,12 +9,12 @@ import Settings from "./pages/Settings";
 
 const theme = {
   colors: {
-    bg: "#0f1117",
-    surface: "#1a1d27",
-    border: "#2d3348",
-    text: "#e8eaf0",
-    textSecondary: "#9ca3b8",
-    accent: "#3b82f6",
+    bg: rawColors.bgPrimary,
+    surface: rawColors.bgSecondary,
+    border: rawColors.border,
+    text: rawColors.textPrimary,
+    textSecondary: rawColors.textSecondary,
+    accent: rawColors.accentBlue,
   },
 };
 

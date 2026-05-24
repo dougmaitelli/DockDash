@@ -1,4 +1,5 @@
 import { LINK_TYPES } from "../../types";
+import { rawColors } from "../../styles/theme";
 import type { ServiceLink } from "@shared";
 import type { PortSide } from "./nodeGeometry";
 
@@ -14,7 +15,7 @@ export interface LinkPath {
 export function getLinkColor(type: string): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
 
-  return linkType?.color || "#6b7280";
+  return linkType?.color || rawColors.accentGray;
 }
 
 const SIDE_VEC: Record<PortSide, [number, number]> = {

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
+import { colors } from "../../styles/theme";
 import { EditLinkModal } from "../modals/EditLinkModal";
 import { EditServiceModal } from "../modals/EditServiceModal";
 import { dashboardApi } from "../../services/api";
@@ -70,32 +71,32 @@ const ActionButton = styled.button`
 `;
 
 const PrimaryButton = styled(ActionButton)`
-  background: #3b82f6;
+  background: ${colors.accentBlue};
   color: white;
 
   &:hover {
-    background: #2563eb;
+    background: ${colors.accentBlueDark};
   }
 `;
 
 const SecondaryButton = styled(ActionButton)`
   background: transparent;
-  border: 1px solid #2d3348;
-  color: #9ca3b8;
+  border: 1px solid ${colors.border};
+  color: ${colors.textSecondary};
 
   &:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
+    border-color: ${colors.accentBlue};
+    color: ${colors.accentBlue};
   }
 `;
 
 const DangerButton = styled(ActionButton)`
   background: transparent;
-  border: 1px solid #2d3348;
-  color: #ef4444;
+  border: 1px solid ${colors.border};
+  color: ${colors.accentRed};
 
   &:hover {
-    border-color: #ef4444;
+    border-color: ${colors.accentRed};
   }
 `;
 
@@ -681,10 +682,10 @@ export function DashboardCanvas({
     <CanvasWrapper>
       <ToolbarInner>
         <ToolbarGroup>
-          <span style={{ fontSize: "0.85rem", color: "#e8eaf0", fontWeight: 600 }}>
+          <span style={{ fontSize: "0.85rem", color: colors.textPrimary, fontWeight: 600 }}>
             {servicesOnline} / {services.length}
           </span>
-          <span style={{ fontSize: "0.75rem", color: "#6b7290" }}>Online</span>
+          <span style={{ fontSize: "0.75rem", color: colors.textMuted }}>Online</span>
         </ToolbarGroup>
         <ToolbarGroup>
           <SecondaryButton onClick={() => setAddingService(true)}>

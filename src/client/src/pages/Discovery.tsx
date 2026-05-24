@@ -14,8 +14,8 @@ const Page = styled.div`
 `;
 
 const Section = styled.div`
-  background: #1e2230;
-  border: 1px solid #2d3348;
+  background: ${colors.bgCard};
+  border: 1px solid ${colors.border};
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
@@ -25,12 +25,12 @@ const SectionTitle = styled.h2`
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 4px;
-  color: #e8eaf0;
+  color: ${colors.textPrimary};
 `;
 
 const SectionDesc = styled.p`
   font-size: 0.85rem;
-  color: #6b7290;
+  color: ${colors.textMuted};
   margin-bottom: 20px;
 `;
 
@@ -51,11 +51,11 @@ const PrimaryButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #3b82f6;
+  background: ${colors.accentBlue};
   color: white;
 
   &:hover {
-    background: #2563eb;
+    background: ${colors.accentBlueDark};
   }
 
   &:disabled {
@@ -66,21 +66,21 @@ const PrimaryButton = styled.button`
 
 const SecondaryButton = styled.button`
   padding: 10px 20px;
-  border: 1px solid #2d3348;
+  border: 1px solid ${colors.border};
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
   background: transparent;
-  color: #9ca3b8;
+  color: ${colors.textSecondary};
   display: flex;
   align-items: center;
   gap: 8px;
 
   &:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
+    border-color: ${colors.accentBlue};
+    color: ${colors.accentBlue};
   }
 
   &:disabled {
@@ -109,11 +109,11 @@ const CIDRInputRow = styled.div`
 
 const CIDRTag = styled.span`
   padding: 4px 12px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: ${colors.accentBlueAlpha10};
+  border: 1px solid ${colors.accentBlueAlpha20};
   border-radius: 16px;
   font-size: 0.8rem;
-  color: #3b82f6;
+  color: ${colors.accentBlue};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -122,14 +122,14 @@ const CIDRTag = styled.span`
 const RemoveTag = styled.button`
   background: none;
   border: none;
-  color: #9ca3b8;
+  color: ${colors.textSecondary};
   cursor: pointer;
   font-size: 1rem;
   padding: 0;
   line-height: 1;
 
   &:hover {
-    color: #ef4444;
+    color: ${colors.accentRed};
   }
 `;
 
@@ -137,15 +137,15 @@ const CIDRInputField = styled.input`
   flex: 1;
   min-width: 200px;
   padding: 8px 12px;
-  border: 1px solid #2d3348;
+  border: 1px solid ${colors.border};
   border-radius: 6px;
-  background: #0f1117;
-  color: #e8eaf0;
+  background: ${colors.bgPrimary};
+  color: ${colors.textPrimary};
   font-size: 0.85rem;
   outline: none;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: ${colors.accentBlue};
   }
 `;
 
@@ -161,13 +161,13 @@ const ResultItem = styled.div`
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #0f1117;
-  border: 1px solid #2d3348;
+  background: ${colors.bgPrimary};
+  border: 1px solid ${colors.border};
   border-radius: 8px;
   transition: border-color 0.15s;
 
   &:hover {
-    border-color: #3d4460;
+    border-color: ${colors.borderHover};
   }
 `;
 
@@ -180,12 +180,12 @@ const ResultInfo = styled.div`
 const ResultName = styled.div`
   font-size: 0.85rem;
   font-weight: 500;
-  color: #e8eaf0;
+  color: ${colors.textPrimary};
 `;
 
 const ResultMeta = styled.div`
   font-size: 0.75rem;
-  color: #6b7290;
+  color: ${colors.textMuted};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -210,7 +210,7 @@ const StatusBadge = styled.span<{ ok: boolean }>`
   padding: 4px 10px;
   border-radius: 16px;
   font-size: 0.8rem;
-  background: ${(props) => (props.ok ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)")};
+  background: ${(props) => (props.ok ? colors.accentGreenAlpha15 : colors.accentRedAlpha15)};
   color: ${(props) => (props.ok ? colors.accentGreen : colors.accentRed)};
 `;
 
@@ -352,14 +352,14 @@ export default function Discovery() {
             position: "fixed",
             top: 70,
             right: 24,
-            background: "#1e2230",
-            border: "1px solid #2d3348",
+            background: colors.bgCard,
+            border: `1px solid ${colors.border}`,
             borderRadius: 8,
             padding: "10px 20px",
-            color: "#e8eaf0",
+            color: colors.textPrimary,
             fontSize: "0.85rem",
             zIndex: 200,
-            boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+            boxShadow: `0 4px 20px ${colors.blackAlpha40}`,
           }}
         >
           {toast}
@@ -396,7 +396,7 @@ export default function Discovery() {
             <div
               style={{
                 fontSize: "0.8rem",
-                color: "#6b7290",
+                color: colors.textMuted,
                 marginBottom: 4,
                 display: "flex",
                 justifyContent: "space-between",
@@ -415,18 +415,18 @@ export default function Discovery() {
                       <StatusDot status={svc.status} /> {svc.name}
                     </ResultName>
                     <ResultMeta>
-                      <Tag bg="rgba(139, 92, 246, 0.1)" color={colors.accentPurple}>
+                      <Tag bg={colors.accentPurpleAlpha10} color={colors.accentPurple}>
                         Docker
                       </Tag>
                       {svc.host}
                       {svc.port && `:${svc.port}`}
-                      <Tag bg="rgba(245, 158, 11, 0.1)" color={colors.accentYellow}>
+                      <Tag bg={colors.accentYellowAlpha10} color={colors.accentYellow}>
                         {svc.protocol}
                       </Tag>
                     </ResultMeta>
                   </ResultInfo>
                   {imported ? (
-                    <Tag bg="rgba(16, 185, 129, 0.15)" color={colors.accentGreen}>
+                    <Tag bg={colors.accentGreenAlpha15} color={colors.accentGreen}>
                       ✓ On Dashboard
                     </Tag>
                   ) : (
@@ -490,7 +490,12 @@ export default function Discovery() {
         </CIDRInput>
         <div style={{ marginBottom: 16 }}>
           <label
-            style={{ fontSize: "0.75rem", color: "#6b7290", marginBottom: 4, display: "block" }}
+            style={{
+              fontSize: "0.75rem",
+              color: colors.textMuted,
+              marginBottom: 4,
+              display: "block",
+            }}
           >
             Scan Ports
           </label>
@@ -511,7 +516,7 @@ export default function Discovery() {
             <div
               style={{
                 fontSize: "0.8rem",
-                color: "#6b7290",
+                color: colors.textMuted,
                 marginBottom: 4,
                 display: "flex",
                 justifyContent: "space-between",
@@ -530,18 +535,18 @@ export default function Discovery() {
                       <StatusDot status={svc.status} /> {svc.name}
                     </ResultName>
                     <ResultMeta>
-                      <Tag bg="rgba(16, 185, 129, 0.1)" color={colors.accentGreen}>
+                      <Tag bg={colors.accentGreenAlpha10} color={colors.accentGreen}>
                         Network
                       </Tag>
                       {svc.host}
                       {svc.port && `:${svc.port}`}
-                      <Tag bg="rgba(245, 158, 11, 0.1)" color={colors.accentYellow}>
+                      <Tag bg={colors.accentYellowAlpha10} color={colors.accentYellow}>
                         {svc.protocol}
                       </Tag>
                     </ResultMeta>
                   </ResultInfo>
                   {imported ? (
-                    <Tag bg="rgba(16, 185, 129, 0.15)" color={colors.accentGreen}>
+                    <Tag bg={colors.accentGreenAlpha15} color={colors.accentGreen}>
                       ✓ On Dashboard
                     </Tag>
                   ) : (

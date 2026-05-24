@@ -2,6 +2,7 @@ import { useState } from "react";
 import styled from "styled-components";
 import type { ServiceLink } from "@shared";
 import { LINK_TYPES, ServiceLinkType } from "../../types";
+import { colors, rawColors } from "../../styles/theme";
 import {
   PrimaryButton,
   SecondaryButton,
@@ -14,24 +15,24 @@ import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./
 const TextArea = styled.textarea`
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #2d3348;
+  border: 1px solid ${colors.border};
   border-radius: 6px;
-  background: #0f1117;
-  color: #e8eaf0;
+  background: ${colors.bgPrimary};
+  color: ${colors.textPrimary};
   font-size: 0.85rem;
   outline: none;
   resize: vertical;
   min-height: 60px;
 
   &:focus {
-    border-color: #3b82f6;
+    border-color: ${colors.accentBlue};
   }
 `;
 
 function getLinkColor(type: string): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
 
-  return linkType?.color || "#6b7280";
+  return linkType?.color || rawColors.accentGray;
 }
 
 interface EditLinkModalProps {
@@ -68,10 +69,10 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
       <div
         style={{
           fontSize: "0.85rem",
-          color: "#9ca3b8",
+          color: colors.textSecondary,
           marginBottom: 16,
           padding: "10px 12px",
-          background: "#0f1117",
+          background: colors.bgPrimary,
           borderRadius: 6,
         }}
       >
@@ -81,10 +82,12 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
           <span>{link.target_name || link.target_id}</span>
         </div>
         {link.label && (
-          <div style={{ marginTop: 4, fontSize: "0.8rem", color: "#6b7290" }}>{link.label}</div>
+          <div style={{ marginTop: 4, fontSize: "0.8rem", color: colors.textMuted }}>
+            {link.label}
+          </div>
         )}
         {link.description && (
-          <div style={{ marginTop: 4, fontSize: "0.8rem", color: "#6b7290" }}>
+          <div style={{ marginTop: 4, fontSize: "0.8rem", color: colors.textMuted }}>
             {link.description}
           </div>
         )}

@@ -1,5 +1,6 @@
 import type { ServiceSource, ServicePosition } from "@shared";
 import { ServiceLinkType, ServiceProtocol } from "@shared";
+import { rawColors } from "../styles/theme";
 
 export type { ServiceSource, ServicePosition };
 export { ServiceLinkType, ServiceProtocol };
@@ -14,9 +15,19 @@ export interface LinkType {
 export const SERVICE_PROTOCOLS: ServiceProtocol[] = Object.values(ServiceProtocol);
 
 export const LINK_TYPES: LinkType[] = [
-  { value: ServiceLinkType.COMMUNICATION, label: "Communication", color: "#3b82f6", icon: "↔" },
-  { value: ServiceLinkType.DEPENDENCY, label: "Dependency", color: "#10b981", icon: "↓" },
-  { value: ServiceLinkType.OTHER, label: "Other", color: "#8b5cf6", icon: "🔗" },
+  {
+    value: ServiceLinkType.COMMUNICATION,
+    label: "Communication",
+    color: rawColors.accentBlue,
+    icon: "↔",
+  },
+  {
+    value: ServiceLinkType.DEPENDENCY,
+    label: "Dependency",
+    color: rawColors.accentGreen,
+    icon: "↓",
+  },
+  { value: ServiceLinkType.OTHER, label: "Other", color: rawColors.accentPurple, icon: "🔗" },
 ];
 
 export interface DashboardConfig {

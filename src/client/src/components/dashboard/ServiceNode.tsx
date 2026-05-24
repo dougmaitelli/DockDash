@@ -13,31 +13,30 @@ const NodeCard = styled.div.withConfig({
   shouldForwardProp: (prop) => !["isSelected", "isHovered"].includes(prop),
 })<ServiceNodeProps>`
   width: 220px;
-  background: #1e2230;
+  background: ${colors.bgCard};
   border: 3px solid
     ${(props) =>
       props.isSelected
-        ? "#3b82f6"
+        ? colors.accentBlue
         : props.service.status === ServiceStatus.UP
           ? `color-mix(in srgb, ${colors.accentGreen} 50%, transparent)`
           : props.service.status === ServiceStatus.DOWN
             ? `color-mix(in srgb, ${colors.accentRed} 50%, transparent)`
-            : "#2d3348"};
+            : colors.border};
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: ${(props) =>
     props.isSelected
-      ? "0 0 0 2px rgba(59, 130, 246, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3)"
-      : "0 2px 8px rgba(0, 0, 0, 0.2)"};
+      ? `0 0 0 2px ${colors.accentBlueAlpha20}, 0 4px 12px ${colors.blackAlpha30}`
+      : `0 2px 8px ${colors.blackAlpha20}`};
 
   &:hover {
-    border-color: ${(props) =>
-      props.isSelected ? "#3b82f6" : props.isHovered ? "#3d4460" : "#3d4460"};
+    border-color: ${(props) => (props.isSelected ? colors.accentBlue : colors.borderHover)};
     box-shadow: ${(props) =>
       props.isSelected
-        ? "0 0 0 2px rgba(59, 130, 246, 0.3), 0 6px 20px rgba(0, 0, 0, 0.4)"
-        : "0 4px 16px rgba(0, 0, 0, 0.4)"};
+        ? `0 0 0 2px ${colors.accentBlueAlpha30}, 0 6px 20px ${colors.blackAlpha40}`
+        : `0 4px 16px ${colors.blackAlpha40}`};
   }
 `;
 
@@ -48,7 +47,7 @@ const NodeBody = styled.div`
 const ServiceName = styled.div`
   font-size: 0.85rem;
   font-weight: 600;
-  color: #e8eaf0;
+  color: ${colors.textPrimary};
   display: flex;
   align-items: center;
   gap: 6px;
@@ -68,7 +67,7 @@ const ServiceName = styled.div`
 
 const ServiceHost = styled.div`
   font-size: 0.7rem;
-  color: #6b7290;
+  color: ${colors.textMuted};
   margin-top: 2px;
   font-family: "SF Mono", "Fira Code", monospace;
 `;
@@ -86,10 +85,10 @@ const StatusBadge = styled.div<{ status: string }>`
   letter-spacing: 0.5px;
   background: ${(props) =>
     props.status === ServiceStatus.UP
-      ? "rgba(16, 185, 129, 0.15)"
+      ? colors.accentGreenAlpha15
       : props.status === ServiceStatus.DOWN
-        ? "rgba(239, 68, 68, 0.15)"
-        : "rgba(107, 114, 144, 0.15)"};
+        ? colors.accentRedAlpha15
+        : colors.textMutedAlpha15};
   color: ${(props) =>
     props.status === ServiceStatus.UP
       ? colors.accentGreen
@@ -101,7 +100,7 @@ const StatusBadge = styled.div<{ status: string }>`
 const PortTag = styled.span`
   display: inline-block;
   padding: 1px 6px;
-  background: rgba(59, 130, 246, 0.1);
+  background: ${colors.accentBlueAlpha10};
   color: ${colors.accentBlue};
   border-radius: 4px;
   font-size: 0.65rem;
@@ -114,8 +113,8 @@ const PortDot = styled.div<{ $isSource?: boolean; $isTarget?: boolean }>`
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #3b82f6;
-  border: 2px solid #1e2230;
+  background: ${colors.accentBlue};
+  border: 2px solid ${colors.bgCard};
   cursor: crosshair;
   opacity: 0;
   transition: all 0.2s ease;
@@ -129,43 +128,51 @@ const PortDot = styled.div<{ $isSource?: boolean; $isTarget?: boolean }>`
   .draggable-node:hover &:hover,
   .connection-port:hover {
     opacity: 1;
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 8px ${colors.accentBlueAlpha50};
   }
 
   &.port-left {
     left: -7px;
     top: 50%;
     transform: translateY(-50%);
-    &:hover { transform: translateY(-50%) scale(1.4); }
+    &:hover {
+      transform: translateY(-50%) scale(1.4);
+    }
   }
 
   &.port-right {
     right: -7px;
     top: 50%;
     transform: translateY(-50%);
-    &:hover { transform: translateY(-50%) scale(1.4); }
+    &:hover {
+      transform: translateY(-50%) scale(1.4);
+    }
   }
 
   &.port-top {
     top: -7px;
     left: 50%;
     transform: translateX(-50%);
-    &:hover { transform: translateX(-50%) scale(1.4); }
+    &:hover {
+      transform: translateX(-50%) scale(1.4);
+    }
   }
 
   &.port-bottom {
     bottom: -7px;
     left: 50%;
     transform: translateX(-50%);
-    &:hover { transform: translateX(-50%) scale(1.4); }
+    &:hover {
+      transform: translateX(-50%) scale(1.4);
+    }
   }
 
   ${(props) =>
     props.$isSource &&
     `
     opacity: 1;
-    background: #60a5fa;
-    box-shadow: 0 0 10px rgba(96, 165, 250, 0.6);
+    background: ${colors.accentBlueLighter};
+    box-shadow: 0 0 10px ${colors.accentBlueLighterAlpha60};
     animation: pulse-port 1.5s infinite;
   `}
 
@@ -173,8 +180,8 @@ const PortDot = styled.div<{ $isSource?: boolean; $isTarget?: boolean }>`
     props.$isTarget &&
     `
     opacity: 1;
-    background: #34d399;
-    box-shadow: 0 0 10px rgba(52, 211, 153, 0.6);
+    background: ${colors.accentGreenLighter};
+    box-shadow: 0 0 10px ${colors.accentGreenLighterAlpha60};
   `}
 
   @keyframes pulse-port {
@@ -350,7 +357,7 @@ export function ServiceNodeInner({
               padding: "1px 6px",
               borderRadius: 4,
               fontSize: "0.65rem",
-              background: "rgba(139, 92, 246, 0.1)",
+              background: colors.accentPurpleAlpha10,
               color: colors.accentPurple,
             }}
           >
@@ -361,7 +368,7 @@ export function ServiceNodeInner({
               padding: "1px 6px",
               borderRadius: 4,
               fontSize: "0.65rem",
-              background: "rgba(245, 158, 11, 0.1)",
+              background: colors.accentYellowAlpha10,
               color: colors.accentYellow,
             }}
           >

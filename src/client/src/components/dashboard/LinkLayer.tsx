@@ -1,5 +1,6 @@
 import type { ServiceLink } from "@shared";
 import type { LinkPath } from "./linkUtils";
+import { colors } from "../../styles/theme";
 
 interface LinkLayerProps {
   linkPaths: LinkPath[];
@@ -65,7 +66,7 @@ export function LinkLayer({
               dominantBaseline="middle"
               fontSize={15}
               fill={p.color}
-              stroke="#0f1117"
+              stroke={colors.bgPrimary}
               strokeWidth={3}
               paintOrder="stroke"
               style={{ pointerEvents: "none", userSelect: "none" }}
@@ -80,7 +81,7 @@ export function LinkLayer({
         <path
           d={previewPath}
           fill="none"
-          stroke="#60a5fa"
+          stroke={colors.accentBlueLighter}
           strokeWidth={2}
           strokeDasharray="8 4"
           strokeOpacity={0.8}

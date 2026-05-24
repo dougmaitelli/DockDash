@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
+import { colors } from "../styles/theme";
 import { discoveryApi } from "../services/api";
 import type { DashboardConfig } from "../types";
 
@@ -10,8 +11,8 @@ const Page = styled.div`
 `;
 
 const Section = styled.div`
-  background: #1e2230;
-  border: 1px solid #2d3348;
+  background: ${colors.bgCard};
+  border: 1px solid ${colors.border};
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
@@ -21,7 +22,7 @@ const SectionTitle = styled.h2`
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 16px;
-  color: #e8eaf0;
+  color: ${colors.textPrimary};
 `;
 
 const ConfigItem = styled.div`
@@ -29,19 +30,19 @@ const ConfigItem = styled.div`
   justify-content: space-between;
   align-items: flex-start;
   padding: 12px 0;
-  border-bottom: 1px solid #2d3348;
+  border-bottom: 1px solid ${colors.border};
 `;
 
 const ConfigKey = styled.label`
   font-size: 0.85rem;
-  color: #9ca3b8;
+  color: ${colors.textSecondary};
   min-width: 160px;
 `;
 
 const ConfigValue = styled.code`
   font-size: 0.8rem;
-  color: #3b82f6;
-  background: #0f1117;
+  color: ${colors.accentBlue};
+  background: ${colors.bgPrimary};
   padding: 4px 10px;
   border-radius: 4px;
   word-break: break-all;
@@ -49,7 +50,7 @@ const ConfigValue = styled.code`
 
 const HelpText = styled.p`
   font-size: 0.8rem;
-  color: #6b7290;
+  color: ${colors.textMuted};
   line-height: 1.6;
   margin-top: 8px;
 `;

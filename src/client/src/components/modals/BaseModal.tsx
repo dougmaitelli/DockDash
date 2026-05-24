@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import styled from "styled-components";
+import { colors } from "../../styles/theme";
 
 const ModalOverlay = styled.div`
   position: absolute;
   inset: 0;
   z-index: 199;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${colors.blackAlpha50};
 `;
 
 const ModalPanel = styled.div<{ $width: number }>`
@@ -13,19 +14,19 @@ const ModalPanel = styled.div<{ $width: number }>`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: #1e2230;
-  border: 1px solid #2d3348;
+  background: ${colors.bgCard};
+  border: 1px solid ${colors.border};
   border-radius: 12px;
   padding: 24px;
   z-index: 200;
   width: ${({ $width }) => $width}px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px ${colors.blackAlpha50};
 `;
 
 export const ModalTitle = styled.h3`
   font-size: 1rem;
   margin-bottom: 16px;
-  color: #e8eaf0;
+  color: ${colors.textPrimary};
 `;
 
 export const FormGroup = styled.div`
@@ -35,7 +36,7 @@ export const FormGroup = styled.div`
 export const Label = styled.label`
   display: block;
   font-size: 0.75rem;
-  color: #6b7290;
+  color: ${colors.textMuted};
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;

@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { colors } from "../styles/theme";
 
 export const Page = styled.div`
   padding: 24px;
@@ -11,8 +12,8 @@ export const Page = styled.div`
 export const CanvasWrapper = styled.div`
   flex: 1;
   position: relative;
-  background: #1a1d27;
-  border: 1px solid #2d3348;
+  background: ${colors.bgSecondary};
+  border: 1px solid ${colors.border};
   border-radius: 10px;
   overflow: hidden;
   min-height: 400px;
@@ -23,7 +24,7 @@ export const Canvas = styled.div`
   height: 100%;
   position: relative;
   overflow: hidden;
-  background-image: radial-gradient(#2d3348 1px, transparent 1px);
+  background-image: radial-gradient(${colors.border} 1px, transparent 1px);
   background-size: 24px 24px;
   cursor: grab;
 
@@ -37,25 +38,25 @@ export const Toolbar = styled.div`
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(30, 34, 48, 0.9);
-  border-bottom: 1px solid #2d3348;
+  background: ${colors.bgCardAlpha90};
+  border-bottom: 1px solid ${colors.border};
 `;
 
 export const ToolButton = styled.button.withConfig({
   shouldForwardProp: (prop) => prop !== "active",
 })<{ active?: boolean }>`
   padding: 8px 14px;
-  border: 1px solid ${(props) => (props.active ? "#3b82f6" : "#2d3348")};
-  background: ${(props) => (props.active ? "rgba(59, 130, 246, 0.15)" : "transparent")};
-  color: ${(props) => (props.active ? "#3b82f6" : "#9ca3b8")};
+  border: 1px solid ${(props) => (props.active ? colors.accentBlue : colors.border)};
+  background: ${(props) => (props.active ? colors.accentBlueAlpha15 : "transparent")};
+  color: ${(props) => (props.active ? colors.accentBlue : colors.textSecondary)};
   border-radius: 6px;
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.15s;
 
   &:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
+    border-color: ${colors.accentBlue};
+    color: ${colors.accentBlue};
   }
 `;
 
@@ -64,13 +65,13 @@ export const SectionHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   padding-bottom: 12px;
-  border-bottom: 1px solid #2d3348;
+  border-bottom: 1px solid ${colors.border};
 `;
 
 export const SectionTitle = styled.h2`
   font-size: 1rem;
   font-weight: 600;
-  color: #e8eaf0;
+  color: ${colors.textPrimary};
 `;
 
 export const EmptyState = styled.div`
@@ -79,7 +80,7 @@ export const EmptyState = styled.div`
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #6b7290;
+  color: ${colors.textMuted};
   gap: 12px;
   font-size: 0.9rem;
 
