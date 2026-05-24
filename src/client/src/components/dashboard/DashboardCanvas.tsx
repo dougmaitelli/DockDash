@@ -5,12 +5,6 @@ import { colors } from "../../styles/theme";
 import { EditLinkModal } from "../modals/EditLinkModal";
 import { EditServiceModal } from "../modals/EditServiceModal";
 import { dashboardApi } from "../../services/api";
-import {
-  CanvasWrapper,
-  Canvas,
-  Toolbar,
-  ToolButton,
-} from "../../styles/Dashboard.styles";
 import { ErrorOverlay } from "./ErrorOverlay";
 import { EmptyOverlay } from "./EmptyOverlay";
 import type { Service, ServiceLink, ServiceWithPosition } from "@shared";
@@ -28,6 +22,7 @@ import { LinkLayer } from "./LinkLayer";
 import { NodeLayer } from "./NodeLayer";
 import { ZoomControls } from "./ZoomControls";
 import { IconPlus, IconTrash, IconRefresh, IconCheckCircle } from "../../utils/Icons";
+import { ActionButton, PrimaryButton, SecondaryButton, DangerButton } from "../../utils/ui";
 
 interface DashboardCanvasProps {
   services: ServiceWithPosition[];
@@ -50,6 +45,57 @@ interface DashboardCanvasProps {
   removeService: (id: string) => Promise<void>;
 }
 
+const CanvasWrapper = styled.div`
+  flex: 1;
+  position: relative;
+  background: ${colors.bgSecondary};
+  border: 1px solid ${colors.border};
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 400px;
+`;
+
+const Canvas = styled.div`
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background-image: radial-gradient(${colors.border} 1px, transparent 1px);
+  background-size: 24px 24px;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+`;
+
+const Toolbar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: ${colors.bgCardAlpha90};
+  border-bottom: 1px solid ${colors.border};
+`;
+
+const ToolButton = styled.button.withConfig({
+  shouldForwardProp: (prop) => prop !== "active",
+})<{ active?: boolean }>`
+  padding: 8px 14px;
+  border: 1px solid ${(props) => (props.active ? colors.accentBlue : colors.border)};
+  background: ${(props) => (props.active ? colors.accentBlueAlpha15 : "transparent")};
+  color: ${(props) => (props.active ? colors.accentBlue : colors.textSecondary)};
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: ${colors.accentBlue};
+    color: ${colors.accentBlue};
+  }
+`;
+
 const ToolbarInner = styled(Toolbar)`
   justify-content: space-between;
 `;
@@ -60,49 +106,6 @@ const ToolbarGroup = styled.div`
   gap: 10px;
 `;
 
-const ActionButton = styled.button`
-  padding: 8px 18px;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-`;
-
-const PrimaryButton = styled(ActionButton)`
-  background: ${colors.accentBlue};
-  color: white;
-  justify-content: center;
-
-  &:hover {
-    background: ${colors.accentBlueDark};
-  }
-`;
-
-const SecondaryButton = styled(ActionButton)`
-  background: transparent;
-  border: 1px solid ${colors.border};
-  color: ${colors.textSecondary};
-
-  &:hover {
-    border-color: ${colors.accentBlue};
-    color: ${colors.accentBlue};
-  }
-`;
-
-const DangerButton = styled(ActionButton)`
-  background: transparent;
-  border: 1px solid ${colors.border};
-  color: ${colors.accentRed};
-
-  &:hover {
-    border-color: ${colors.accentRed};
-  }
-`;
 
 export function DashboardCanvas({
   services,

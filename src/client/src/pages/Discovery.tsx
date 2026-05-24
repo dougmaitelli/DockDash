@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { colors } from "../styles/theme";
 import { IconPlus, IconX, IconScan } from "../utils/Icons";
+import { PrimaryButton, SecondaryButton } from "../utils/ui";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
 import { discoveryApi } from "../services/api";
@@ -40,55 +41,6 @@ const ButtonRow = styled.div`
   flex-wrap: wrap;
 `;
 
-const PrimaryButton = styled.button`
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: ${colors.accentBlue};
-  color: white;
-
-  &:hover {
-    background: ${colors.accentBlueDark};
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
-
-const SecondaryButton = styled.button`
-  padding: 10px 20px;
-  border: 1px solid ${colors.border};
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  background: transparent;
-  color: ${colors.textSecondary};
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  &:hover {
-    border-color: ${colors.accentBlue};
-    color: ${colors.accentBlue};
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`;
 
 const CIDRInput = styled.div`
   display: flex;

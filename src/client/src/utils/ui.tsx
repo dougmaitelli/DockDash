@@ -12,13 +12,18 @@ export const ActionButton = styled.button`
   display: flex;
   align-items: center;
   gap: 6px;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 `;
 
 export const PrimaryButton = styled(ActionButton)`
   background: ${colors.accentBlue};
   color: white;
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: ${colors.accentBlueDark};
   }
 `;
@@ -28,18 +33,19 @@ export const SecondaryButton = styled(ActionButton)`
   border: 1px solid ${colors.border};
   color: ${colors.textSecondary};
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: ${colors.accentBlue};
     color: ${colors.accentBlue};
   }
 `;
 
 export const DangerButton = styled(ActionButton)`
-  background: ${colors.accentRed};
-  color: white;
+  background: transparent;
+  border: 1px solid ${colors.border};
+  color: ${colors.accentRed};
 
-  &:hover {
-    background: ${colors.accentRedDark};
+  &:hover:not(:disabled) {
+    border-color: ${colors.accentRed};
   }
 `;
 

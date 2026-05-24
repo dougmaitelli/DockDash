@@ -1,5 +1,6 @@
 import styled from "styled-components";
 import { colors } from "../../styles/theme";
+import { DangerButton } from "../../utils/ui";
 
 const Overlay = styled.div`
   position: absolute;
@@ -41,21 +42,6 @@ const Message = styled.p`
   word-break: break-word;
 `;
 
-const RetryButton = styled.button`
-  margin-top: 4px;
-  padding: 7px 20px;
-  border: 1px solid ${colors.accentRed};
-  background: transparent;
-  color: ${colors.accentRed};
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.15s;
-
-  &:hover {
-    background: ${colors.accentRedAlpha15};
-  }
-`;
 
 interface ErrorOverlayProps {
   message: string;
@@ -68,7 +54,7 @@ export function ErrorOverlay({ message, onRetry }: ErrorOverlayProps) {
       <Box>
         <Title>Failed to load dashboard</Title>
         <Message>{message}</Message>
-        <RetryButton onClick={onRetry}>Retry</RetryButton>
+        <DangerButton onClick={onRetry}>Retry</DangerButton>
       </Box>
     </Overlay>
   );

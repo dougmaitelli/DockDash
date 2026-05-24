@@ -1,6 +1,14 @@
+import styled from "styled-components";
 import { useDashboard } from "../hooks/useData";
 import { DashboardCanvas } from "../components/dashboard/DashboardCanvas";
-import { Page } from "../styles/Dashboard.styles";
+
+const Page = styled.div`
+  padding: 24px;
+  height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+`;
 
 export default function Dashboard() {
   const {
