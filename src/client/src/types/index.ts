@@ -1,6 +1,6 @@
 import type { ServiceSource, ServicePosition } from "@shared";
 import { ServiceLinkType, ServiceProtocol } from "@shared";
-import { rawColors } from "../styles/theme";
+import { rawColors } from "../styles/themes/dark.theme";
 
 export type { ServiceSource, ServicePosition };
 export { ServiceLinkType, ServiceProtocol };

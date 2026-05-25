@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
-import { colors } from "../styles/theme";
+import { colors } from "../styles/vars";
 import { IconPlus, IconX, IconScan } from "../utils/Icons";
 import { PrimaryButton, SecondaryButton } from "../utils/ui";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
@@ -40,7 +40,6 @@ const ButtonRow = styled.div`
   gap: 10px;
   flex-wrap: wrap;
 `;
-
 
 const CIDRInput = styled.div`
   display: flex;

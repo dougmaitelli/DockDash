@@ -1,6 +1,6 @@
 import type { ServiceLink } from "@shared";
 import type { LinkPath } from "./linkUtils";
-import { colors } from "../../styles/theme";
+import { colors } from "../../styles/vars";
 
 interface LinkLayerProps {
   linkPaths: LinkPath[];

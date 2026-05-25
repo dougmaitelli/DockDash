@@ -1,29 +1,3 @@
-// Raw hex values — use in non-CSS contexts (SVG props, JS data like LINK_TYPES)
-export const rawColors = {
-  bgPrimary: "#0f1117",
-  bgSecondary: "#1a1d27",
-  bgTertiary: "#242836",
-  bgCard: "#1e2230",
-  border: "#2d3348",
-  borderHover: "#3d4460",
-  textPrimary: "#e8eaf0",
-  textSecondary: "#9ca3b8",
-  textMuted: "#6b7290",
-  textLight: "#c8cad8",
-  accentBlue: "#3b82f6",
-  accentBlueDark: "#2563eb",
-  accentBlueLighter: "#60a5fa",
-  accentGreen: "#10b981",
-  accentGreenLighter: "#34d399",
-  accentRed: "#ef4444",
-  accentRedDark: "#dc2626",
-  accentYellow: "#f59e0b",
-  accentPurple: "#8b5cf6",
-  accentCyan: "#06b6d4",
-  accentGray: "#6b7280",
-} as const;
-
-// CSS variable references — use in styled-components
 export const colors = {
   bgPrimary: "var(--bg-primary)",
   bgSecondary: "var(--bg-secondary)",

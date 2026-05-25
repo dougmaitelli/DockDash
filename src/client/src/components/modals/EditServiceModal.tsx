@@ -3,7 +3,7 @@ import styled from "styled-components";
 import type { Service } from "@shared";
 import { ServiceProtocol, ServiceSource } from "@shared";
 import { SERVICE_PROTOCOLS } from "../../types";
-import { colors } from "../../styles/theme";
+import { colors } from "../../styles/vars";
 import {
   PrimaryButton,
   SecondaryButton,

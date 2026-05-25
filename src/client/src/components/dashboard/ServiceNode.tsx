@@ -1,7 +1,7 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import styled from "styled-components";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
-import { colors } from "../../styles/theme";
+import { colors } from "../../styles/vars";
 
 interface ServiceNodeProps {
   service: Service;

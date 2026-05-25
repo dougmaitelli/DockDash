@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import styled from "styled-components";
-import { colors } from "../../styles/theme";
+import { colors } from "../../styles/vars";
 
 const ModalOverlay = styled.div`
   position: absolute;

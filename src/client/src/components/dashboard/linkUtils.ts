@@ -1,5 +1,5 @@
 import { LINK_TYPES } from "../../types";
-import { rawColors } from "../../styles/theme";
+import { rawColors } from "../../styles/themes/dark.theme";
 import type { ServiceLink } from "@shared";
 import type { PortSide } from "./nodeGeometry";
 

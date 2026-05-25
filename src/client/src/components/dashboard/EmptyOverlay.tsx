@@ -1,6 +1,6 @@
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-import { colors } from "../../styles/theme";
+import { colors } from "../../styles/vars";
 import { IconServer, IconScan } from "../../utils/Icons";
 import { PrimaryButton } from "../../utils/ui";
 

@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { colors } from "../styles/theme";
+import { colors } from "../styles/vars";
 import { discoveryApi } from "../services/api";
+import { useTheme } from "../context/ThemeContext";
+import { themeSelections } from "../styles/themes";
+import type { ThemeSelection } from "../styles/themes";
 import type { DashboardConfig } from "../types";
+import { StyledSelect } from "../utils/ui";
 
 const Page = styled.div`
   padding: 24px;
@@ -55,8 +59,22 @@ const HelpText = styled.p`
   margin-top: 8px;
 `;
 
+const ThemeRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 16px;
+`;
+
+const ThemeLabel = styled.label`
+  font-size: 0.85rem;
+  color: ${colors.textSecondary};
+  white-space: nowrap;
+`;
+
 export default function Settings() {
   const [config, setConfig] = useState<DashboardConfig | null>(null);
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     discoveryApi.getConfig().then((res) => setConfig(res.data));
@@ -64,6 +82,24 @@ export default function Settings() {
 
   return (
     <Page>
+      <Section>
+        <SectionTitle>Appearance</SectionTitle>
+        <ThemeRow>
+          <ThemeLabel htmlFor="theme-select">Color theme</ThemeLabel>
+          <StyledSelect
+            id="theme-select"
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as ThemeSelection)}
+          >
+            {themeSelections.map(({ key, label }) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </StyledSelect>
+        </ThemeRow>
+      </Section>
+
       <Section>
         <SectionTitle>⚙️ Environment Variables</SectionTitle>
         <HelpText>

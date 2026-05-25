@@ -1,6 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import styled from "styled-components";
-import { colors, rawColors } from "../styles/theme";
+import { colors } from "../styles/vars";
+import { rawColors } from "../styles/themes/dark.theme";
 
 interface LayoutProps {
   children: React.ReactNode;

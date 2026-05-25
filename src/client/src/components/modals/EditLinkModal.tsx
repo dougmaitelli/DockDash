@@ -2,7 +2,8 @@ import { useState } from "react";
 import styled from "styled-components";
 import type { ServiceLink } from "@shared";
 import { LINK_TYPES, ServiceLinkType } from "../../types";
-import { colors, rawColors } from "../../styles/theme";
+import { colors } from "../../styles/vars";
+import { rawColors } from "../../styles/themes/dark.theme";
 import {
   PrimaryButton,
   SecondaryButton,

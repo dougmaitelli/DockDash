@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { colors } from "../../styles/theme";
+import { colors } from "../../styles/vars";
 import { IconPlus, IconMinus, IconResetView } from "../../utils/Icons";
 
 const Wrapper = styled.div`

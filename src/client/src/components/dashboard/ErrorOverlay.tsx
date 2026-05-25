@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { colors } from "../../styles/theme";
+import { colors } from "../../styles/vars";
 import { DangerButton } from "../../utils/ui";
 
 const Overlay = styled.div`
@@ -41,7 +41,6 @@ const Message = styled.p`
   margin: 0;
   word-break: break-word;
 `;
-
 
 interface ErrorOverlayProps {
   message: string;

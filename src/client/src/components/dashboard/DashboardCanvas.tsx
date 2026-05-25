@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { colors } from "../../styles/theme";
+import { colors } from "../../styles/vars";
 import { EditLinkModal } from "../modals/EditLinkModal";
 import { EditServiceModal } from "../modals/EditServiceModal";
 import { dashboardApi } from "../../services/api";
@@ -22,7 +21,7 @@ import { LinkLayer } from "./LinkLayer";
 import { NodeLayer } from "./NodeLayer";
 import { ZoomControls } from "./ZoomControls";
 import { IconPlus, IconTrash, IconRefresh, IconCheckCircle } from "../../utils/Icons";
-import { ActionButton, PrimaryButton, SecondaryButton, DangerButton } from "../../utils/ui";
+import { SecondaryButton, DangerButton } from "../../utils/ui";
 
 interface DashboardCanvasProps {
   services: ServiceWithPosition[];
@@ -106,7 +105,6 @@ const ToolbarGroup = styled.div`
   gap: 10px;
 `;
 
-
 export function DashboardCanvas({
   services,
   links,
@@ -126,7 +124,6 @@ export function DashboardCanvas({
 
   const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
 
-  const navigate = useNavigate();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [editingLink, setEditingLink] = useState<ServiceLink | null>(null);
