@@ -66,8 +66,8 @@ const NavLink = styled(Link).withConfig({
 `;
 
 const Content = styled.main`
-  margin-top: 56px;
-  min-height: calc(100vh - 56px);
+  padding-top: 56px;
+  min-height: 100vh;
 `;
 
 function Layout({ children }: LayoutProps) {
