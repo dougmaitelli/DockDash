@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { colors } from "../../styles/vars";
 import { EditLinkModal } from "../modals/EditLinkModal";
 import { EditServiceModal } from "../modals/EditServiceModal";
@@ -122,6 +123,7 @@ export function DashboardCanvas({
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 3;
 
+  const { t } = useTranslation();
   const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -691,12 +693,14 @@ export function DashboardCanvas({
           <span style={{ fontSize: "0.85rem", color: colors.textPrimary, fontWeight: 600 }}>
             {servicesOnline} / {services.length}
           </span>
-          <span style={{ fontSize: "0.75rem", color: colors.textMuted }}>Online</span>
+          <span style={{ fontSize: "0.75rem", color: colors.textMuted }}>
+            {t("dashboard.online")}
+          </span>
         </ToolbarGroup>
         <ToolbarGroup>
           <SecondaryButton onClick={() => setAddingService(true)}>
-            <IconPlus size={13} />
-            Add Service
+            <IconPlus size={14} />
+            {t("dashboard.addService")}
           </SecondaryButton>
           {selectedService && (
             <DangerButton
@@ -705,14 +709,17 @@ export function DashboardCanvas({
                 setSelectedId(null);
               }}
             >
-              <IconTrash size={13} />
-              Remove
+              <IconTrash size={14} />
+              {t("dashboard.remove")}
             </DangerButton>
           )}
-          <ToolButton title="Refresh" onClick={() => refresh()}>
+          <ToolButton title={t("dashboard.refresh")} onClick={() => refresh()}>
             <IconRefresh size={14} />
           </ToolButton>
-          <ToolButton title="Trigger status checks" onClick={() => dashboardApi.checkAllServices()}>
+          <ToolButton
+            title={t("dashboard.triggerStatusChecks")}
+            onClick={() => dashboardApi.checkAllServices()}
+          >
             <IconCheckCircle size={14} />
           </ToolButton>
         </ToolbarGroup>

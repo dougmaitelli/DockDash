@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { colors } from "../../styles/vars";
 import { DangerButton } from "../../utils/ui";
 
@@ -48,12 +49,14 @@ interface ErrorOverlayProps {
 }
 
 export function ErrorOverlay({ message, onRetry }: ErrorOverlayProps) {
+  const { t } = useTranslation();
+
   return (
     <Overlay>
       <Box>
-        <Title>Failed to load dashboard</Title>
+        <Title>{t("dashboard.errorTitle")}</Title>
         <Message>{message}</Message>
-        <DangerButton onClick={onRetry}>Retry</DangerButton>
+        <DangerButton onClick={onRetry}>{t("dashboard.retry")}</DangerButton>
       </Box>
     </Overlay>
   );

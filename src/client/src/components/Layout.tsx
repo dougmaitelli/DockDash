@@ -1,5 +1,6 @@
 import { useLocation, Link } from "react-router-dom";
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { colors } from "../styles/vars";
 import { rawColors } from "../styles/themes/dark.theme";
 
@@ -71,6 +72,7 @@ const Content = styled.main`
 
 function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const { t } = useTranslation();
 
   return (
     <>
@@ -94,13 +96,13 @@ function Layout({ children }: LayoutProps) {
         </Logo>
         <NavLinks>
           <NavLink to="/" active={location.pathname === "/"}>
-            Dashboard
+            {t("nav.dashboard")}
           </NavLink>
           <NavLink to="/discover" active={location.pathname === "/discover"}>
-            Discovery
+            {t("nav.discovery")}
           </NavLink>
           <NavLink to="/settings" active={location.pathname === "/settings"}>
-            Settings
+            {t("nav.settings")}
           </NavLink>
         </NavLinks>
       </Nav>

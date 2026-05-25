@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { colors } from "../styles/vars";
-import { IconPlus, IconX, IconScan } from "../utils/Icons";
+import { IconPlus, IconX, IconScan, IconCheck } from "../utils/Icons";
 import { PrimaryButton, SecondaryButton } from "../utils/ui";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
@@ -167,6 +168,9 @@ const StatusBadge = styled.span<{ ok: boolean }>`
 `;
 
 const Tag = styled.span<{ bg: string; color: string }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.65rem;
@@ -177,6 +181,7 @@ const Tag = styled.span<{ bg: string; color: string }>`
 `;
 
 export default function Discovery() {
+  const { t } = useTranslation();
   const { services, refresh, importService } = useDiscovery();
   const { health } = useDockerHealth();
 
@@ -215,12 +220,12 @@ export default function Discovery() {
       onService: (svc) => setDockerResults((prev) => [...prev, svc]),
       onDone: async (count) => {
         setScanningDocker(false);
-        showToast(`Discovered ${count} Docker containers`);
+        showToast(t("discovery.toastDockerDone", { count }));
         await refresh();
       },
       onError: (msg) => {
         setScanningDocker(false);
-        showToast(`Docker scan failed: ${msg}`);
+        showToast(t("discovery.toastDockerFailed", { message: msg }));
       },
     });
   };
@@ -238,12 +243,12 @@ export default function Discovery() {
       onService: (svc) => setNetworkResults((prev) => [...prev, svc]),
       onDone: async (count) => {
         setScanningNetwork(false);
-        showToast(`Discovered ${count} network services`);
+        showToast(t("discovery.toastNetworkDone", { count }));
         await refresh();
       },
       onError: (msg) => {
         setScanningNetwork(false);
-        showToast(`Network scan failed: ${msg}`);
+        showToast(t("discovery.toastNetworkFailed", { message: msg }));
       },
     });
   };
@@ -273,13 +278,13 @@ export default function Discovery() {
     if (!newCidr) return;
 
     if (!isValidCIDR(newCidr)) {
-      setCidrError("Invalid CIDR — expected format: x.x.x.x/xx");
+      setCidrError(t("discovery.invalidCidr"));
 
       return;
     }
 
     if (cidrs.includes(newCidr)) {
-      setCidrError("This CIDR is already in the list");
+      setCidrError(t("discovery.duplicateCidr"));
 
       return;
     }
@@ -311,7 +316,7 @@ export default function Discovery() {
         }),
       ),
     );
-    showToast(`Imported ${availableDocker.length} services`);
+    showToast(t("discovery.toastImported", { count: availableDocker.length }));
   };
 
   const handleImportAllNetwork = async () => {
@@ -328,7 +333,7 @@ export default function Discovery() {
         }),
       ),
     );
-    showToast(`Imported ${availableNetwork.length} services`);
+    showToast(t("discovery.toastImported", { count: availableNetwork.length }));
   };
 
   return (
@@ -354,32 +359,36 @@ export default function Discovery() {
       )}
 
       <Section>
-        <SectionTitle>🐳 Docker Container Scan</SectionTitle>
-        <SectionDesc>
-          Scan the Docker socket for running containers on the host or remote Docker host
-        </SectionDesc>
+        <SectionTitle>🐳 {t("discovery.dockerTitle")}</SectionTitle>
+        <SectionDesc>{t("discovery.dockerDesc")}</SectionDesc>
         <div style={{ marginBottom: 12 }}>
           {health ? (
             health.connected ? (
               <StatusBadge ok={true}>
-                ✓ Connected — {health.serverVersion} ({health.containersRunning} running /{" "}
-                {health.containers} total)
+                ✓{" "}
+                {t("discovery.connected", {
+                  version: health.serverVersion,
+                  running: health.containersRunning,
+                  total: health.containers,
+                })}
               </StatusBadge>
             ) : (
-              <StatusBadge ok={false}>✕ Not Connected — {health.error}</StatusBadge>
+              <StatusBadge ok={false}>
+                ✕ {t("discovery.notConnected", { error: health.error })}
+              </StatusBadge>
             )
           ) : (
-            <StatusBadge ok={false}>Checking...</StatusBadge>
+            <StatusBadge ok={false}>{t("discovery.checking")}</StatusBadge>
           )}
         </div>
         <ButtonRow>
           <PrimaryButton onClick={handleDockerScan} disabled={scanningDocker || !health?.connected}>
-            <IconScan size={13} />
-            {scanningDocker ? "Scanning..." : "Scan Docker"}
+            <IconScan size={14} />
+            {scanningDocker ? t("discovery.scanning") : t("discovery.scanDocker")}
           </PrimaryButton>
           {availableDocker.length > 0 && !scanningDocker && (
             <SecondaryButton onClick={handleImportAllDocker}>
-              Import All ({availableDocker.length})
+              {t("discovery.importAll", { count: availableDocker.length })}
             </SecondaryButton>
           )}
         </ButtonRow>
@@ -395,8 +404,8 @@ export default function Discovery() {
                 justifyContent: "space-between",
               }}
             >
-              <span>Found {dockerResults.length} containers</span>
-              <span>{availableDocker.length} not on dashboard</span>
+              <span>{t("discovery.foundContainers", { count: dockerResults.length })}</span>
+              <span>{t("discovery.notOnDashboard", { count: availableDocker.length })}</span>
             </div>
             {dockerResults.map((svc) => {
               const imported = existingKeys.has(`${svc.host}:${svc.port}`);
@@ -409,7 +418,7 @@ export default function Discovery() {
                     </ResultName>
                     <ResultMeta>
                       <Tag bg={colors.accentPurpleAlpha10} color={colors.accentPurple}>
-                        Docker
+                        {t("discovery.tagDocker")}
                       </Tag>
                       {svc.host}
                       {svc.port && `:${svc.port}`}
@@ -420,7 +429,7 @@ export default function Discovery() {
                   </ResultInfo>
                   {imported ? (
                     <Tag bg={colors.accentGreenAlpha15} color={colors.accentGreen}>
-                      ✓ On Dashboard
+                      <IconCheck size={11} /> {t("discovery.onDashboard")}
                     </Tag>
                   ) : (
                     <SecondaryButton
@@ -436,7 +445,7 @@ export default function Discovery() {
                         });
                       }}
                     >
-                      + Import
+                      <IconPlus size={14} /> {t("discovery.importOne")}
                     </SecondaryButton>
                   )}
                 </ResultItem>
@@ -447,8 +456,8 @@ export default function Discovery() {
       </Section>
 
       <Section>
-        <SectionTitle>🌐 Network Scan</SectionTitle>
-        <SectionDesc>Scan CIDR ranges for non-Docker services on your local network</SectionDesc>
+        <SectionTitle>🌐 {t("discovery.networkTitle")}</SectionTitle>
+        <SectionDesc>{t("discovery.networkDesc")}</SectionDesc>
         <CIDRInput>
           {cidrs.length > 0 && (
             <CIDRTagsRow>
@@ -456,7 +465,7 @@ export default function Discovery() {
                 <CIDRTag key={i}>
                   {c}
                   <RemoveTag onClick={() => removeCidr(i)}>
-                    <IconX size={13} />
+                    <IconX size={14} />
                   </RemoveTag>
                 </CIDRTag>
               ))}
@@ -469,12 +478,12 @@ export default function Discovery() {
                 setNewCidr(e.target.value);
                 setCidrError("");
               }}
-              placeholder="Add CIDR (e.g., 10.0.0.0/8)"
+              placeholder={t("discovery.cidrPlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && addCidr()}
               style={cidrError ? { borderColor: colors.accentRed } : undefined}
             />
             <SecondaryButton onClick={addCidr}>
-              <IconPlus size={14} /> Add
+              <IconPlus size={14} /> {t("discovery.addCidr")}
             </SecondaryButton>
           </CIDRInputRow>
           {cidrError && (
@@ -490,22 +499,22 @@ export default function Discovery() {
               display: "block",
             }}
           >
-            Scan Ports
+            {t("discovery.scanPortsLabel")}
           </label>
           <CIDRInputField
             value={scanPorts}
             onChange={(e) => setScanPorts(e.target.value)}
-            placeholder="Comma-separated ports"
+            placeholder={t("discovery.portsPlaceholder")}
           />
         </div>
         <ButtonRow>
           <PrimaryButton onClick={handleNetworkScan} disabled={scanningNetwork}>
-            <IconScan size={13} />
-            {scanningNetwork ? "Scanning..." : "Scan Network"}
+            <IconScan size={14} />
+            {scanningNetwork ? t("discovery.scanning") : t("discovery.scanNetwork")}
           </PrimaryButton>
           {availableNetwork.length > 0 && !scanningNetwork && (
             <SecondaryButton onClick={handleImportAllNetwork}>
-              Import All ({availableNetwork.length})
+              {t("discovery.importAll", { count: availableNetwork.length })}
             </SecondaryButton>
           )}
         </ButtonRow>
@@ -521,8 +530,8 @@ export default function Discovery() {
                 justifyContent: "space-between",
               }}
             >
-              <span>Found {networkResults.length} services</span>
-              <span>{availableNetwork.length} not on dashboard</span>
+              <span>{t("discovery.foundServices", { count: networkResults.length })}</span>
+              <span>{t("discovery.notOnDashboard", { count: availableNetwork.length })}</span>
             </div>
             {networkResults.map((svc) => {
               const imported = existingKeys.has(`${svc.host}:${svc.port}`);
@@ -535,7 +544,7 @@ export default function Discovery() {
                     </ResultName>
                     <ResultMeta>
                       <Tag bg={colors.accentGreenAlpha10} color={colors.accentGreen}>
-                        Network
+                        {t("discovery.tagNetwork")}
                       </Tag>
                       {svc.host}
                       {svc.port && `:${svc.port}`}
@@ -546,7 +555,7 @@ export default function Discovery() {
                   </ResultInfo>
                   {imported ? (
                     <Tag bg={colors.accentGreenAlpha15} color={colors.accentGreen}>
-                      ✓ On Dashboard
+                      <IconCheck size={11} /> {t("discovery.onDashboard")}
                     </Tag>
                   ) : (
                     <SecondaryButton
@@ -562,7 +571,7 @@ export default function Discovery() {
                         });
                       }}
                     >
-                      + Import
+                      <IconPlus size={14} /> {t("discovery.importOne")}
                     </SecondaryButton>
                   )}
                 </ResultItem>

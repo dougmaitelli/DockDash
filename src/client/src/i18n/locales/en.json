@@ -1,0 +1,86 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "discovery": "Discovery",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "online": "Online",
+    "addService": "Add Service",
+    "remove": "Remove",
+    "refresh": "Refresh",
+    "triggerStatusChecks": "Trigger status checks",
+    "errorTitle": "Failed to load dashboard",
+    "retry": "Retry",
+    "emptyMessage": "No services yet. Go to Discovery to find services.",
+    "goToDiscovery": "Go to Discovery",
+    "zoom": {
+      "in": "Zoom in",
+      "out": "Zoom out",
+      "reset": "Reset view"
+    },
+    "linkTypes": {
+      "communication": "Communication",
+      "dependency": "Dependency",
+      "other": "Other"
+    }
+  },
+  "discovery": {
+    "dockerTitle": "Docker Container Scan",
+    "dockerDesc": "Scan the Docker socket for running containers on the host or remote Docker host",
+    "connected": "Connected — {{version}} ({{running}} running / {{total}} total)",
+    "notConnected": "Not Connected — {{error}}",
+    "checking": "Checking...",
+    "scanning": "Scanning...",
+    "scanDocker": "Scan Docker",
+    "networkTitle": "Network Scan",
+    "networkDesc": "Scan CIDR ranges for non-Docker services on your local network",
+    "cidrPlaceholder": "Add CIDR (e.g., 10.0.0.0/8)",
+    "addCidr": "Add",
+    "invalidCidr": "Invalid CIDR — expected format: x.x.x.x/xx",
+    "duplicateCidr": "This CIDR is already in the list",
+    "scanPortsLabel": "Scan Ports",
+    "portsPlaceholder": "Comma-separated ports",
+    "scanNetwork": "Scan Network",
+    "importAll": "Import All ({{count}})",
+    "foundContainers": "Found {{count}} containers",
+    "foundServices": "Found {{count}} services",
+    "notOnDashboard": "{{count}} not on dashboard",
+    "tagDocker": "Docker",
+    "tagNetwork": "Network",
+    "onDashboard": "On Dashboard",
+    "importOne": "Import",
+    "toastDockerDone": "Discovered {{count}} Docker containers",
+    "toastDockerFailed": "Docker scan failed: {{message}}",
+    "toastNetworkDone": "Discovered {{count}} network services",
+    "toastNetworkFailed": "Network scan failed: {{message}}",
+    "toastImported": "Imported {{count}} services"
+  },
+  "settings": {
+    "appearance": "Appearance",
+    "colorTheme": "Color theme",
+    "envVarsTitle": "Environment Variables",
+    "envVarsDesc": "These settings are configured via environment variables when starting the container. Changes require a container restart."
+  },
+  "modals": {
+    "editServiceTitle": "Edit Service",
+    "addServiceTitle": "Add Service",
+    "editLinkTitle": "Edit Link",
+    "name": "Name",
+    "namePlaceholder": "Service name",
+    "host": "Host",
+    "hostPlaceholder": "IP address or hostname",
+    "port": "Port",
+    "portPlaceholder": "Optional",
+    "protocol": "Protocol",
+    "linkType": "Link Type",
+    "linkLabel": "Label (optional)",
+    "linkLabelPlaceholder": "e.g., REST API, gRPC, WebSocket",
+    "linkDescription": "Description (optional)",
+    "linkDescriptionPlaceholder": "Describe the relationship...",
+    "save": "Save",
+    "add": "Add",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  }
+}

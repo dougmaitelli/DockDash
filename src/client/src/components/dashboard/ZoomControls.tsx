@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { colors } from "../../styles/vars";
 import { IconPlus, IconMinus, IconResetView } from "../../utils/Icons";
 
@@ -65,16 +66,18 @@ export function ZoomControls({
   onZoomOut,
   onReset,
 }: ZoomControlsProps) {
+  const { t } = useTranslation();
+
   return (
     <Wrapper>
-      <ZoomButton onClick={onZoomIn} disabled={zoom >= maxZoom} title="Zoom in">
+      <ZoomButton onClick={onZoomIn} disabled={zoom >= maxZoom} title={t("dashboard.zoom.in")}>
         <IconPlus size={16} />
       </ZoomButton>
       <ZoomLabel>{Math.round(zoom * 100)}%</ZoomLabel>
-      <ZoomButton onClick={onZoomOut} disabled={zoom <= minZoom} title="Zoom out">
+      <ZoomButton onClick={onZoomOut} disabled={zoom <= minZoom} title={t("dashboard.zoom.out")}>
         <IconMinus size={16} />
       </ZoomButton>
-      <ResetButton onClick={onReset} title="Reset view">
+      <ResetButton onClick={onReset} title={t("dashboard.zoom.reset")}>
         <IconResetView size={16} />
       </ResetButton>
     </Wrapper>

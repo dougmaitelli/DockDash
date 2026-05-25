@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import type { Service } from "@shared";
 import { ServiceProtocol, ServiceSource } from "@shared";
 import { SERVICE_PROTOCOLS } from "../../types";
@@ -46,6 +47,7 @@ interface EditServiceModalProps {
 }
 
 export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditServiceModalProps) {
+  const { t } = useTranslation();
   const [editNodeName, setEditNodeName] = useState(service?.name ?? "");
   const [editNodeHost, setEditNodeHost] = useState(service?.host ?? "");
   const [editNodePort, setEditNodePort] = useState(service?.port?.toString() ?? "");
@@ -65,15 +67,17 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
 
   return (
     <BaseModal
-      title={service ? "Edit Service" : "Add Service"}
+      title={service ? t("modals.editServiceTitle") : t("modals.addServiceTitle")}
       onClose={onCancel}
       width={400}
       actions={
         <ModalActions>
-          {onDelete && <DangerButton onClick={onDelete}>Delete</DangerButton>}
+          {onDelete && <DangerButton onClick={onDelete}>{t("modals.delete")}</DangerButton>}
           <ModalActionsRight>
-            <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
-            <PrimaryButton onClick={handleConfirm}>{service ? "Save" : "Add"}</PrimaryButton>
+            <SecondaryButton onClick={onCancel}>{t("modals.cancel")}</SecondaryButton>
+            <PrimaryButton onClick={handleConfirm}>
+              {service ? t("modals.save") : t("modals.add")}
+            </PrimaryButton>
           </ModalActionsRight>
         </ModalActions>
       }
@@ -92,35 +96,35 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
         </NodeInfo>
       )}
       <FormGroup>
-        <Label>Name</Label>
+        <Label>{t("modals.name")}</Label>
         <StyledInput
           value={editNodeName}
           onChange={(e) => setEditNodeName(e.target.value)}
-          placeholder="Service name"
+          placeholder={t("modals.namePlaceholder")}
         />
       </FormGroup>
       <FormGroup>
-        <Label>Host</Label>
+        <Label>{t("modals.host")}</Label>
         <StyledInput
           value={editNodeHost}
           onChange={(e) => setEditNodeHost(e.target.value)}
-          placeholder="IP address or hostname"
+          placeholder={t("modals.hostPlaceholder")}
         />
       </FormGroup>
       <Row>
         <FormGroup>
-          <Label>Port</Label>
+          <Label>{t("modals.port")}</Label>
           <StyledInput
             type="number"
             value={editNodePort}
             onChange={(e) => setEditNodePort(e.target.value)}
-            placeholder="Optional"
+            placeholder={t("modals.portPlaceholder")}
             min="0"
             max="65535"
           />
         </FormGroup>
         <FormGroup>
-          <Label>Protocol</Label>
+          <Label>{t("modals.protocol")}</Label>
           <StyledSelect
             value={editNodeProtocol}
             onChange={(e) => setEditNodeProtocol(e.target.value as ServiceProtocol)}

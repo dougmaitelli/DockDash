@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import { colors } from "../styles/vars";
 import { discoveryApi } from "../services/api";
 import { useTheme } from "../context/ThemeContext";
@@ -73,6 +74,7 @@ const ThemeLabel = styled.label`
 `;
 
 export default function Settings() {
+  const { t } = useTranslation();
   const [config, setConfig] = useState<DashboardConfig | null>(null);
   const { theme, setTheme } = useTheme();
 
@@ -83,9 +85,9 @@ export default function Settings() {
   return (
     <Page>
       <Section>
-        <SectionTitle>Appearance</SectionTitle>
+        <SectionTitle>{t("settings.appearance")}</SectionTitle>
         <ThemeRow>
-          <ThemeLabel htmlFor="theme-select">Color theme</ThemeLabel>
+          <ThemeLabel htmlFor="theme-select">{t("settings.colorTheme")}</ThemeLabel>
           <StyledSelect
             id="theme-select"
             value={theme}
@@ -101,11 +103,8 @@ export default function Settings() {
       </Section>
 
       <Section>
-        <SectionTitle>⚙️ Environment Variables</SectionTitle>
-        <HelpText>
-          These settings are configured via environment variables when starting the container.
-          Changes require a container restart.
-        </HelpText>
+        <SectionTitle>⚙️ {t("settings.envVarsTitle")}</SectionTitle>
+        <HelpText>{t("settings.envVarsDesc")}</HelpText>
 
         <div style={{ marginTop: 16 }}>
           <ConfigItem>

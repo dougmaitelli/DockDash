@@ -1,5 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
+import { useTranslation } from "react-i18next";
 import type { ServiceLink } from "@shared";
 import { LINK_TYPES, ServiceLinkType } from "../../types";
 import { colors } from "../../styles/vars";
@@ -44,6 +45,7 @@ interface EditLinkModalProps {
 }
 
 export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModalProps) {
+  const { t } = useTranslation();
   const [editLabel, setEditLabel] = useState(link.label || "");
   const [editType, setEditType] = useState(link.type || ServiceLinkType.COMMUNICATION);
   const [editDesc, setEditDesc] = useState(link.description || "");
@@ -54,15 +56,15 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
 
   return (
     <BaseModal
-      title="Edit Link"
+      title={t("modals.editLinkTitle")}
       onClose={onCancel}
       width={380}
       actions={
         <ModalActions>
-          <DangerButton onClick={onDelete}>Delete</DangerButton>
+          <DangerButton onClick={onDelete}>{t("modals.delete")}</DangerButton>
           <ModalActionsRight>
-            <SecondaryButton onClick={onCancel}>Cancel</SecondaryButton>
-            <PrimaryButton onClick={handleConfirm}>Save</PrimaryButton>
+            <SecondaryButton onClick={onCancel}>{t("modals.cancel")}</SecondaryButton>
+            <PrimaryButton onClick={handleConfirm}>{t("modals.save")}</PrimaryButton>
           </ModalActionsRight>
         </ModalActions>
       }
@@ -94,32 +96,32 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
         )}
       </div>
       <FormGroup>
-        <Label>Link Type</Label>
+        <Label>{t("modals.linkType")}</Label>
         <StyledSelect
           value={editType}
           onChange={(e) => setEditType(e.target.value as ServiceLinkType)}
         >
           {LINK_TYPES.map((lt) => (
             <option key={lt.value} value={lt.value}>
-              {lt.label}
+              {t(`dashboard.linkTypes.${lt.value}`)}
             </option>
           ))}
         </StyledSelect>
       </FormGroup>
       <FormGroup>
-        <Label>Label (optional)</Label>
+        <Label>{t("modals.linkLabel")}</Label>
         <StyledInput
           value={editLabel}
           onChange={(e) => setEditLabel(e.target.value)}
-          placeholder="e.g., REST API, gRPC, WebSocket"
+          placeholder={t("modals.linkLabelPlaceholder")}
         />
       </FormGroup>
       <FormGroup>
-        <Label>Description (optional)</Label>
+        <Label>{t("modals.linkDescription")}</Label>
         <TextArea
           value={editDesc}
           onChange={(e) => setEditDesc(e.target.value)}
-          placeholder="Describe the relationship..."
+          placeholder={t("modals.linkDescriptionPlaceholder")}
         />
       </FormGroup>
     </BaseModal>

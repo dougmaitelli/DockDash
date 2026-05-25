@@ -90,6 +90,14 @@ export function IconScan({ size = 14, ...props }: IconProps) {
   );
 }
 
+export function IconCheck({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.5)} {...props}>
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
 export function IconServer({ size = 14, ...props }: IconProps) {
   return (
     <svg {...defaults(size, 1.5)} {...props}>
