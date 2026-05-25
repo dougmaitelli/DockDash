@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { GlobalStyles } from "../styles/GlobalStyles";
-import { themes } from "../styles/themes";
+import { themes, SYSTEM_THEME } from "../styles/themes";
 import type { ThemeName, ThemeSelection } from "../styles/themes";
 
 const STORAGE_KEY = "dockdash-theme";
@@ -12,7 +12,7 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: "system",
+  theme: SYSTEM_THEME,
   setTheme: () => {},
 });
 
@@ -28,7 +28,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       return stored as ThemeSelection;
     }
 
-    return "system";
+    return SYSTEM_THEME;
   });
 
   const [systemTheme, setSystemTheme] = useState<ThemeName>(getSystemTheme);
@@ -47,7 +47,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, t);
   };
 
-  const resolved = selection === "system" ? systemTheme : selection;
+  const resolved = selection === SYSTEM_THEME ? systemTheme : selection;
 
   return (
     <ThemeContext.Provider value={{ theme: selection, setTheme }}>

@@ -25,10 +25,12 @@ export const themes: Record<string, { label: string; colors: RawColors }> = Obje
   }),
 );
 
+export const SYSTEM_THEME = "system";
+
 export type ThemeName = string;
 export type ThemeSelection = string;
 
 export const themeSelections: Array<{ key: ThemeSelection; label: string }> = [
-  { key: "system", label: "System" },
+  { key: SYSTEM_THEME, label: "System" },
   ...Object.entries(themes).map(([key, { label }]) => ({ key, label })),
 ];

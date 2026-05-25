@@ -1,4 +1,5 @@
 import type { Service } from "@shared";
+import { SSE_EVENT } from "@shared";
 
 interface ScanStreamOptions {
   url: string;
@@ -19,14 +20,14 @@ export function startScanStream({
     onService(JSON.parse(e.data) as Service);
   });
 
-  es.addEventListener("done", async (e) => {
+  es.addEventListener(SSE_EVENT.DONE, async (e) => {
     const { count } = JSON.parse(e.data) as { count: number };
 
     es.close();
     await onDone(count);
   });
 
-  es.addEventListener("scan-error", (e) => {
+  es.addEventListener(SSE_EVENT.SCAN_ERROR, (e) => {
     const { message } = JSON.parse(e.data) as { message: string };
 
     es.close();

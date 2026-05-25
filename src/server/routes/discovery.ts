@@ -6,6 +6,7 @@ import {
 } from "../services/dockerService.js";
 import { scanNetworkStream, parseCIDRConfig } from "../services/networkScanner.js";
 import { config } from "../lib/config.js";
+import { SSE_EVENT } from "../../shared-types/constants.js";
 
 const router = Router();
 
@@ -55,13 +56,13 @@ router.get("/docker/scan/stream", async (req, res) => {
   } catch (err) {
     if (!closed) {
       res.write(
-        `event: scan-error\ndata: ${JSON.stringify({ message: err instanceof Error ? err.message : String(err) })}\n\n`,
+        `event: ${SSE_EVENT.SCAN_ERROR}\ndata: ${JSON.stringify({ message: err instanceof Error ? err.message : String(err) })}\n\n`,
       );
     }
   }
 
   if (!closed) {
-    res.write(`event: done\ndata: ${JSON.stringify({ count })}\n\n`);
+    res.write(`event: ${SSE_EVENT.DONE}\ndata: ${JSON.stringify({ count })}\n\n`);
     res.end();
   }
 });
@@ -109,13 +110,13 @@ router.get("/network/scan/stream", async (req, res) => {
   } catch (err) {
     if (!closed) {
       res.write(
-        `event: scan-error\ndata: ${JSON.stringify({ message: err instanceof Error ? err.message : String(err) })}\n\n`,
+        `event: ${SSE_EVENT.SCAN_ERROR}\ndata: ${JSON.stringify({ message: err instanceof Error ? err.message : String(err) })}\n\n`,
       );
     }
   }
 
   if (!closed) {
-    res.write(`event: done\ndata: ${JSON.stringify({ count })}\n\n`);
+    res.write(`event: ${SSE_EVENT.DONE}\ndata: ${JSON.stringify({ count })}\n\n`);
     res.end();
   }
 });
