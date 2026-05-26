@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS service_links (
 CREATE TABLE IF NOT EXISTS service_positions (
   service_id TEXT PRIMARY KEY REFERENCES services(id) ON DELETE CASCADE,
   x REAL NOT NULL,
-  y REAL NOT NULL
+  y REAL NOT NULL,
+  parent_id TEXT REFERENCES services(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_links_source ON service_links(source_id);

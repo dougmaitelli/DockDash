@@ -42,7 +42,7 @@ export const linkApi = {
 
 // Position management APIs
 export const positionApi = {
-  save: (positions: { service_id: string; x: number; y: number }[]) =>
+  save: (positions: { service_id: string; x: number; y: number; parent_id?: string | null }[]) =>
     api.post<SavePositionsResponse>("/positions", { positions }),
 };
 

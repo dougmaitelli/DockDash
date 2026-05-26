@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { colors } from "../../styles/vars";
@@ -8,12 +8,12 @@ import { dashboardApi } from "../../services/api";
 import { ErrorOverlay } from "./ErrorOverlay";
 import { EmptyOverlay } from "./EmptyOverlay";
 import type { Service, ServiceLink, ServiceWithPosition } from "@shared";
-import { orthogonalPath, getLinkColor, type LinkPath } from "./linkUtils";
 import { ServiceLinkType, ServiceStatus } from "@shared";
 import {
-  getNodeCenter,
   getNodeSize,
   getPortPosition,
+  getAbsoluteNodePosition,
+  computeGroupDimensions,
   NODE_WIDTH,
   NODE_HEIGHT,
   type PortSide,
@@ -30,7 +30,12 @@ interface DashboardCanvasProps {
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  updatePosition: (serviceId: string, x: number, y: number) => Promise<void>;
+  updatePosition: (
+    serviceId: string,
+    x: number,
+    y: number,
+    parentId?: string | null,
+  ) => Promise<void>;
   addService: (data: Partial<Service> & { name: string; host: string }) => Promise<Service>;
   updateService: (
     id: string,
@@ -106,6 +111,46 @@ const ToolbarGroup = styled.div`
   gap: 10px;
 `;
 
+function findNestTarget(
+  draggedId: string,
+  draggedAbsX: number,
+  draggedAbsY: number,
+  services: ServiceWithPosition[],
+): string | null {
+  const cx = draggedAbsX + NODE_WIDTH / 2;
+  const cy = draggedAbsY + NODE_HEIGHT / 2;
+
+  for (const svc of services) {
+    if (svc.id === draggedId || !svc.id) continue;
+
+    if (svc.position?.parent_id) continue; // can't nest into a child
+
+    const svcX = svc.position?.x ?? 0;
+    const svcY = svc.position?.y ?? 0;
+
+    // Existing children (excluding the dragged node itself in case it's re-nesting)
+    const currentChildren = services.filter(
+      (s) => s.position?.parent_id === svc.id && s.id !== draggedId,
+    );
+
+    if (currentChildren.length > 0) {
+      // Hit the full group container bounds so the user can drop anywhere inside
+      const { w: groupW, h: groupH } = computeGroupDimensions(currentChildren.length);
+
+      if (cx >= svcX && cx <= svcX + groupW && cy >= svcY && cy <= svcY + groupH) {
+        return svc.id;
+      }
+    } else {
+      // No children yet: hit only the service card to create a new group
+      if (cx >= svcX && cx <= svcX + NODE_WIDTH && cy >= svcY && cy <= svcY + NODE_HEIGHT) {
+        return svc.id;
+      }
+    }
+  }
+
+  return null;
+}
+
 export function DashboardCanvas({
   services,
   links,
@@ -140,34 +185,23 @@ export function DashboardCanvas({
   const [connectingTarget, setConnectingTarget] = useState<string | null>(null);
   const [mouseCanvasPos, setMouseCanvasPos] = useState<{ x: number; y: number } | null>(null);
 
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [dragOffsets, setDragOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
-  const [zoomLevel, setZoomLevel] = useState(1);
+
+  const [nestingTarget, setNestingTarget] = useState<string | null>(null);
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const nodeHoverRef = useRef<string | null>(null);
   const [canvasDimensions, setCanvasDimensions] = useState({ w: 0, h: 0 });
   const initialFitDone = useRef(false);
+  const canvasW = canvasDimensions.w;
+  const canvasH = canvasDimensions.h;
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Delete" && selectedId) {
-        e.preventDefault();
-        removeService(selectedId);
-        setSelectedId(null);
-      }
-    },
-    [removeService, selectedId],
-  );
+  const selectedService = services.find((s) => s.id === selectedId);
 
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
-
+  // Initial fit to content
   useEffect(() => {
     if (initialFitDone.current) return;
 
@@ -223,12 +257,203 @@ export function DashboardCanvas({
     initialFitDone.current = true;
   }, [services, canvasDimensions]);
 
+  // Keyboard handling
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Delete" && selectedId) {
+        e.preventDefault();
+        removeService(selectedId);
+        setSelectedId(null);
+      }
+    },
+    [removeService, selectedId],
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Node click — select/deselect
   const handleNodeClick = useCallback(
     (id: string) => {
       setSelectedId(selectedId === id ? null : id);
     },
     [selectedId],
   );
+
+  // Drag handling
+  const dragState = useRef<{
+    draggedId: string | null;
+    nodeX: number;
+    nodeY: number;
+    grabOffsetX: number;
+    grabOffsetY: number;
+  }>({ draggedId: null, nodeX: 0, nodeY: 0, grabOffsetX: 0, grabOffsetY: 0 });
+
+  // On mouse down on node, start dragging
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent, serviceId: string) => {
+      if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a"))
+        return;
+
+      e.stopPropagation();
+      const canvas = canvasRef.current;
+
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+
+      // Use absolute position so children (relative coords) are handled correctly
+      const service = services.find((s) => s.id === serviceId);
+      let nodeX: number;
+      let nodeY: number;
+
+      if (service) {
+        const abs = getAbsoluteNodePosition(service, services, {});
+
+        nodeX = abs.x;
+        nodeY = abs.y;
+      } else {
+        nodeX = 0;
+        nodeY = 0;
+      }
+
+      const grabOffsetX = mouseX - nodeX;
+      const grabOffsetY = mouseY - nodeY;
+
+      dragState.current = {
+        draggedId: serviceId,
+        nodeX,
+        nodeY,
+        grabOffsetX,
+        grabOffsetY,
+      };
+      setDragOffsets((prev) => {
+        const copy = { ...prev };
+
+        delete copy[serviceId];
+
+        return copy;
+      });
+      e.preventDefault();
+    },
+    [panOffset, zoomLevel, services],
+  );
+
+  // On mouse move, update drag offsets for the dragged node
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const { draggedId, nodeX, nodeY, grabOffsetX, grabOffsetY } = dragState.current;
+
+      if (!draggedId || !canvasRef.current) return;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+      const dx = mouseX - nodeX - grabOffsetX;
+      const dy = mouseY - nodeY - grabOffsetY;
+
+      setDragOffsets((prev) => ({ ...prev, [draggedId]: { dx, dy } }));
+
+      // Show nesting indicator: only for root nodes without children
+      const draggedHasChildren = services.some((s) => s.position?.parent_id === draggedId);
+      const draggedService = services.find((s) => s.id === draggedId);
+      const isChild = draggedService?.position?.parent_id != null;
+
+      if (!draggedHasChildren && !isChild) {
+        const currentAbsX = nodeX + dx;
+        const currentAbsY = nodeY + dy;
+
+        setNestingTarget(findNestTarget(draggedId, currentAbsX, currentAbsY, services));
+      } else {
+        setNestingTarget(null);
+      }
+    };
+
+    // On mouse up, update position based on where it was dropped
+    const handleMouseUp = async (e: MouseEvent) => {
+      const { draggedId, grabOffsetX, grabOffsetY } = dragState.current;
+
+      if (!draggedId || !canvasRef.current) return;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+      const finalAbsX = mouseX - grabOffsetX;
+      const finalAbsY = mouseY - grabOffsetY;
+
+      setNestingTarget(null);
+
+      const draggedService = services.find((s) => s.id === draggedId);
+      const draggedHasChildren = services.some((s) => s.position?.parent_id === draggedId);
+      const currentParentId = draggedService?.position?.parent_id ?? null;
+
+      let newX = finalAbsX;
+      let newY = finalAbsY;
+      let newParentId: string | null = null;
+      let shouldUpdate = true;
+
+      if (currentParentId) {
+        // Nested child: snap back to grid if dropped inside group, un-nest if outside
+        const parent = services.find((s) => s.id === currentParentId);
+
+        if (parent?.position) {
+          const childCount = services.filter(
+            (s) => s.position?.parent_id === currentParentId,
+          ).length;
+          const { w: groupW, h: groupH } = computeGroupDimensions(childCount);
+          const cx = finalAbsX + NODE_WIDTH / 2;
+          const cy = finalAbsY + NODE_HEIGHT / 2;
+          const insideGroup =
+            cx >= parent.position.x &&
+            cx <= parent.position.x + groupW &&
+            cy >= parent.position.y &&
+            cy <= parent.position.y + groupH;
+
+          if (insideGroup) {
+            shouldUpdate = false; // snap back to grid position
+          } else {
+            newParentId = null; // un-nest
+          }
+        }
+      } else if (!draggedHasChildren) {
+        // Root node without children: nest onto another node/group if applicable
+        const target = findNestTarget(draggedId, finalAbsX, finalAbsY, services);
+
+        if (target) {
+          newX = 0;
+          newY = 0;
+          newParentId = target;
+        }
+      }
+      // Parent nodes (draggedHasChildren) move freely; newParentId stays null
+
+      if (shouldUpdate) {
+        await updatePosition(draggedId, newX, newY, newParentId);
+      }
+
+      setDragOffsets((prev) => {
+        const copy = { ...prev };
+
+        delete copy[draggedId];
+
+        return copy;
+      });
+      dragState.current.draggedId = null;
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [panOffset, zoomLevel, services, updatePosition]);
 
   // Port mouse down — start connecting
   const handlePortMouseDown = useCallback(
@@ -265,25 +490,21 @@ export function DashboardCanvas({
     [connectingSource],
   );
 
-  // Node body mouse enter — also a valid target (closest port will be used)
+  // Node body mouse enter — also a valid target
   const handleNodeMouseEnter = useCallback(
     (serviceId: string) => {
       if (!connectingSource || connectingSource.serviceId === serviceId) return;
 
-      nodeHoverRef.current = serviceId;
       setConnectingTarget(serviceId);
     },
     [connectingSource],
   );
 
   const handleNodeMouseLeave = useCallback(() => {
-    nodeHoverRef.current = null;
     setConnectingTarget(null);
   }, []);
 
   const handlePortMouseLeave = useCallback(() => {
-    if (nodeHoverRef.current) return;
-
     setConnectingTarget(null);
   }, []);
 
@@ -340,119 +561,6 @@ export function DashboardCanvas({
     };
   }, [connectingSource, connectingTarget, panOffset, zoomLevel, addLink, refresh, links]);
 
-  // Drag handling
-  const dragState = useRef<{
-    draggedId: string | null;
-    nodeX: number;
-    nodeY: number;
-    grabOffsetX: number;
-    grabOffsetY: number;
-  }>({ draggedId: null, nodeX: 0, nodeY: 0, grabOffsetX: 0, grabOffsetY: 0 });
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const { draggedId, nodeX, nodeY, grabOffsetX, grabOffsetY } = dragState.current;
-
-      if (!draggedId || !canvasRef.current) return;
-
-      const rect = canvasRef.current.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-      const dx = mouseX - nodeX - grabOffsetX;
-      const dy = mouseY - nodeY - grabOffsetY;
-
-      setDragOffsets((prev) => ({
-        ...prev,
-        [draggedId]: { dx, dy },
-      }));
-    };
-
-    const handleMouseUp = async (e: MouseEvent) => {
-      const { draggedId, grabOffsetX, grabOffsetY } = dragState.current;
-
-      if (!draggedId || !canvasRef.current) return;
-
-      const rect = canvasRef.current.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-      const finalNodeX = mouseX - grabOffsetX;
-      const finalNodeY = mouseY - grabOffsetY;
-
-      await updatePosition(draggedId, finalNodeX, finalNodeY);
-      setDragOffsets((prev) => {
-        const copy = { ...prev };
-
-        delete copy[draggedId];
-
-        return copy;
-      });
-      dragState.current.draggedId = null;
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [panOffset, zoomLevel, services, updatePosition]);
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, serviceId: string) => {
-      if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a"))
-        return;
-
-      e.stopPropagation();
-      const canvas = canvasRef.current;
-
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-
-      const pos = services.find((s) => s.id === serviceId)?.position;
-      let nodeX: number;
-      let nodeY: number;
-
-      if (pos) {
-        nodeX = pos.x;
-        nodeY = pos.y;
-      } else {
-        const idx = services.findIndex((s) => s.id === serviceId);
-        const cols = Math.max(3, Math.ceil(Math.sqrt(services.length)));
-        const row = Math.floor(idx / cols);
-        const col = idx % cols;
-        const gapX = 60;
-        const gapY = 80;
-
-        nodeX = 100 + col * (NODE_WIDTH + gapX);
-        nodeY = 120 + row * (NODE_HEIGHT + gapY);
-      }
-
-      const grabOffsetX = mouseX - nodeX;
-      const grabOffsetY = mouseY - nodeY;
-
-      dragState.current = {
-        draggedId: serviceId,
-        nodeX,
-        nodeY,
-        grabOffsetX,
-        grabOffsetY,
-      };
-      setDragOffsets((prev) => {
-        const copy = { ...prev };
-
-        delete copy[serviceId];
-
-        return copy;
-      });
-      e.preventDefault();
-    },
-    [panOffset, zoomLevel, services],
-  );
-
   // Wheel zoom
   const handleWheel = useCallback(
     (e: WheelEvent) => {
@@ -477,37 +585,7 @@ export function DashboardCanvas({
     [panOffset, zoomLevel, MAX_ZOOM, MIN_ZOOM],
   );
 
-  // Canvas panning
-  const handleCanvasMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest(".draggable-node")) return;
-
-      if (e.button !== 0) return;
-
-      setSelectedId(null);
-      setIsPanning(true);
-      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
-    },
-    [panOffset],
-  );
-
-  useEffect(() => {
-    if (!isPanning) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
-    };
-    const handleMouseUp = () => setIsPanning(false);
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isPanning, panStart]);
-
+  // Wheel zoom
   useEffect(() => {
     const canvas = canvasRef.current;
 
@@ -530,125 +608,44 @@ export function DashboardCanvas({
     };
   }, [handleWheel]);
 
-  const canvasW = canvasDimensions.w;
-  const canvasH = canvasDimensions.h;
+  // Canvas panning
+  const handleCanvasMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if ((e.target as HTMLElement).closest(".draggable-node")) return;
 
-  // Compute existing link SVG paths
-  const linkPaths = useMemo<LinkPath[]>(() => {
-    return links
-      .map((link) => {
-        const srcCenter = getNodeCenter(link.source_id, services, dragOffsets);
-        const tgtCenter = getNodeCenter(link.target_id, services, dragOffsets);
+      if (e.button !== 0) return;
 
-        if (!srcCenter || !tgtCenter) return null;
+      setSelectedId(null);
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+    },
+    [panOffset],
+  );
 
-        const sx = srcCenter.x * zoomLevel + panOffset.x;
-        const sy = srcCenter.y * zoomLevel + panOffset.y;
-        const tx = tgtCenter.x * zoomLevel + panOffset.x;
-        const ty = tgtCenter.y * zoomLevel + panOffset.y;
+  // Global mouse move/up for panning
+  useEffect(() => {
+    if (!isPanning) return;
 
-        const dx = tx - sx;
-        const dy = ty - sy;
-        const useHorizontal = Math.abs(dx) >= Math.abs(dy);
+    const handleMouseMove = (e: MouseEvent) => {
+      setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+    };
+    const handleMouseUp = () => setIsPanning(false);
 
-        let x1: number, y1: number, x2: number, y2: number;
-        let exitSide: PortSide, entrySide: PortSide;
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
 
-        const srcEl = document.querySelector(
-          `[data-service-id="${link.source_id}"]`,
-        ) as HTMLElement | null;
-        const tgtEl = document.querySelector(
-          `[data-service-id="${link.target_id}"]`,
-        ) as HTMLElement | null;
-        const srcHalfW = ((srcEl?.offsetWidth ?? NODE_WIDTH) * zoomLevel) / 2;
-        const srcHalfH = ((srcEl?.offsetHeight ?? NODE_HEIGHT) * zoomLevel) / 2;
-        const tgtHalfW = ((tgtEl?.offsetWidth ?? NODE_WIDTH) * zoomLevel) / 2;
-        const tgtHalfH = ((tgtEl?.offsetHeight ?? NODE_HEIGHT) * zoomLevel) / 2;
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isPanning, panStart]);
 
-        if (useHorizontal) {
-          if (dx >= 0) {
-            x1 = sx + srcHalfW;
-            y1 = sy;
-            exitSide = "right";
-            x2 = tx - tgtHalfW;
-            y2 = ty;
-            entrySide = "left";
-          } else {
-            x1 = sx - srcHalfW;
-            y1 = sy;
-            exitSide = "left";
-            x2 = tx + tgtHalfW;
-            y2 = ty;
-            entrySide = "right";
-          }
-        } else {
-          if (dy >= 0) {
-            x1 = sx;
-            y1 = sy + srcHalfH;
-            exitSide = "bottom";
-            x2 = tx;
-            y2 = ty - tgtHalfH;
-            entrySide = "top";
-          } else {
-            x1 = sx;
-            y1 = sy - srcHalfH;
-            exitSide = "top";
-            x2 = tx;
-            y2 = ty + tgtHalfH;
-            entrySide = "bottom";
-          }
-        }
-
-        return {
-          id: link.id,
-          d: orthogonalPath(x1, y1, exitSide, x2, y2, entrySide, zoomLevel),
-          midX: (x1 + x2) / 2,
-          midY: (y1 + y2) / 2,
-          link,
-          color: getLinkColor(link.type),
-        };
-      })
-      .filter((p): p is LinkPath => p !== null);
-  }, [links, services, dragOffsets, panOffset, zoomLevel]);
-
-  // Compute connecting preview path
-  const previewPath = useMemo(() => {
-    if (!connectingSource || !mouseCanvasPos) return null;
-
-    const srcPort = getPortPosition(
-      connectingSource.serviceId,
-      connectingSource.side,
-      services,
-      dragOffsets,
-    );
-
-    if (!srcPort) return null;
-
-    const sx = srcPort.x * zoomLevel + panOffset.x;
-    const sy = srcPort.y * zoomLevel + panOffset.y;
-    const tx = mouseCanvasPos.x * zoomLevel + panOffset.x;
-    const ty = mouseCanvasPos.y * zoomLevel + panOffset.y;
-
-    const pdx = tx - sx;
-    const pdy = ty - sy;
-    let entrySide: PortSide;
-
-    if (Math.abs(pdx) >= Math.abs(pdy)) {
-      entrySide = pdx >= 0 ? "left" : "right";
-    } else {
-      entrySide = pdy >= 0 ? "top" : "bottom";
-    }
-
-    return orthogonalPath(sx, sy, connectingSource.side, tx, ty, entrySide, zoomLevel);
-  }, [connectingSource, mouseCanvasPos, services, dragOffsets, panOffset, zoomLevel]);
-
-  const selectedService = services.find((s) => s.id === selectedId);
-
-  const openEditModal = useCallback((link: ServiceLink) => {
+  // Edit link
+  const openEditLinkModal = useCallback((link: ServiceLink) => {
     setEditingLink(link);
   }, []);
 
-  const handleLinkEditSave = async (data: Pick<ServiceLink, "label" | "type" | "description">) => {
+  const handleEditLinkSave = async (data: Pick<ServiceLink, "label" | "type" | "description">) => {
     if (!editingLink) return;
 
     await updateLink(editingLink.id, data);
@@ -656,7 +653,7 @@ export function DashboardCanvas({
     await refresh();
   };
 
-  const handleLinkEditDelete = async () => {
+  const handleEditLinkDelete = async () => {
     if (!editingLink) return;
 
     await removeLink(editingLink.id);
@@ -664,6 +661,7 @@ export function DashboardCanvas({
     await refresh();
   };
 
+  // Edit node
   const openEditNodeModal = useCallback((service: Service) => {
     setEditingNode(service);
   }, []);
@@ -730,14 +728,6 @@ export function DashboardCanvas({
         onMouseDown={handleCanvasMouseDown}
         style={{ cursor: isPanning ? "grabbing" : "" }}
       >
-        <LinkLayer
-          linkPaths={linkPaths}
-          previewPath={previewPath}
-          canvasW={canvasW}
-          canvasH={canvasH}
-          onEditLink={openEditModal}
-        />
-
         <div
           style={{
             transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
@@ -750,9 +740,10 @@ export function DashboardCanvas({
         >
           <NodeLayer
             services={services}
-            dragOffsets={dragOffsets}
             selectedId={selectedId}
+            dragOffsets={dragOffsets}
             hoveredNode={hoveredNode}
+            nestingTarget={nestingTarget}
             connectingSource={connectingSource}
             onSelect={handleNodeClick}
             onHover={setHoveredNode}
@@ -765,6 +756,19 @@ export function DashboardCanvas({
             onNodeMouseLeave={handleNodeMouseLeave}
           />
         </div>
+
+        <LinkLayer
+          links={links}
+          services={services}
+          dragOffsets={dragOffsets}
+          panOffset={panOffset}
+          zoomLevel={zoomLevel}
+          connectingSource={connectingSource}
+          mouseCanvasPos={mouseCanvasPos}
+          canvasW={canvasW}
+          canvasH={canvasH}
+          onEditLink={openEditLinkModal}
+        />
       </Canvas>
 
       <ZoomControls
@@ -792,8 +796,8 @@ export function DashboardCanvas({
       {editingLink && (
         <EditLinkModal
           link={editingLink}
-          onSave={handleLinkEditSave}
-          onDelete={handleLinkEditDelete}
+          onSave={handleEditLinkSave}
+          onDelete={handleEditLinkDelete}
           onCancel={() => setEditingLink(null)}
         />
       )}

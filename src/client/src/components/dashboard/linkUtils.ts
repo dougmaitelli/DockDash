@@ -12,6 +12,9 @@ export interface LinkPath {
   color: string;
 }
 
+const MIN_SEG = 40; // minimum stub length before first turn
+const CORNER_R = 10; // corner radius
+
 export function getLinkColor(type: string): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
 
@@ -24,9 +27,6 @@ const SIDE_VEC: Record<PortSide, [number, number]> = {
   bottom: [0, 1],
   top: [0, -1],
 };
-
-const MIN_SEG = 40; // minimum stub length before first turn
-const CORNER_R = 10; // corner radius
 
 export function orthogonalPath(
   x1: number,

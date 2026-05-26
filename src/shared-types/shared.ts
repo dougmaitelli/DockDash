@@ -52,6 +52,7 @@ export interface ServicePosition {
   service_id: string;
   x: number;
   y: number;
+  parent_id?: string | null;
 }
 
 export interface ServiceWithPosition extends Service {

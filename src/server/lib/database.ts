@@ -129,15 +129,15 @@ export class DatabaseService {
     this.db.prepare("DELETE FROM service_positions WHERE service_id = ?").run(id);
   }
 
-  saveServicePosition(serviceId: string, x: number, y: number): void {
+  saveServicePosition(serviceId: string, x: number, y: number, parentId?: string | null): void {
     this.db
       .prepare(
         `
-      INSERT INTO service_positions (service_id, x, y) VALUES (?, ?, ?)
-      ON CONFLICT(service_id) DO UPDATE SET x = excluded.x, y = excluded.y
+      INSERT INTO service_positions (service_id, x, y, parent_id) VALUES (?, ?, ?, ?)
+      ON CONFLICT(service_id) DO UPDATE SET x = excluded.x, y = excluded.y, parent_id = excluded.parent_id
     `,
       )
-      .run(serviceId, x, y);
+      .run(serviceId, x, y, parentId ?? null);
   }
 
   getServicePositions(): ServicePosition[] {

@@ -162,19 +162,24 @@ export function useDashboard() {
     [],
   );
 
-  const updatePosition = useCallback(async (serviceId: string, x: number, y: number) => {
-    await positionApi.save([{ service_id: serviceId, x, y }]);
-    setData((prev) => {
-      if (!prev) return prev;
+  const updatePosition = useCallback(
+    async (serviceId: string, x: number, y: number, parentId: string | null = null) => {
+      await positionApi.save([{ service_id: serviceId, x, y, parent_id: parentId }]);
+      setData((prev) => {
+        if (!prev) return prev;
 
-      return {
-        ...prev,
-        services: prev.services.map((s) =>
-          s.id === serviceId ? { ...s, position: { service_id: serviceId, x, y } } : s,
-        ),
-      };
-    });
-  }, []);
+        return {
+          ...prev,
+          services: prev.services.map((s) =>
+            s.id === serviceId
+              ? { ...s, position: { service_id: serviceId, x, y, parent_id: parentId } }
+              : s,
+          ),
+        };
+      });
+    },
+    [],
+  );
 
   const removeService = useCallback(async (id: string) => {
     await serviceApi.delete(id);

@@ -130,10 +130,12 @@ router.delete("/links/:id", (req, res) => {
 
 // Update service positions
 router.post("/positions", (req, res) => {
-  const { positions } = req.body as { positions: { service_id: string; x: number; y: number }[] };
+  const { positions } = req.body as {
+    positions: { service_id: string; x: number; y: number; parent_id?: string | null }[];
+  };
 
   for (const p of positions) {
-    db.saveServicePosition(p.service_id, p.x, p.y);
+    db.saveServicePosition(p.service_id, p.x, p.y, p.parent_id);
   }
 
   const allPositions = db.getServicePositions();
