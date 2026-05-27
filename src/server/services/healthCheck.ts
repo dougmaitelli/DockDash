@@ -3,6 +3,7 @@ import axios from "axios";
 import { db } from "../lib/database.js";
 import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 import { USER_AGENT, HTTP_PROTOCOLS, TCP_CHECKABLE_PROTOCOLS } from "../lib/constants.js";
+import { createDockerClient, getContainersStateMap } from "./dockerService.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -102,12 +103,40 @@ export async function checkSingleService(serviceId: string): Promise<ServiceStat
 
     return status;
   } catch (err) {
-    console.error(
-      `Health check failed for service "${service.name}" (${serviceId}):`,
-      err instanceof Error ? err.message : String(err),
-    );
+    console.error(`Health check failed for service "${service.name}" (${serviceId}):`, err);
 
     return null;
+  }
+}
+
+async function refreshDockerContainerStates(
+  services: ReturnType<typeof db.getServices>,
+): Promise<void> {
+  const dockerServices = services.filter((s) => s.source === ServiceSource.DOCKER);
+
+  if (dockerServices.length === 0) return;
+
+  try {
+    const docker = await createDockerClient();
+    const stateMap = await getContainersStateMap(docker);
+
+    for (const service of dockerServices) {
+      const containerId = service.metadata?.containerId as string | undefined;
+
+      if (!containerId) continue;
+
+      const containerState = stateMap.get(containerId);
+
+      if (containerState) {
+        db.updateServiceMetadata(service.id || "", {
+          state: containerState.state,
+          status: containerState.status,
+          imageTag: containerState.imageTag,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Failed to refresh Docker container states:", err);
   }
 }
 
@@ -125,6 +154,8 @@ export async function checkAllServices(): Promise<{ updated: number; errors: num
       updated++;
     }
   }
+
+  await refreshDockerContainerStates(services);
 
   return { updated, errors };
 }

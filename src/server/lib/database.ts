@@ -90,6 +90,22 @@ export class DatabaseService {
     return this.getService(id)!;
   }
 
+  updateServiceMetadata(
+    id: string,
+    patch: Record<string, string | number | boolean | string[] | number[]>,
+  ): void {
+    const service = this.getService(id);
+
+    if (!service) return;
+
+    const merged = { ...(service.metadata ?? {}), ...patch };
+    const now = new Date().toISOString();
+
+    this.db
+      .prepare(`UPDATE services SET metadata = ?, updated_at = ? WHERE id = ?`)
+      .run(JSON.stringify(merged), now, id);
+  }
+
   updateServiceStatus(id: string, status: ServiceStatus, lastChecked?: string): void {
     const now = lastChecked || new Date().toISOString();
 

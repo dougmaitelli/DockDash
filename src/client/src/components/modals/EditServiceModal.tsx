@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import type { Service } from "@shared";
@@ -30,6 +30,48 @@ const NodeId = styled.div`
   margin-top: 4px;
 `;
 
+const MetadataToggle = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 8px 0 4px;
+  cursor: pointer;
+  color: ${colors.textMuted};
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+
+  &:hover {
+    color: ${colors.textSecondary};
+  }
+`;
+
+const MetadataGrid = styled.div`
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  padding: 8px 12px;
+  background: ${colors.bgPrimary};
+  border-radius: 6px;
+  margin-bottom: 14px;
+`;
+
+const MetaKey = styled.span`
+  font-size: 0.75rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+  color: ${colors.textMuted};
+  white-space: nowrap;
+`;
+
+const MetaValue = styled.span`
+  font-size: 0.75rem;
+  color: ${colors.textSecondary};
+  word-break: break-all;
+`;
+
 const Row = styled.div`
   display: flex;
   gap: 12px;
@@ -54,6 +96,14 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
   const [editNodeProtocol, setEditNodeProtocol] = useState<ServiceProtocol>(
     service?.protocol ?? ServiceProtocol.HTTP,
   );
+  const [metadataExpanded, setMetadataExpanded] = useState(false);
+
+  const metadataEntries = service?.metadata
+    ? Object.entries(service.metadata).map(([key, value]) => ({
+        key,
+        value: Array.isArray(value) ? value.join(", ") : String(value),
+      }))
+    : [];
 
   const handleConfirm = () => {
     const portVal = editNodePort.trim() === "" ? null : parseInt(editNodePort, 10);
@@ -137,6 +187,24 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
           </StyledSelect>
         </FormGroup>
       </Row>
+      {metadataEntries.length > 0 && (
+        <>
+          <MetadataToggle onClick={() => setMetadataExpanded((v) => !v)}>
+            <span>{metadataExpanded ? "▾" : "▸"}</span>
+            {t("modals.metadata")}
+          </MetadataToggle>
+          {metadataExpanded && (
+            <MetadataGrid>
+              {metadataEntries.map(({ key, value }) => (
+                <Fragment key={key}>
+                  <MetaKey>{key}</MetaKey>
+                  <MetaValue>{value}</MetaValue>
+                </Fragment>
+              ))}
+            </MetadataGrid>
+          )}
+        </>
+      )}
     </BaseModal>
   );
 }

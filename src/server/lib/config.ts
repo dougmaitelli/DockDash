@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { PORT_INFO_MAP } from "./constants.js";
 
 export const DEFAULT_PORT = 3001;

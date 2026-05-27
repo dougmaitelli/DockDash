@@ -11,8 +11,8 @@ export async function createDockerClient(): Promise<Docker> {
     return new Docker({ socketPath: dockerHost.replace("unix://", "") });
   }
 
-  const url = dockerHost.startsWith("tcp://") ? dockerHost : `tcp://${dockerHost}`;
-  const docker = new Docker({ host: url.replace("tcp://", "") });
+  const url = new URL(dockerHost.startsWith("tcp://") ? dockerHost : `tcp://${dockerHost}`);
+  const docker = new Docker({ host: url.hostname, port: parseInt(url.port, 10) || 2375 });
 
   return docker;
 }
@@ -63,6 +63,7 @@ export async function* scanDockerContainers(docker: Docker): AsyncGenerator<Serv
     const networks = inspect.NetworkSettings?.Networks || {};
     const networkNames = Object.keys(networks);
     const hostPorts = ports.map((p) => p.PublicPort ?? 0);
+    const { image, tag: imageTag } = parseImage(container.Image);
 
     yield {
       id: `docker-${uuidv4()}`,
@@ -79,17 +80,32 @@ export async function* scanDockerContainers(docker: Docker): AsyncGenerator<Serv
             : ServiceStatus.UNKNOWN,
       metadata: {
         containerId: container.Id,
-        image: container.Image,
+        containerName: name,
+        image,
+        imageTag,
         state: container.State,
         status: container.Status,
         networkNames: networkNames,
-        labels: inspect.Config?.Labels ? Object.values(inspect.Config.Labels) : [],
         hostPorts: hostPorts,
       },
       created_at: now,
       updated_at: now,
     };
   }
+}
+
+export async function getContainersStateMap(
+  docker: Docker,
+): Promise<Map<string, { state: string; status: string; imageTag: string }>> {
+  const containers = await docker.listContainers({ all: true });
+
+  return new Map(
+    containers.map((c) => {
+      const { tag: imageTag } = parseImage(c.Image);
+
+      return [c.Id, { state: c.State, status: c.Status, imageTag }];
+    }),
+  );
 }
 
 export async function scanDockerNetworks(docker: Docker) {
@@ -106,4 +122,21 @@ export async function scanDockerNetworks(docker: Docker) {
 
 function detectProtocol(port: number): ServiceProtocol {
   return PORT_INFO_MAP[port]?.protocol ?? ServiceProtocol.HTTP;
+}
+
+export function parseImage(image: string): { image: string; tag: string } {
+  // Strip digest (sha256:...) if present
+  const withoutDigest = image.split("@")[0];
+  // Reconstruct the path segments, splitting the tag off the last segment only
+  const segments = withoutDigest.split("/");
+  const lastSegment = segments[segments.length - 1];
+  const colonIdx = lastSegment.lastIndexOf(":");
+
+  if (colonIdx >= 0) {
+    segments[segments.length - 1] = lastSegment.slice(0, colonIdx);
+
+    return { image: segments.join("/"), tag: lastSegment.slice(colonIdx + 1) };
+  }
+
+  return { image: withoutDigest, tag: "latest" };
 }

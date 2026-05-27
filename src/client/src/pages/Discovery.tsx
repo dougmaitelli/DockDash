@@ -298,9 +298,10 @@ export default function Discovery() {
     setCidrs(cidrs.filter((_, i) => i !== index));
   };
 
-  const existingKeys = new Set(services.map((s) => `${s.host}:${s.port}`));
-  const availableDocker = dockerResults.filter((s) => !existingKeys.has(`${s.host}:${s.port}`));
-  const availableNetwork = networkResults.filter((s) => !existingKeys.has(`${s.host}:${s.port}`));
+  const availableDocker = dockerResults.filter((s) => !services.some((e) => Service.equals(s, e)));
+  const availableNetwork = networkResults.filter(
+    (s) => !services.some((e) => Service.equals(s, e)),
+  );
 
   const handleImportAllDocker = async () => {
     await Promise.all(
@@ -408,7 +409,7 @@ export default function Discovery() {
               <span>{t("discovery.notOnDashboard", { count: availableDocker.length })}</span>
             </div>
             {dockerResults.map((svc) => {
-              const imported = existingKeys.has(`${svc.host}:${svc.port}`);
+              const imported = services.some((e) => Service.equals(svc, e));
 
               return (
                 <ResultItem key={svc.id}>
@@ -534,7 +535,7 @@ export default function Discovery() {
               <span>{t("discovery.notOnDashboard", { count: availableNetwork.length })}</span>
             </div>
             {networkResults.map((svc) => {
-              const imported = existingKeys.has(`${svc.host}:${svc.port}`);
+              const imported = services.some((e) => Service.equals(svc, e));
 
               return (
                 <ResultItem key={svc.id}>
