@@ -115,6 +115,17 @@ const StatusBadge = styled.div<{ status: string }>`
         : colors.textMuted};
 `;
 
+const ImageTag = styled.span`
+  display: inline-block;
+  padding: 1px 5px;
+  background: ${colors.accentPurpleAlpha10};
+  color: ${colors.accentPurple};
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+  flex-shrink: 0;
+`;
+
 const PortTag = styled.span`
   display: inline-block;
   padding: 1px 6px;
@@ -344,6 +355,9 @@ export function ServiceNodeInner({
             <span className="name" title={service.name}>
               {service.name}
             </span>
+            {service.source === ServiceSource.DOCKER && service.metadata?.imageTag && (
+              <ImageTag>{service.metadata.imageTag as string}</ImageTag>
+            )}
           </ServiceName>
           <ServiceHost>
             {service.host}
