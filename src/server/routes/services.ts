@@ -81,6 +81,7 @@ router.delete("/services/:id", (req, res) => {
   db.deleteService(req.params.id);
 
   const response: ApiSuccess = { success: true };
+
   res.json(response);
 });
 
@@ -133,6 +134,7 @@ router.delete("/links/:id", (req, res) => {
   db.deleteLink(req.params.id);
 
   const response: ApiSuccess = { success: true };
+
   res.json(response);
 });
 
@@ -145,6 +147,7 @@ router.post("/positions", (req, res) => {
   }
 
   const response: SavePositionsResponse = { positions: db.getServicePositions() };
+
   res.json(response);
 });
 
@@ -168,6 +171,7 @@ router.post("/checkAllServices", (_req, res) => {
     status: "running",
     message: "Health check started in background",
   };
+
   res.json(response);
 });
 

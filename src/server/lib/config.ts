@@ -16,7 +16,9 @@ class Config {
 
   get dockerHosts(): string[] {
     const envHosts = process.env.DOCKER_HOSTS
-      ? process.env.DOCKER_HOSTS.split(",").map((h) => h.trim()).filter(Boolean)
+      ? process.env.DOCKER_HOSTS.split(",")
+          .map((h) => h.trim())
+          .filter(Boolean)
       : [];
 
     const socketPath = DEFAULT_DOCKER_SOCKET.replace("unix://", "");

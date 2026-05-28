@@ -32,7 +32,6 @@ export enum ServiceLinkType {
   OTHER = "other",
 }
 
-
 export interface ServiceStatusItem {
   id: string;
   status: ServiceStatus;
@@ -61,4 +60,3 @@ export interface DashboardData {
   services: ServiceWithPosition[];
   links: ServiceLink[];
 }
-

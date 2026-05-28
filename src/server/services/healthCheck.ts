@@ -3,7 +3,11 @@ import axios from "axios";
 import { db } from "../lib/database.js";
 import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 import { USER_AGENT, HTTP_PROTOCOLS, TCP_CHECKABLE_PROTOCOLS } from "../lib/constants.js";
-import { createDockerClientForHost, getContainersStateMap } from "./dockerService.js";
+import {
+  createDockerClientForHost,
+  getContainersStateMap,
+  type ContainerStateMap,
+} from "./dockerService.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -44,113 +48,112 @@ async function checkHttp(host: string, port: number, protocol: string): Promise<
   }
 }
 
-export async function checkService(service: {
-  id: string;
+async function checkNetworkService(service: {
   host: string;
   port: number | null;
   protocol: ServiceProtocol;
-  source: ServiceSource;
 }): Promise<ServiceStatus> {
   if (service.port === null) return ServiceStatus.UNKNOWN;
 
-  // Docker containers: check by port (protocol already set from scan)
-  if (service.source === ServiceSource.DOCKER) {
-    if (TCP_CHECKABLE_PROTOCOLS.includes(service.protocol)) {
-      return (await checkTcp(service.host, service.port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
-    }
-
-    return ServiceStatus.UNKNOWN;
-  }
-
-  // Network services: check HTTP first, fall back to TCP
   if (HTTP_PROTOCOLS.includes(service.protocol)) {
     const httpOk = await checkHttp(service.host, service.port, service.protocol);
 
     if (httpOk) return ServiceStatus.UP;
 
-    // HTTP probe failed, try raw TCP
+    // HTTP probe failed, fall back to raw TCP
     return (await checkTcp(service.host, service.port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
   }
 
-  // Non-HTTP protocols: TCP check
-  const open = await checkTcp(service.host, service.port);
+  if (TCP_CHECKABLE_PROTOCOLS.includes(service.protocol)) {
+    return (await checkTcp(service.host, service.port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
+  }
 
-  return open ? ServiceStatus.UP : ServiceStatus.DOWN;
+  return ServiceStatus.UNKNOWN;
 }
 
-export async function checkSingleService(serviceId: string): Promise<ServiceStatus | null> {
-  const services = db.getServices();
-  const service = services.find((s) => s.id === serviceId); //TODO: optimize by adding getService to db
+function logStatusChange(name: string, oldStatus: ServiceStatus, newStatus: ServiceStatus): void {
+  if (oldStatus !== newStatus) {
+    console.log(`Service "${name}" status changed: ${oldStatus} -> ${newStatus}`);
+  }
+}
+
+export async function checkSingleDockerService(
+  serviceId: string,
+  stateMap?: ContainerStateMap,
+): Promise<ServiceStatus | null> {
+  const service = db.getService(serviceId);
 
   if (!service) return null;
 
+  const containerId = service.metadata?.containerId as string | undefined;
+  const dockerHost = service.metadata?.dockerHost as string | undefined;
+
   try {
-    const status = await checkService({
-      id: service.id || "",
-      host: service.host,
-      port: service.port,
-      protocol: service.protocol,
-      source: service.source,
-    });
+    let status: ServiceStatus;
 
-    const oldStatus = service.status;
+    if (!containerId || !dockerHost) {
+      status = ServiceStatus.UNKNOWN;
+    } else {
+      const map = stateMap ?? (await getContainersStateMap(createDockerClientForHost(dockerHost)));
+      const containerInfo = map.get(containerId);
 
-    db.updateServiceStatus(service.id || "", status);
+      if (!containerInfo) {
+        status = ServiceStatus.UNKNOWN;
+      } else if (containerInfo.state === "running") {
+        status = ServiceStatus.UP;
+      } else if (["exited", "dead", "stopped"].includes(containerInfo.state)) {
+        status = ServiceStatus.DOWN;
+      } else {
+        status = ServiceStatus.UNKNOWN;
+      }
 
-    if (oldStatus !== status) {
-      console.log(`Service "${service.name}" status changed: ${oldStatus} -> ${status}`);
+      if (containerInfo) {
+        db.updateServiceMetadata(service.id || "", { imageTag: containerInfo.imageTag });
+      }
     }
+
+    logStatusChange(service.name, service.status, status);
+    db.updateServiceStatus(service.id || "", status);
 
     return status;
   } catch (err) {
-    console.error(`Health check failed for service "${service.name}" (${serviceId}):`, err);
+    console.error(`Health check failed for Docker service "${service.name}" (${serviceId}):`, err);
 
     return null;
   }
 }
 
-async function refreshDockerContainerStates(
-  services: ReturnType<typeof db.getServices>,
-): Promise<void> {
-  const dockerServices = services.filter((s) => s.source === ServiceSource.DOCKER);
+export async function checkSingleNetworkService(serviceId: string): Promise<ServiceStatus | null> {
+  const service = db.getService(serviceId);
 
-  if (dockerServices.length === 0) return;
+  if (!service) return null;
 
-  const servicesByHost = new Map<string, typeof dockerServices>();
+  try {
+    const status = await checkNetworkService({
+      host: service.host,
+      port: service.port,
+      protocol: service.protocol,
+    });
 
-  for (const service of dockerServices) {
-    const host = service.metadata?.dockerHost as string | undefined;
+    logStatusChange(service.name, service.status, status);
+    db.updateServiceStatus(service.id || "", status);
 
-    if (!host) continue;
+    return status;
+  } catch (err) {
+    console.error(`Health check failed for network service "${service.name}" (${serviceId}):`, err);
 
-    if (!servicesByHost.has(host)) servicesByHost.set(host, []);
-
-    servicesByHost.get(host)!.push(service);
+    return null;
   }
+}
 
-  for (const [host, hostServices] of servicesByHost) {
-    try {
-      const docker = createDockerClientForHost(host);
-      const stateMap = await getContainersStateMap(docker);
+export async function checkSingleService(serviceId: string): Promise<ServiceStatus | null> {
+  const service = db.getService(serviceId);
 
-      for (const service of hostServices) {
-        const containerId = service.metadata?.containerId as string | undefined;
+  if (!service) return null;
 
-        if (!containerId) continue;
-
-        const containerState = stateMap.get(containerId);
-
-        if (containerState) {
-          db.updateServiceMetadata(service.id || "", {
-            state: containerState.state,
-            imageTag: containerState.imageTag,
-          });
-        }
-      }
-    } catch (err) {
-      console.error(`Failed to refresh Docker container states for host ${host}:`, err);
-    }
-  }
+  return service.source === ServiceSource.DOCKER
+    ? checkSingleDockerService(serviceId)
+    : checkSingleNetworkService(serviceId);
 }
 
 export async function checkAllServices(): Promise<{ updated: number; errors: number }> {
@@ -158,8 +161,37 @@ export async function checkAllServices(): Promise<{ updated: number; errors: num
   let updated = 0;
   let errors = 0;
 
+  // Pre-fetch one stateMap per Docker host so checkSingleDockerService
+  // doesn't call listContainers once per container.
+  const stateMapByHost = new Map<string, ContainerStateMap>();
+
   for (const service of services) {
-    const status = await checkSingleService(service.id || "");
+    if (service.source !== ServiceSource.DOCKER) continue;
+
+    const host = service.metadata?.dockerHost as string | undefined;
+
+    if (host && !stateMapByHost.has(host)) {
+      try {
+        stateMapByHost.set(host, await getContainersStateMap(createDockerClientForHost(host)));
+      } catch (err) {
+        console.error(`Failed to fetch container states for Docker host ${host}:`, err);
+      }
+    }
+  }
+
+  for (const service of services) {
+    let status: ServiceStatus | null;
+
+    if (service.source === ServiceSource.DOCKER) {
+      const host = service.metadata?.dockerHost as string | undefined;
+
+      status = await checkSingleDockerService(
+        service.id || "",
+        host ? stateMapByHost.get(host) : undefined,
+      );
+    } else {
+      status = await checkSingleNetworkService(service.id || "");
+    }
 
     if (status === null) {
       errors++;
@@ -167,8 +199,6 @@ export async function checkAllServices(): Promise<{ updated: number; errors: num
       updated++;
     }
   }
-
-  await refreshDockerContainerStates(services);
 
   return { updated, errors };
 }

@@ -1,4 +1,4 @@
-import { ServiceSource, ServiceStatus, ServiceProtocol, ServicePosition } from "./shared.js";
+import { ServiceSource, ServiceStatus, ServiceProtocol } from "./shared.js";
 
 export class Service {
   id?: string;

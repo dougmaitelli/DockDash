@@ -70,12 +70,14 @@ router.get("/docker/scan/stream", async (req, res) => {
       const errorPayload: SseScanErrorPayload = {
         message: err instanceof Error ? err.message : String(err),
       };
+
       res.write(`event: ${SSE_EVENT.SCAN_ERROR}\ndata: ${JSON.stringify(errorPayload)}\n\n`);
     }
   }
 
   if (!closed) {
     const donePayload: SseScanDonePayload = { count };
+
     res.write(`event: ${SSE_EVENT.DONE}\ndata: ${JSON.stringify(donePayload)}\n\n`);
     res.end();
   }
@@ -126,12 +128,14 @@ router.get("/network/scan/stream", async (req, res) => {
       const errorPayload: SseScanErrorPayload = {
         message: err instanceof Error ? err.message : String(err),
       };
+
       res.write(`event: ${SSE_EVENT.SCAN_ERROR}\ndata: ${JSON.stringify(errorPayload)}\n\n`);
     }
   }
 
   if (!closed) {
     const donePayload: SseScanDonePayload = { count };
+
     res.write(`event: ${SSE_EVENT.DONE}\ndata: ${JSON.stringify(donePayload)}\n\n`);
     res.end();
   }
@@ -146,6 +150,7 @@ router.get("/config", (_req, res) => {
     refreshInterval: config.refreshInterval,
     healthCheckInterval: config.healthCheckInterval,
   };
+
   res.json(cfg);
 });
 

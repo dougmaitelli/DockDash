@@ -88,7 +88,6 @@ export async function* scanDockerContainers(
         containerName: name,
         image,
         imageTag,
-        state: container.State,
         networkNames: networkNames,
         hostPorts: hostPorts,
       },
@@ -98,9 +97,9 @@ export async function* scanDockerContainers(
   }
 }
 
-export async function getContainersStateMap(
-  docker: Docker,
-): Promise<Map<string, { state: string; imageTag: string }>> {
+export type ContainerStateMap = Map<string, { state: string; imageTag: string }>;
+
+export async function getContainersStateMap(docker: Docker): Promise<ContainerStateMap> {
   const containers = await docker.listContainers({ all: true });
 
   return new Map(
