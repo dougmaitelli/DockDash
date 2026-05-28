@@ -170,6 +170,7 @@ export function DashboardCanvas({
 
   const { t } = useTranslation();
   const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
+  const servicesWithUpdates = services.filter((s) => s.metadata?.hasUpdate === true).length;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
@@ -694,6 +695,17 @@ export function DashboardCanvas({
           <span style={{ fontSize: "0.75rem", color: colors.textMuted }}>
             {t("dashboard.online")}
           </span>
+          {servicesWithUpdates > 0 && (
+            <>
+              <span style={{ color: colors.border }}>·</span>
+              <span style={{ fontSize: "0.85rem", color: colors.accentYellow, fontWeight: 600 }}>
+                {servicesWithUpdates}
+              </span>
+              <span style={{ fontSize: "0.75rem", color: colors.textMuted }}>
+                {t("dashboard.updates")}
+              </span>
+            </>
+          )}
         </ToolbarGroup>
         <ToolbarGroup>
           <SecondaryButton onClick={() => setAddingService(true)}>

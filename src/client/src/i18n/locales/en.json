@@ -6,6 +6,7 @@
   },
   "dashboard": {
     "online": "Online",
+    "updates": "Updates",
     "addService": "Add Service",
     "remove": "Remove",
     "refresh": "Refresh",

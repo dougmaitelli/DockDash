@@ -16,6 +16,7 @@ services:
       - DB_PATH=/app/data/dockdash.db
       - REFRESH_INTERVAL=${REFRESH_INTERVAL:-30000}
       - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30000}
+      - UPDATE_CHECK_INTERVAL=${UPDATE_CHECK_INTERVAL:-3600000}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - dockdash-data:/app/data

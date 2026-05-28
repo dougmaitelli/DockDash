@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { colors } from "../../styles/vars";
 import { NODE_WIDTH, CHILD_GAP, GROUP_CARD_INNER_PADDING, PortSide } from "./nodeGeometry";
+import { IconArrowRight } from "../../utils/Icons";
 
 interface NodeCardProps {
   service: Service;
@@ -135,6 +136,26 @@ const PortTag = styled.span`
   font-size: 0.65rem;
   margin-left: 4px;
   font-family: "SF Mono", "Fira Code", monospace;
+`;
+
+const TagRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+`;
+
+const UpdateTag = styled.span`
+  display: inline-block;
+  padding: 1px 5px;
+  background: ${colors.accentYellowAlpha10};
+  color: ${colors.accentYellow};
+  border: 1px solid color-mix(in srgb, ${colors.accentYellow} 30%, transparent);
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+  flex-shrink: 0;
 `;
 
 const PortDot = styled.div<{ $isSource?: boolean; $isTarget?: boolean }>`
@@ -374,10 +395,20 @@ export function ServiceNodeInner({
             <span className="name" title={service.name}>
               {service.name}
             </span>
-            {service.source === ServiceSource.DOCKER && service.metadata?.imageTag && (
-              <ImageTag>{service.metadata.imageTag as string}</ImageTag>
-            )}
           </ServiceName>
+          {service.source === ServiceSource.DOCKER && service.metadata?.imageTag && (
+            <TagRow>
+              <ImageTag>{service.metadata.imageTag as string}</ImageTag>
+              {service.metadata.hasUpdate && (
+                <>
+                  <IconArrowRight size={10} style={{ color: colors.textMuted, flexShrink: 0 }} />
+                  <UpdateTag>
+                    {(service.metadata.latestVersion as string | undefined) ?? "update available"}
+                  </UpdateTag>
+                </>
+              )}
+            </TagRow>
+          )}
           <ServiceHost>
             {service.host}
             {service.port && <PortTag>:{service.port}</PortTag>}

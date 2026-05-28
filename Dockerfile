@@ -34,6 +34,7 @@ ENV SCAN_PORTS=
 ENV DB_PATH=/app/data/dockdash.db
 ENV REFRESH_INTERVAL=30000
 ENV HEALTH_CHECK_INTERVAL=30000
+ENV UPDATE_CHECK_INTERVAL=3600000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1

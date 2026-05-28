@@ -50,6 +50,7 @@ export interface DashboardConfig {
   scanPorts: number[];
   refreshInterval: number;
   healthCheckInterval: number;
+  updateCheckInterval: number;
 }
 
 // ---------------------------------------------------------------------------

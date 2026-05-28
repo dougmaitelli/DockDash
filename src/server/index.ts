@@ -5,12 +5,14 @@ import { fileURLToPath } from "url";
 import discoveryRoutes from "./routes/discovery.js";
 import serviceRoutes from "./routes/services.js";
 import { checkAllServices } from "./services/healthCheck.js";
+import { checkAllServicesForUpdates } from "./services/updateChecker.js";
 import { config } from "./lib/config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = config.port;
 const HEALTH_CHECK_INTERVAL = config.healthCheckInterval;
+const UPDATE_CHECK_INTERVAL = config.updateCheckInterval;
 
 // Middleware
 app.use(cors());
@@ -46,6 +48,7 @@ app.listen(PORT, () => {
   console.log(`Docker hosts: ${config.dockerHosts.join(", ")}`);
   console.log(`Network CIDRs: ${config.networkCidrs.join(",")}`);
   console.log(`Health check interval: ${HEALTH_CHECK_INTERVAL}ms`);
+  console.log(`Update check interval: ${UPDATE_CHECK_INTERVAL}ms`);
 
   // Background health check job
   const healthCheckInterval = setInterval(async () => {
@@ -61,6 +64,22 @@ app.listen(PORT, () => {
   }, HEALTH_CHECK_INTERVAL);
 
   healthCheckInterval.unref();
+
+  // Background update check job (also runs once immediately at startup)
+  const runUpdateCheck = async () => {
+    try {
+      console.log("Update check: starting…");
+      await checkAllServicesForUpdates();
+      console.log("Update check: done");
+    } catch (err) {
+      console.error("Update check failed:", err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const updateCheckInterval = setInterval(runUpdateCheck, UPDATE_CHECK_INTERVAL);
+
+  updateCheckInterval.unref();
+  runUpdateCheck();
 });
 
 export default app;

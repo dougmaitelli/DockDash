@@ -60,3 +60,12 @@ export interface DashboardData {
   services: ServiceWithPosition[];
   links: ServiceLink[];
 }
+
+/** Stored inside service.metadata for Docker services once an update check has run. */
+export interface ServiceUpdateInfo {
+  hasUpdate: boolean;
+  /** Tag name (SemVer case) or short digest string ("latest" case) */
+  latestVersion?: string;
+  /** ISO timestamp of the last update check */
+  updateCheckedAt?: string;
+}

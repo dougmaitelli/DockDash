@@ -8,6 +8,7 @@ export const DEFAULT_NETWORK_CIDRS = "192.168.0.0/24";
 export const DEFAULT_SCAN_PORTS = [...Object.keys(PORT_INFO_MAP).map(Number), 3001, 9090];
 export const DEFAULT_HEALTH_CHECK_INTERVAL = 30000;
 export const DEFAULT_REFRESH_INTERVAL = 30000;
+export const DEFAULT_UPDATE_CHECK_INTERVAL = 3_600_000; // 1 hour
 
 class Config {
   get port(): number {
@@ -53,6 +54,12 @@ class Config {
     return process.env.REFRESH_INTERVAL
       ? parseInt(process.env.REFRESH_INTERVAL, 10)
       : DEFAULT_REFRESH_INTERVAL;
+  }
+
+  get updateCheckInterval(): number {
+    return process.env.UPDATE_CHECK_INTERVAL
+      ? parseInt(process.env.UPDATE_CHECK_INTERVAL, 10)
+      : DEFAULT_UPDATE_CHECK_INTERVAL;
   }
 }
 

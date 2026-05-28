@@ -149,6 +149,7 @@ router.get("/config", (_req, res) => {
     scanPorts: config.scanPorts,
     refreshInterval: config.refreshInterval,
     healthCheckInterval: config.healthCheckInterval,
+    updateCheckInterval: config.updateCheckInterval,
   };
 
   res.json(cfg);

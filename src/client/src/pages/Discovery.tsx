@@ -375,7 +375,8 @@ export default function Discovery() {
             health.map((h) =>
               h.connected ? (
                 <StatusBadge key={h.host} ok={true}>
-                  ✓ {h.host} —{" "}
+                  <IconCheck size={12} />
+                  {h.host} —{" "}
                   {t("discovery.connected", {
                     version: h.serverVersion,
                     running: h.containersRunning,
@@ -384,7 +385,8 @@ export default function Discovery() {
                 </StatusBadge>
               ) : (
                 <StatusBadge key={h.host} ok={false}>
-                  ✕ {h.host} — {t("discovery.notConnected", { error: h.error })}
+                  <IconX size={12} />
+                  {h.host} — {t("discovery.notConnected", { error: h.error })}
                 </StatusBadge>
               ),
             )

@@ -109,3 +109,12 @@ export function IconServer({ size = 14, ...props }: IconProps) {
     </svg>
   );
 }
+
+export function IconArrowRight({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2.2)} {...props}>
+      <path d="M5 12h14" />
+      <path d="M13 6l6 6-6 6" />
+    </svg>
+  );
+}
