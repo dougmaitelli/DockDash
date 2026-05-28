@@ -125,8 +125,7 @@ function findNestTarget(
 
     if (svc.position?.parent_id) continue; // can't nest into a child
 
-    const svcX = svc.position?.x ?? 0;
-    const svcY = svc.position?.y ?? 0;
+    const { x: svcX, y: svcY } = getAbsoluteNodePosition(svc, services, {});
 
     // Existing children (excluding the dragged node itself in case it's re-nesting)
     const currentChildren = services.filter(
@@ -402,7 +401,8 @@ export function DashboardCanvas({
         // Nested child: snap back to grid if dropped inside group, un-nest if outside
         const parent = services.find((s) => s.id === currentParentId);
 
-        if (parent?.position) {
+        if (parent) {
+          const { x: parentX, y: parentY } = getAbsoluteNodePosition(parent, services, {});
           const childCount = services.filter(
             (s) => s.position?.parent_id === currentParentId,
           ).length;
@@ -410,10 +410,10 @@ export function DashboardCanvas({
           const cx = finalAbsX + NODE_WIDTH / 2;
           const cy = finalAbsY + NODE_HEIGHT / 2;
           const insideGroup =
-            cx >= parent.position.x &&
-            cx <= parent.position.x + groupW &&
-            cy >= parent.position.y &&
-            cy <= parent.position.y + groupH;
+            cx >= parentX &&
+            cx <= parentX + groupW &&
+            cy >= parentY &&
+            cy <= parentY + groupH;
 
           if (insideGroup) {
             shouldUpdate = false; // snap back to grid position
