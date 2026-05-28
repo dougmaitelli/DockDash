@@ -2,6 +2,12 @@ import { Router } from "express";
 import { db } from "../lib/database.js";
 import { checkAllServices, checkSingleService } from "../services/healthCheck.js";
 import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
+import type {
+  ApiSuccess,
+  SavePositionsRequest,
+  SavePositionsResponse,
+  CheckAllServicesResponse,
+} from "../../shared-types/api.js";
 
 const router = Router();
 
@@ -74,7 +80,8 @@ router.put("/services/:id", (req, res) => {
 router.delete("/services/:id", (req, res) => {
   db.deleteService(req.params.id);
 
-  res.json({ success: true });
+  const response: ApiSuccess = { success: true };
+  res.json(response);
 });
 
 // Create link
@@ -125,22 +132,20 @@ router.put("/links/:id", (req, res) => {
 router.delete("/links/:id", (req, res) => {
   db.deleteLink(req.params.id);
 
-  res.json({ success: true });
+  const response: ApiSuccess = { success: true };
+  res.json(response);
 });
 
 // Update service positions
 router.post("/positions", (req, res) => {
-  const { positions } = req.body as {
-    positions: { service_id: string; x: number; y: number; parent_id?: string | null }[];
-  };
+  const { positions } = req.body as SavePositionsRequest;
 
   for (const p of positions) {
     db.saveServicePosition(p.service_id, p.x, p.y, p.parent_id);
   }
 
-  const allPositions = db.getServicePositions();
-
-  res.json({ positions: allPositions });
+  const response: SavePositionsResponse = { positions: db.getServicePositions() };
+  res.json(response);
 });
 
 // Dashboard data (services with positions, links, and stats in one request)
@@ -159,7 +164,11 @@ router.post("/checkAllServices", (_req, res) => {
       console.error("Health check failed:", err instanceof Error ? err.message : String(err));
     });
 
-  res.json({ status: "running", message: "Health check started in background" });
+  const response: CheckAllServicesResponse = {
+    status: "running",
+    message: "Health check started in background",
+  };
+  res.json(response);
 });
 
 router.get("/serviceStatuses", (_req, res) => {

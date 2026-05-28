@@ -5,8 +5,13 @@ import type {
   ServicePosition,
   DashboardData,
   ServiceStatusItem,
+  DockerHostHealth,
+  DashboardConfig,
+  ApiSuccess,
+  SavePositionsRequest,
+  SavePositionsResponse,
+  CheckAllServicesResponse,
 } from "@shared";
-import { DashboardConfig, DockerHealth } from "@/types";
 
 const api = axios.create({
   baseURL: "/api",
@@ -14,8 +19,7 @@ const api = axios.create({
 
 // Discovery APIs
 export const discoveryApi = {
-  dockerHealth: () => api.get<DockerHealth>("/docker/health"),
-  dockerNetworks: () => api.get("/docker/networks"),
+  dockerHealth: () => api.get<DockerHostHealth[]>("/docker/health"),
   getConfig: () => api.get<DashboardConfig>("/config"),
 };
 
@@ -29,7 +33,7 @@ export const serviceApi = {
     id: string,
     data: { name: string; host: string; port?: number | null; protocol?: string },
   ) => api.put<Service>(`/services/${id}`, data),
-  delete: (id: string) => api.delete(`/services/${id}`),
+  delete: (id: string) => api.delete<ApiSuccess>(`/services/${id}`),
 };
 
 // Link management APIs
@@ -37,25 +41,22 @@ export const linkApi = {
   create: (data: Omit<ServiceLink, "id" | "created_at">) => api.post<ServiceLink>("/links", data),
   update: (id: string, data: Pick<ServiceLink, "label" | "type" | "description">) =>
     api.put<ServiceLink>(`/links/${id}`, data),
-  delete: (id: string) => api.delete(`/links/${id}`),
+  delete: (id: string) => api.delete<ApiSuccess>(`/links/${id}`),
 };
 
 // Position management APIs
 export const positionApi = {
-  save: (positions: { service_id: string; x: number; y: number; parent_id?: string | null }[]) =>
-    api.post<SavePositionsResponse>("/positions", { positions }),
+  save: (positions: ServicePosition[]) =>
+    api.post<SavePositionsResponse>("/positions", { positions } satisfies SavePositionsRequest),
 };
 
 // Dashboard API
 export const dashboardApi = {
   get: () => api.get<DashboardData>("/dashboard"),
-  checkAllServices: () => api.post("/checkAllServices"),
+  checkAllServices: () => api.post<CheckAllServicesResponse>("/checkAllServices"),
   serviceStatuses: () => api.get<ServiceStatusItem[]>("/serviceStatuses"),
 };
 
-// Position API response with saved positions
-export interface SavePositionsResponse {
-  positions: ServicePosition[];
-}
+export type { SavePositionsResponse };
 
 export default api;

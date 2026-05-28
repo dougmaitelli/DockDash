@@ -3,7 +3,7 @@ import axios from "axios";
 import { db } from "../lib/database.js";
 import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 import { USER_AGENT, HTTP_PROTOCOLS, TCP_CHECKABLE_PROTOCOLS } from "../lib/constants.js";
-import { createDockerClient, getContainersStateMap } from "./dockerService.js";
+import { createDockerClientForHost, getContainersStateMap } from "./dockerService.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -116,27 +116,40 @@ async function refreshDockerContainerStates(
 
   if (dockerServices.length === 0) return;
 
-  try {
-    const docker = await createDockerClient();
-    const stateMap = await getContainersStateMap(docker);
+  const servicesByHost = new Map<string, typeof dockerServices>();
 
-    for (const service of dockerServices) {
-      const containerId = service.metadata?.containerId as string | undefined;
+  for (const service of dockerServices) {
+    const host = service.metadata?.dockerHost as string | undefined;
 
-      if (!containerId) continue;
+    if (!host) continue;
 
-      const containerState = stateMap.get(containerId);
+    if (!servicesByHost.has(host)) servicesByHost.set(host, []);
 
-      if (containerState) {
-        db.updateServiceMetadata(service.id || "", {
-          state: containerState.state,
-          status: containerState.status,
-          imageTag: containerState.imageTag,
-        });
+    servicesByHost.get(host)!.push(service);
+  }
+
+  for (const [host, hostServices] of servicesByHost) {
+    try {
+      const docker = createDockerClientForHost(host);
+      const stateMap = await getContainersStateMap(docker);
+
+      for (const service of hostServices) {
+        const containerId = service.metadata?.containerId as string | undefined;
+
+        if (!containerId) continue;
+
+        const containerState = stateMap.get(containerId);
+
+        if (containerState) {
+          db.updateServiceMetadata(service.id || "", {
+            state: containerState.state,
+            imageTag: containerState.imageTag,
+          });
+        }
       }
+    } catch (err) {
+      console.error(`Failed to refresh Docker container states for host ${host}:`, err);
     }
-  } catch (err) {
-    console.error("Failed to refresh Docker container states:", err);
   }
 }
 

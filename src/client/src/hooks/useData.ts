@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { serviceApi, linkApi, positionApi, discoveryApi, dashboardApi } from "../services/api";
-import { DashboardData, Service, ServiceLink, ServiceStatus } from "@shared";
+import { DashboardData, Service, ServiceLink, ServiceStatus, DockerHostHealth } from "@shared";
 
 export function useDiscovery() {
   const [services, setServices] = useState<Service[]>([]);
@@ -49,15 +49,7 @@ export function useDiscovery() {
 }
 
 export function useDockerHealth() {
-  const [health, setHealth] = useState<{
-    connected: boolean;
-    containers?: number;
-    containersRunning?: number;
-    containersPaused?: number;
-    containersStopped?: number;
-    serverVersion?: string;
-    error?: string;
-  } | null>(null);
+  const [health, setHealth] = useState<DockerHostHealth[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   const check = useCallback(async () => {
@@ -67,7 +59,7 @@ export function useDockerHealth() {
 
       setHealth(res.data);
     } catch {
-      setHealth({ connected: false });
+      setHealth([]);
     } finally {
       setLoading(false);
     }

@@ -4,20 +4,24 @@ import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared"
 import { PORT_INFO_MAP } from "../lib/constants.js";
 import { config } from "../lib/config.js";
 
-export async function createDockerClient(): Promise<Docker> {
-  const dockerHost = config.dockerHost;
-
-  if (dockerHost.startsWith("unix://")) {
-    return new Docker({ socketPath: dockerHost.replace("unix://", "") });
+export function createDockerClientForHost(host: string): Docker {
+  if (host.startsWith("unix://")) {
+    return new Docker({ socketPath: host.replace("unix://", "") });
   }
 
-  const url = new URL(dockerHost.startsWith("tcp://") ? dockerHost : `tcp://${dockerHost}`);
-  const docker = new Docker({ host: url.hostname, port: parseInt(url.port, 10) || 2375 });
+  const url = new URL(host.startsWith("tcp://") ? host : `tcp://${host}`);
 
-  return docker;
+  return new Docker({ host: url.hostname, port: parseInt(url.port, 10) || 2375 });
 }
 
-export async function* scanDockerContainers(docker: Docker): AsyncGenerator<Service> {
+export function createDockerClients(): { host: string; docker: Docker }[] {
+  return config.dockerHosts.map((host) => ({ host, docker: createDockerClientForHost(host) }));
+}
+
+export async function* scanDockerContainers(
+  docker: Docker,
+  dockerHost: string,
+): AsyncGenerator<Service> {
   const containers = await docker.listContainers({ all: true });
   const now = new Date().toISOString();
 
@@ -79,12 +83,12 @@ export async function* scanDockerContainers(docker: Docker): AsyncGenerator<Serv
             ? ServiceStatus.DOWN
             : ServiceStatus.UNKNOWN,
       metadata: {
+        dockerHost,
         containerId: container.Id,
         containerName: name,
         image,
         imageTag,
         state: container.State,
-        status: container.Status,
         networkNames: networkNames,
         hostPorts: hostPorts,
       },
@@ -96,28 +100,16 @@ export async function* scanDockerContainers(docker: Docker): AsyncGenerator<Serv
 
 export async function getContainersStateMap(
   docker: Docker,
-): Promise<Map<string, { state: string; status: string; imageTag: string }>> {
+): Promise<Map<string, { state: string; imageTag: string }>> {
   const containers = await docker.listContainers({ all: true });
 
   return new Map(
     containers.map((c) => {
       const { tag: imageTag } = parseImage(c.Image);
 
-      return [c.Id, { state: c.State, status: c.Status, imageTag }];
+      return [c.Id, { state: c.State, imageTag }];
     }),
   );
-}
-
-export async function scanDockerNetworks(docker: Docker) {
-  const networks = await docker.listNetworks();
-
-  return networks.map((net) => ({
-    id: net.Id,
-    name: net.Name,
-    driver: net.Driver,
-    ipam: net.IPAM,
-    containers: net.Containers || {},
-  }));
 }
 
 function detectProtocol(port: number): ServiceProtocol {

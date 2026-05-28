@@ -43,7 +43,7 @@ app.use(
 
 app.listen(PORT, () => {
   console.log(`DockDash server running on http://localhost:${PORT}`);
-  console.log(`Docker host: ${config.dockerHost}`);
+  console.log(`Docker hosts: ${config.dockerHosts.join(", ")}`);
   console.log(`Network CIDRs: ${config.networkCidrs.join(",")}`);
   console.log(`Health check interval: ${HEALTH_CHECK_INTERVAL}ms`);
 

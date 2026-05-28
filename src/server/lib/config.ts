@@ -1,8 +1,9 @@
 import "dotenv/config";
+import fs from "fs";
 import { PORT_INFO_MAP } from "./constants.js";
 
 export const DEFAULT_PORT = 3001;
-export const DEFAULT_DOCKER_HOST = "unix:///var/run/docker.sock";
+export const DEFAULT_DOCKER_SOCKET = "unix:///var/run/docker.sock";
 export const DEFAULT_NETWORK_CIDRS = "192.168.0.0/24";
 export const DEFAULT_SCAN_PORTS = [...Object.keys(PORT_INFO_MAP).map(Number), 3001, 9090];
 export const DEFAULT_HEALTH_CHECK_INTERVAL = 30000;
@@ -13,8 +14,19 @@ class Config {
     return process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;
   }
 
-  get dockerHost(): string {
-    return process.env.DOCKER_HOST ?? DEFAULT_DOCKER_HOST;
+  get dockerHosts(): string[] {
+    const envHosts = process.env.DOCKER_HOSTS
+      ? process.env.DOCKER_HOSTS.split(",").map((h) => h.trim()).filter(Boolean)
+      : [];
+
+    const socketPath = DEFAULT_DOCKER_SOCKET.replace("unix://", "");
+    const socketExists = fs.existsSync(socketPath);
+
+    if (socketExists && !envHosts.includes(DEFAULT_DOCKER_SOCKET)) {
+      return [DEFAULT_DOCKER_SOCKET, ...envHosts];
+    }
+
+    return envHosts;
   }
 
   get networkCidrs(): string[] {

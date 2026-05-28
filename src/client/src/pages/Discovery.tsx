@@ -362,28 +362,41 @@ export default function Discovery() {
       <Section>
         <SectionTitle>🐳 {t("discovery.dockerTitle")}</SectionTitle>
         <SectionDesc>{t("discovery.dockerDesc")}</SectionDesc>
-        <div style={{ marginBottom: 12 }}>
+        <div
+          style={{
+            marginBottom: 12,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+            gap: 4,
+          }}
+        >
           {health ? (
-            health.connected ? (
-              <StatusBadge ok={true}>
-                ✓{" "}
-                {t("discovery.connected", {
-                  version: health.serverVersion,
-                  running: health.containersRunning,
-                  total: health.containers,
-                })}
-              </StatusBadge>
-            ) : (
-              <StatusBadge ok={false}>
-                ✕ {t("discovery.notConnected", { error: health.error })}
-              </StatusBadge>
+            health.map((h) =>
+              h.connected ? (
+                <StatusBadge key={h.host} ok={true}>
+                  ✓ {h.host} —{" "}
+                  {t("discovery.connected", {
+                    version: h.serverVersion,
+                    running: h.containersRunning,
+                    total: h.containers,
+                  })}
+                </StatusBadge>
+              ) : (
+                <StatusBadge key={h.host} ok={false}>
+                  ✕ {h.host} — {t("discovery.notConnected", { error: h.error })}
+                </StatusBadge>
+              ),
             )
           ) : (
             <StatusBadge ok={false}>{t("discovery.checking")}</StatusBadge>
           )}
         </div>
         <ButtonRow>
-          <PrimaryButton onClick={handleDockerScan} disabled={scanningDocker || !health?.connected}>
+          <PrimaryButton
+            onClick={handleDockerScan}
+            disabled={scanningDocker || !health?.some((h) => h.connected)}
+          >
             <IconScan size={14} />
             {scanningDocker ? t("discovery.scanning") : t("discovery.scanDocker")}
           </PrimaryButton>

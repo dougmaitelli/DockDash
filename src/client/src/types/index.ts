@@ -18,21 +18,3 @@ export const LINK_TYPES: LinkType[] = [
   { value: ServiceLinkType.DEPENDENCY, color: rawColors.accentGreen, icon: "↓" },
   { value: ServiceLinkType.OTHER, color: rawColors.accentPurple, icon: "🔗" },
 ];
-
-export interface DashboardConfig {
-  dockerHost: string;
-  networkCidrs: string[];
-  scanPorts: number[];
-  refreshInterval: number;
-  healthCheckInterval: number;
-}
-
-export interface DockerHealth {
-  connected: boolean;
-  containers?: number;
-  containersRunning?: number;
-  containersPaused?: number;
-  containersStopped?: number;
-  serverVersion?: string;
-  error?: string;
-}

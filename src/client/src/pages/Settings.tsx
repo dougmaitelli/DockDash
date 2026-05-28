@@ -6,7 +6,7 @@ import { discoveryApi } from "../services/api";
 import { useTheme } from "../context/ThemeContext";
 import { themeSelections } from "../styles/themes";
 import type { ThemeSelection } from "../styles/themes";
-import type { DashboardConfig } from "../types";
+import type { DashboardConfig } from "@shared";
 import { StyledSelect } from "../utils/ui";
 
 const Page = styled.div`
@@ -108,8 +108,8 @@ export default function Settings() {
 
         <div style={{ marginTop: 16 }}>
           <ConfigItem>
-            <ConfigKey>DOCKER_HOST</ConfigKey>
-            <ConfigValue>{config?.dockerHost}</ConfigValue>
+            <ConfigKey>DOCKER_HOSTS</ConfigKey>
+            <ConfigValue>{config?.dockerHosts.join(", ")}</ConfigValue>
           </ConfigItem>
           <ConfigItem>
             <ConfigKey>NETWORK_CIDRS</ConfigKey>

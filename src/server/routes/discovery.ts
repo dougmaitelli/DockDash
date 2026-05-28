@@ -1,32 +1,42 @@
 import { Router } from "express";
-import {
-  createDockerClient,
-  scanDockerContainers,
-  scanDockerNetworks,
-} from "../services/dockerService.js";
+import { createDockerClients, scanDockerContainers } from "../services/dockerService.js";
 import { scanNetworkStream, parseCIDRConfig } from "../services/networkScanner.js";
 import { config } from "../lib/config.js";
-import { SSE_EVENT } from "../../shared-types/constants.js";
+import type {
+  DockerHostHealth,
+  DashboardConfig,
+  SseScanDonePayload,
+  SseScanErrorPayload,
+} from "../../shared-types/api.js";
+import { SSE_EVENT } from "../../shared-types/api.js";
 
 const router = Router();
 
-// Docker socket health
+// Docker hosts health
 router.get("/docker/health", async (_req, res) => {
-  try {
-    const docker = await createDockerClient();
-    const info = await docker.info();
+  const clients = createDockerClients();
 
-    res.json({
-      connected: true,
-      containers: info.Containers,
-      containersRunning: info.ContainersRunning,
-      containersPaused: info.ContainersPaused,
-      containersStopped: info.ContainersStopped,
-      serverVersion: info.ServerVersion,
-    });
-  } catch (err) {
-    res.json({ connected: false, error: err instanceof Error ? err.message : String(err) });
-  }
+  const results: DockerHostHealth[] = await Promise.all(
+    clients.map(async ({ host, docker }): Promise<DockerHostHealth> => {
+      try {
+        const info = await docker.info();
+
+        return {
+          host,
+          connected: true,
+          containers: info.Containers,
+          containersRunning: info.ContainersRunning,
+          containersPaused: info.ContainersPaused,
+          containersStopped: info.ContainersStopped,
+          serverVersion: info.ServerVersion,
+        };
+      } catch (err) {
+        return { host, connected: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    }),
+  );
+
+  res.json(results);
 });
 
 // Stream Docker container scan results via SSE
@@ -45,24 +55,28 @@ router.get("/docker/scan/stream", async (req, res) => {
   let count = 0;
 
   try {
-    const docker = await createDockerClient();
-
-    for await (const service of scanDockerContainers(docker)) {
+    for (const { host, docker } of createDockerClients()) {
       if (closed) break;
 
-      res.write(`data: ${JSON.stringify(service)}\n\n`);
-      count++;
+      for await (const service of scanDockerContainers(docker, host)) {
+        if (closed) break;
+
+        res.write(`data: ${JSON.stringify(service)}\n\n`);
+        count++;
+      }
     }
   } catch (err) {
     if (!closed) {
-      res.write(
-        `event: ${SSE_EVENT.SCAN_ERROR}\ndata: ${JSON.stringify({ message: err instanceof Error ? err.message : String(err) })}\n\n`,
-      );
+      const errorPayload: SseScanErrorPayload = {
+        message: err instanceof Error ? err.message : String(err),
+      };
+      res.write(`event: ${SSE_EVENT.SCAN_ERROR}\ndata: ${JSON.stringify(errorPayload)}\n\n`);
     }
   }
 
   if (!closed) {
-    res.write(`event: ${SSE_EVENT.DONE}\ndata: ${JSON.stringify({ count })}\n\n`);
+    const donePayload: SseScanDonePayload = { count };
+    res.write(`event: ${SSE_EVENT.DONE}\ndata: ${JSON.stringify(donePayload)}\n\n`);
     res.end();
   }
 });
@@ -109,39 +123,30 @@ router.get("/network/scan/stream", async (req, res) => {
     }
   } catch (err) {
     if (!closed) {
-      res.write(
-        `event: ${SSE_EVENT.SCAN_ERROR}\ndata: ${JSON.stringify({ message: err instanceof Error ? err.message : String(err) })}\n\n`,
-      );
+      const errorPayload: SseScanErrorPayload = {
+        message: err instanceof Error ? err.message : String(err),
+      };
+      res.write(`event: ${SSE_EVENT.SCAN_ERROR}\ndata: ${JSON.stringify(errorPayload)}\n\n`);
     }
   }
 
   if (!closed) {
-    res.write(`event: ${SSE_EVENT.DONE}\ndata: ${JSON.stringify({ count })}\n\n`);
+    const donePayload: SseScanDonePayload = { count };
+    res.write(`event: ${SSE_EVENT.DONE}\ndata: ${JSON.stringify(donePayload)}\n\n`);
     res.end();
-  }
-});
-
-// Get Docker networks
-router.get("/docker/networks", async (_req, res) => {
-  try {
-    const docker = await createDockerClient();
-    const networks = await scanDockerNetworks(docker);
-
-    res.json(networks);
-  } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 });
 
 // Get configuration
 router.get("/config", (_req, res) => {
-  res.json({
-    dockerHost: config.dockerHost,
+  const cfg: DashboardConfig = {
+    dockerHosts: config.dockerHosts,
     networkCidrs: config.networkCidrs,
     scanPorts: config.scanPorts,
     refreshInterval: config.refreshInterval,
     healthCheckInterval: config.healthCheckInterval,
-  });
+  };
+  res.json(cfg);
 });
 
 export default router;
