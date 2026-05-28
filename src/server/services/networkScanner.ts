@@ -154,17 +154,25 @@ export async function* scanNetworkStream(cidr: string, ports: number[]): AsyncGe
       }),
     );
 
-    yield detectedPorts.map((p) => ({
-      id: `net-${uuidv4()}`,
-      name: p.serviceName || `${ip}:${p.port}`,
-      host: ip,
-      port: p.port,
-      protocol: p.protocol,
-      source: ServiceSource.NETWORK,
-      status: ServiceStatus.UP,
-      created_at: now,
-      updated_at: now,
-    }));
+    // One service per host: pick the most meaningful name and protocol from
+    // the detected ports (prefer HTTP services, fall back to the first port).
+    const primary =
+      detectedPorts.find((p) => HTTP_PROTOCOLS.includes(p.protocol)) ?? detectedPorts[0];
+
+    yield [
+      {
+        id: `net-${uuidv4()}`,
+        name: primary?.serviceName || ip,
+        host: ip,
+        ports: detectedPorts.map((p) => p.port).sort((a, b) => a - b),
+        checkPort: primary?.port,
+        protocol: primary?.protocol ?? ServiceProtocol.TCP,
+        source: ServiceSource.NETWORK,
+        status: ServiceStatus.UP,
+        created_at: now,
+        updated_at: now,
+      },
+    ];
   }
 }
 

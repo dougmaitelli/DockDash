@@ -31,7 +31,7 @@ export const serviceApi = {
     api.post<Service>("/services", data),
   update: (
     id: string,
-    data: { name: string; host: string; port?: number | null; protocol?: string },
+    data: { name: string; host: string; checkPort?: number | null; protocol?: string },
   ) => api.put<Service>(`/services/${id}`, data),
   delete: (id: string) => api.delete<ApiSuccess>(`/services/${id}`),
 };

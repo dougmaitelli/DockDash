@@ -39,7 +39,7 @@ interface DashboardCanvasProps {
   addService: (data: Partial<Service> & { name: string; host: string }) => Promise<Service>;
   updateService: (
     id: string,
-    data: Pick<Service, "name" | "host" | "port" | "protocol">,
+    data: Pick<Service, "name" | "host" | "checkPort" | "protocol">,
   ) => Promise<void>;
   addLink: (data: Omit<ServiceLink, "id" | "created_at">) => Promise<void>;
   updateLink: (
@@ -668,7 +668,7 @@ export function DashboardCanvas({
   }, []);
 
   const handleEditNodeConfirm = async (
-    data: Pick<Service, "name" | "host" | "port" | "protocol">,
+    data: Pick<Service, "name" | "host" | "checkPort" | "protocol">,
   ) => {
     if (!editingNode) return;
 

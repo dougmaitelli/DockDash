@@ -11,6 +11,7 @@ import {
   DangerButton,
   StyledInput,
   StyledSelect,
+  PortTag,
 } from "../../utils/ui";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
 
@@ -83,7 +84,7 @@ const Row = styled.div`
 
 interface EditServiceModalProps {
   service?: Service;
-  onSave: (data: Pick<Service, "name" | "host" | "port" | "protocol">) => void;
+  onSave: (data: Pick<Service, "name" | "host" | "checkPort" | "protocol">) => void;
   onDelete?: () => void;
   onCancel: () => void;
 }
@@ -92,7 +93,7 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
   const { t } = useTranslation();
   const [editNodeName, setEditNodeName] = useState(service?.name ?? "");
   const [editNodeHost, setEditNodeHost] = useState(service?.host ?? "");
-  const [editNodePort, setEditNodePort] = useState(service?.port?.toString() ?? "");
+  const [editCheckPort, setEditCheckPort] = useState(service?.checkPort?.toString() ?? "");
   const [editNodeProtocol, setEditNodeProtocol] = useState<ServiceProtocol>(
     service?.protocol ?? ServiceProtocol.HTTP,
   );
@@ -106,13 +107,14 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
     : [];
 
   const handleConfirm = () => {
-    const portVal = editNodePort.trim() === "" ? null : parseInt(editNodePort, 10);
+    const checkPort = parseInt(editCheckPort, 10);
 
-    if (isNaN(portVal as number)) {
-      return;
-    }
-
-    onSave({ name: editNodeName, host: editNodeHost, port: portVal, protocol: editNodeProtocol });
+    onSave({
+      name: editNodeName,
+      host: editNodeHost,
+      checkPort: isNaN(checkPort) ? null : checkPort,
+      protocol: editNodeProtocol,
+    });
   };
 
   return (
@@ -161,16 +163,24 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
           placeholder={t("modals.hostPlaceholder")}
         />
       </FormGroup>
+      {service?.ports && service.ports.length > 0 && (
+        <FormGroup>
+          <Label>{t("modals.ports")}</Label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingTop: 4 }}>
+            {service.ports.map((p) => (
+              <PortTag key={p}>:{p}</PortTag>
+            ))}
+          </div>
+        </FormGroup>
+      )}
       <Row>
         <FormGroup>
-          <Label>{t("modals.port")}</Label>
+          <Label>{t("modals.checkPort")}</Label>
           <StyledInput
             type="number"
-            value={editNodePort}
-            onChange={(e) => setEditNodePort(e.target.value)}
-            placeholder={t("modals.portPlaceholder")}
-            min="0"
-            max="65535"
+            value={editCheckPort}
+            onChange={(e) => setEditCheckPort(e.target.value)}
+            placeholder={t("modals.checkPortPlaceholder")}
           />
         </FormGroup>
         <FormGroup>

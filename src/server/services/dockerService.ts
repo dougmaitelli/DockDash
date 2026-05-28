@@ -34,25 +34,30 @@ export async function* scanDockerContainers(
     const inspect = await containerObj.inspect();
 
     let host = "localhost";
-    let port: number | null = null;
     let protocol: ServiceProtocol = ServiceProtocol.HTTP;
 
-    const ports = container.Ports || [];
+    const containerPorts = container.Ports || [];
+    // Docker emits one entry per IP family (IPv4 + IPv6) for each binding,
+    // so deduplicate by PrivatePort — one PublicPort per unique container port.
+    const seenPrivate = new Set<number>();
+    const hostPorts = containerPorts
+      .filter((p) => p.PublicPort && !seenPrivate.has(p.PrivatePort) && seenPrivate.add(p.PrivatePort))
+      .map((p) => p.PublicPort!)
+      .sort((a, b) => a - b);
 
-    for (const p of ports) {
+    for (const p of containerPorts) {
       if (p.PublicPort) {
         host = p.IP || "localhost";
-        port = p.PublicPort;
 
         if (p.Type === "tcp") {
-          protocol = detectProtocol(port);
+          protocol = detectProtocol(p.PublicPort);
         }
 
         break;
       }
     }
 
-    if (!port && inspect.Config) {
+    if (hostPorts.length === 0 && inspect.Config) {
       const exposedPorts = Object.keys(inspect.Config.ExposedPorts || {});
 
       if (exposedPorts.length > 0) {
@@ -66,14 +71,14 @@ export async function* scanDockerContainers(
 
     const networks = inspect.NetworkSettings?.Networks || {};
     const networkNames = Object.keys(networks);
-    const hostPorts = ports.map((p) => p.PublicPort ?? 0);
     const { image, tag: imageTag } = parseImage(container.Image);
 
     yield {
       id: `docker-${uuidv4()}`,
       name,
       host,
-      port,
+      ports: hostPorts,
+      checkPort: hostPorts[0],
       protocol,
       source: ServiceSource.DOCKER,
       status:
@@ -89,7 +94,6 @@ export async function* scanDockerContainers(
         image,
         imageTag,
         networkNames: networkNames,
-        hostPorts: hostPorts,
       },
       created_at: now,
       updated_at: now,

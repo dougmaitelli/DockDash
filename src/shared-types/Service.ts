@@ -4,7 +4,8 @@ export class Service {
   id?: string;
   name!: string;
   host!: string;
-  port!: number | null;
+  ports: number[] = [];
+  checkPort?: number | null;
   protocol!: ServiceProtocol;
   source!: ServiceSource;
   status: ServiceStatus = ServiceStatus.UNKNOWN;
@@ -28,6 +29,7 @@ export class Service {
       );
     }
 
-    return a.host === b.host && a.port === b.port;
+    // Network services: one service per host, ports are additive
+    return a.host === b.host;
   }
 }

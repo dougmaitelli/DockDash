@@ -36,12 +36,13 @@ export class DatabaseService {
     const now = new Date().toISOString();
 
     const stmt = this.db.prepare(`
-      INSERT INTO services (id, name, host, port, protocol, source, status, metadata, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO services (id, name, host, ports, check_port, protocol, source, status, metadata, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         host = excluded.host,
-        port = excluded.port,
+        ports = excluded.ports,
+        check_port = excluded.check_port,
         protocol = excluded.protocol,
         status = excluded.status,
         metadata = excluded.metadata,
@@ -52,7 +53,8 @@ export class DatabaseService {
       id,
       service.name,
       service.host,
-      service.port,
+      JSON.stringify(service.ports ?? []),
+      service.checkPort,
       service.protocol,
       service.source,
       service.status,
@@ -66,7 +68,7 @@ export class DatabaseService {
 
   updateService(
     id: string,
-    data: { name?: string; host?: string; port?: number | null; protocol?: string },
+    data: { name?: string; host?: string; ports?: number[]; checkPort?: number; protocol?: string },
   ): Service {
     const existing = this.getService(id);
 
@@ -75,17 +77,13 @@ export class DatabaseService {
     const now = new Date().toISOString();
     const name = data.name ?? existing.name;
     const host = data.host ?? existing.host;
-    const port = data.port ?? existing.port;
+    const ports = data.ports ?? existing.ports;
+    const checkPort = data.checkPort !== undefined ? data.checkPort : existing.checkPort;
     const protocol = data.protocol ?? existing.protocol;
 
     this.db
-      .prepare(
-        `
-      UPDATE services SET name = ?, host = ?, port = ?, protocol = ?, updated_at = ?
-      WHERE id = ?
-    `,
-      )
-      .run(name, host, port, protocol, now, id);
+      .prepare(`UPDATE services SET name = ?, host = ?, ports = ?, check_port = ?, protocol = ?, updated_at = ? WHERE id = ?`)
+      .run(name, host, JSON.stringify(ports), checkPort, protocol, now, id);
 
     return this.getService(id)!;
   }
@@ -124,6 +122,8 @@ export class DatabaseService {
 
     return rows.map((row) => ({
       ...row,
+      ports: typeof row.ports === "string" ? JSON.parse(row.ports) : (row.ports ?? []),
+      checkPort: (row as any).check_port,
       metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata,
     }));
   }
@@ -136,6 +136,8 @@ export class DatabaseService {
 
     return {
       ...row,
+      ports: typeof row.ports === "string" ? JSON.parse(row.ports) : (row.ports ?? []),
+      checkPort: (row as any).check_port,
       metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata,
     };
   }

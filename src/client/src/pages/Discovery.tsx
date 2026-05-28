@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { colors } from "../styles/vars";
 import { IconPlus, IconX, IconScan, IconCheck } from "../utils/Icons";
-import { PrimaryButton, SecondaryButton } from "../utils/ui";
+import { PrimaryButton, SecondaryButton, PortTag, Section } from "../utils/ui";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
 import { discoveryApi } from "../services/api";
@@ -15,13 +15,6 @@ const Page = styled.div`
   margin: 0 auto;
 `;
 
-const Section = styled.div`
-  background: ${colors.bgCard};
-  border: 1px solid ${colors.border};
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
-`;
 
 const SectionTitle = styled.h2`
   font-size: 1.1rem;
@@ -143,6 +136,7 @@ const ResultMeta = styled.div`
   align-items: center;
   gap: 8px;
 `;
+
 
 const StatusDot = styled.span<{ status: string }>`
   width: 8px;
@@ -309,7 +303,7 @@ export default function Discovery() {
         importService({
           name: svc.name,
           host: svc.host,
-          port: svc.port,
+          ports: svc.ports,
           protocol: svc.protocol,
           source: ServiceSource.DOCKER,
           status: svc.status,
@@ -326,7 +320,7 @@ export default function Discovery() {
         importService({
           name: svc.name,
           host: svc.host,
-          port: svc.port,
+          ports: svc.ports,
           protocol: svc.protocol,
           source: ServiceSource.NETWORK,
           status: svc.status,
@@ -437,7 +431,7 @@ export default function Discovery() {
                         {t("discovery.tagDocker")}
                       </Tag>
                       {svc.host}
-                      {svc.port && `:${svc.port}`}
+                      {svc.ports?.map((p) => <PortTag key={p}>:{p}</PortTag>)}
                       <Tag bg={colors.accentYellowAlpha10} color={colors.accentYellow}>
                         {svc.protocol}
                       </Tag>
@@ -453,7 +447,7 @@ export default function Discovery() {
                         importService({
                           name: svc.name,
                           host: svc.host,
-                          port: svc.port,
+                          ports: svc.ports,
                           protocol: svc.protocol,
                           source: ServiceSource.DOCKER,
                           status: svc.status,
@@ -563,7 +557,7 @@ export default function Discovery() {
                         {t("discovery.tagNetwork")}
                       </Tag>
                       {svc.host}
-                      {svc.port && `:${svc.port}`}
+                      {svc.ports?.map((p) => <PortTag key={p}>:{p}</PortTag>)}
                       <Tag bg={colors.accentYellowAlpha10} color={colors.accentYellow}>
                         {svc.protocol}
                       </Tag>
@@ -579,7 +573,7 @@ export default function Discovery() {
                         importService({
                           name: svc.name,
                           host: svc.host,
-                          port: svc.port,
+                          ports: svc.ports,
                           protocol: svc.protocol,
                           source: ServiceSource.NETWORK,
                           status: svc.status,

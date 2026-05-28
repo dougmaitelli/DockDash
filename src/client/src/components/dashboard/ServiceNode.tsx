@@ -4,6 +4,7 @@ import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { colors } from "../../styles/vars";
 import { NODE_WIDTH, CHILD_GAP, GROUP_CARD_INNER_PADDING, PortSide } from "./nodeGeometry";
 import { IconArrowRight } from "../../utils/Icons";
+import { PortTag } from "../../utils/ui";
 
 interface NodeCardProps {
   service: Service;
@@ -89,6 +90,10 @@ const ServiceHost = styled.div`
   color: ${colors.textMuted};
   margin-top: 2px;
   font-family: "SF Mono", "Fira Code", monospace;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
 `;
 
 const StatusBadge = styled.div<{ status: string }>`
@@ -127,16 +132,6 @@ const ImageTag = styled.span`
   flex-shrink: 0;
 `;
 
-const PortTag = styled.span`
-  display: inline-block;
-  padding: 1px 6px;
-  background: ${colors.accentBlueAlpha10};
-  color: ${colors.accentBlue};
-  border-radius: 4px;
-  font-size: 0.65rem;
-  margin-left: 4px;
-  font-family: "SF Mono", "Fira Code", monospace;
-`;
 
 const TagRow = styled.div`
   display: flex;
@@ -411,7 +406,7 @@ export function ServiceNodeInner({
           )}
           <ServiceHost>
             {service.host}
-            {service.port && <PortTag>:{service.port}</PortTag>}
+            {service.ports?.map((p) => <PortTag key={p}>:{p}</PortTag>)}
           </ServiceHost>
           <StatusBadge status={service.status}>
             <span

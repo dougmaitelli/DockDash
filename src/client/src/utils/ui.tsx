@@ -74,6 +74,24 @@ export const StyledInput = styled.input`
   }
 `;
 
+export const PortTag = styled.span`
+  display: inline-block;
+  padding: 1px 6px;
+  background: ${colors.accentBlueAlpha10};
+  color: ${colors.accentBlue};
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-family: "SF Mono", "Fira Code", monospace;
+`;
+
+export const Section = styled.div`
+  background: ${colors.bgCard};
+  border: 1px solid ${colors.border};
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+`;
+
 export const StyledSelect = styled.select`
   width: 100%;
   padding: 8px 32px 8px 12px;

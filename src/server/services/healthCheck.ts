@@ -1,7 +1,7 @@
 import net from "net";
 import axios from "axios";
 import { db } from "../lib/database.js";
-import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
+import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 import { USER_AGENT, HTTP_PROTOCOLS, TCP_CHECKABLE_PROTOCOLS } from "../lib/constants.js";
 import {
   createDockerClientForHost,
@@ -48,24 +48,22 @@ async function checkHttp(host: string, port: number, protocol: string): Promise<
   }
 }
 
-async function checkNetworkService(service: {
-  host: string;
-  port: number | null;
-  protocol: ServiceProtocol;
-}): Promise<ServiceStatus> {
-  if (service.port === null) return ServiceStatus.UNKNOWN;
+async function checkNetworkService(service: Service): Promise<ServiceStatus> {
+  const port = service.checkPort;
+
+  if (!port) return ServiceStatus.UNKNOWN;
 
   if (HTTP_PROTOCOLS.includes(service.protocol)) {
-    const httpOk = await checkHttp(service.host, service.port, service.protocol);
+    const httpOk = await checkHttp(service.host, port, service.protocol);
 
     if (httpOk) return ServiceStatus.UP;
 
     // HTTP probe failed, fall back to raw TCP
-    return (await checkTcp(service.host, service.port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
+    return (await checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
   }
 
   if (TCP_CHECKABLE_PROTOCOLS.includes(service.protocol)) {
-    return (await checkTcp(service.host, service.port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
+    return (await checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
   }
 
   return ServiceStatus.UNKNOWN;
@@ -129,11 +127,7 @@ export async function checkSingleNetworkService(serviceId: string): Promise<Serv
   if (!service) return null;
 
   try {
-    const status = await checkNetworkService({
-      host: service.host,
-      port: service.port,
-      protocol: service.protocol,
-    });
+    const status = await checkNetworkService(service);
 
     logStatusChange(service.name, service.status, status);
     db.updateServiceStatus(service.id || "", status);

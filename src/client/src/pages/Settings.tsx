@@ -7,7 +7,7 @@ import { useTheme } from "../context/ThemeContext";
 import { themeSelections } from "../styles/themes";
 import type { ThemeSelection } from "../styles/themes";
 import type { DashboardConfig } from "@shared";
-import { StyledSelect } from "../utils/ui";
+import { StyledSelect, Section } from "../utils/ui";
 
 const Page = styled.div`
   padding: 24px;
@@ -15,13 +15,6 @@ const Page = styled.div`
   margin: 0 auto;
 `;
 
-const Section = styled.div`
-  background: ${colors.bgCard};
-  border: 1px solid ${colors.border};
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
-`;
 
 const SectionTitle = styled.h2`
   font-size: 1rem;

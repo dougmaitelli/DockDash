@@ -29,7 +29,7 @@ router.get("/services/:id", (req, res) => {
 
 // Import / upsert service manually
 router.post("/services", (req, res) => {
-  const { name, host, port, protocol, source, status, metadata } = req.body;
+  const { name, host, ports, checkPort, protocol, source, status, metadata } = req.body;
 
   if (!name || !host) {
     return res.status(400).json({ error: "name and host are required" });
@@ -38,7 +38,8 @@ router.post("/services", (req, res) => {
   const service = db.upsertService({
     name,
     host,
-    port: port || null,
+    ports: Array.isArray(ports) ? ports : [],
+    checkPort,
     protocol: protocol || "http",
     source: source || ServiceSource.NETWORK,
     status: status || ServiceStatus.UNKNOWN,
@@ -54,7 +55,7 @@ router.post("/services", (req, res) => {
 
 // Update service
 router.put("/services/:id", (req, res) => {
-  const { name, host, port, protocol } = req.body;
+  const { name, host, ports, checkPort, protocol } = req.body;
 
   if (!name || !host) {
     return res.status(400).json({ error: "name and host are required" });
@@ -64,7 +65,7 @@ router.put("/services/:id", (req, res) => {
     const service = db.updateService(req.params.id, {
       name,
       host,
-      port: port || null,
+      checkPort,
       protocol: protocol || "http",
     });
 
