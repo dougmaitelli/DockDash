@@ -279,7 +279,26 @@ export function ServiceNodeInner({
         onHover(service.id!);
         onNodeMouseEnter?.(service.id!);
       }}
-      onMouseLeave={(_e: ReactMouseEvent) => {
+      onMouseLeave={(e: ReactMouseEvent) => {
+        // When moving from a child node back to its parent, the parent's
+        // onMouseEnter won't fire (the mouse was already "inside" the parent's
+        // DOM subtree). Detect this via relatedTarget: if the mouse is heading
+        // to another [data-service-id] element, hand the hover to that node
+        // instead of clearing it.
+        const relatedTarget = e.relatedTarget as HTMLElement | null;
+        const targetNode = relatedTarget?.closest?.("[data-service-id]") as HTMLElement | null;
+
+        if (targetNode && targetNode !== (e.currentTarget as HTMLElement)) {
+          const targetId = targetNode.dataset.serviceId;
+
+          if (targetId) {
+            onHover(targetId);
+            onNodeMouseEnter?.(targetId);
+
+            return;
+          }
+        }
+
         onHover(null);
         onNodeMouseLeave?.();
       }}
