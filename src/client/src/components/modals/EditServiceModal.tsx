@@ -14,6 +14,7 @@ import {
   PortTag,
 } from "../../utils/ui";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
+import { IconDocker, IconGlobe } from "../../utils/Icons";
 
 const NodeInfo = styled.div`
   font-size: 0.85rem;
@@ -137,9 +138,11 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
       {service && (
         <NodeInfo>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: "1.2rem" }}>
-              {service.source === ServiceSource.DOCKER ? "🐳" : "🌐"}
-            </span>
+            {service.source === ServiceSource.DOCKER ? (
+              <IconDocker size={20} style={{ color: colors.textMuted }} />
+            ) : (
+              <IconGlobe size={20} style={{ color: colors.textMuted }} />
+            )}
             <div>
               <div style={{ fontWeight: 600, color: colors.textPrimary }}>{service.name}</div>
               <NodeId>{service.id}</NodeId>

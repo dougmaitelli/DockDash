@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { colors } from "../../styles/vars";
 import { NODE_WIDTH, CHILD_GAP, GROUP_CARD_INNER_PADDING, PortSide } from "./nodeGeometry";
-import { IconArrowRight } from "../../utils/Icons";
+import { IconArrowRight, IconDocker, IconGlobe } from "../../utils/Icons";
 import { PortTag } from "../../utils/ui";
 
 interface NodeCardProps {
@@ -77,11 +77,6 @@ const ServiceName = styled.div`
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-  }
-
-  span.icon {
-    font-size: 0.9rem;
-    flex-shrink: 0;
   }
 `;
 
@@ -386,7 +381,11 @@ export function ServiceNodeInner({
       <InfoSection>
         <NodeBody>
           <ServiceName>
-            <span className="icon">{service.source === ServiceSource.DOCKER ? "🐳" : "🌐"}</span>
+            {service.source === ServiceSource.DOCKER ? (
+              <IconDocker size={14} style={{ flexShrink: 0, color: colors.textMuted }} />
+            ) : (
+              <IconGlobe size={14} style={{ flexShrink: 0, color: colors.textMuted }} />
+            )}
             <span className="name" title={service.name}>
               {service.name}
             </span>

@@ -118,3 +118,26 @@ export function IconArrowRight({ size = 14, ...props }: IconProps) {
     </svg>
   );
 }
+
+export function IconDocker({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 1.8)} {...props}>
+      {/* top face */}
+      <path d="M12 3 L21 7.5 L12 12 L3 7.5 Z" />
+      {/* left face */}
+      <path d="M3 7.5 L3 16.5 L12 21 L12 12 Z" />
+      {/* right face */}
+      <path d="M21 7.5 L21 16.5 L12 21 L12 12 Z" />
+    </svg>
+  );
+}
+
+export function IconGlobe({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 1.8)} {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      <path d="M2 12h20" />
+    </svg>
+  );
+}

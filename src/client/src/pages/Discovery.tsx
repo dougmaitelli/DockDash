@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { colors } from "../styles/vars";
-import { IconPlus, IconX, IconScan, IconCheck } from "../utils/Icons";
+import { IconPlus, IconX, IconScan, IconCheck, IconDocker, IconGlobe } from "../utils/Icons";
 import { PrimaryButton, SecondaryButton, PortTag, Section } from "../utils/ui";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
@@ -21,6 +21,9 @@ const SectionTitle = styled.h2`
   font-weight: 600;
   margin-bottom: 4px;
   color: ${colors.textPrimary};
+  display: flex;
+  align-items: center;
+  gap: 8px;
 `;
 
 const SectionDesc = styled.p`
@@ -354,7 +357,7 @@ export default function Discovery() {
       )}
 
       <Section>
-        <SectionTitle>🐳 {t("discovery.dockerTitle")}</SectionTitle>
+        <SectionTitle><IconDocker size={18} /> {t("discovery.dockerTitle")}</SectionTitle>
         <SectionDesc>{t("discovery.dockerDesc")}</SectionDesc>
         <div
           style={{
@@ -466,7 +469,7 @@ export default function Discovery() {
       </Section>
 
       <Section>
-        <SectionTitle>🌐 {t("discovery.networkTitle")}</SectionTitle>
+        <SectionTitle><IconGlobe size={18} /> {t("discovery.networkTitle")}</SectionTitle>
         <SectionDesc>{t("discovery.networkDesc")}</SectionDesc>
         <CIDRInput>
           {cidrs.length > 0 && (
