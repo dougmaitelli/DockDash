@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { ServiceWithPosition } from "@shared";
 import { ServiceNodeInner } from "./ServiceNode";
-import { NODE_WIDTH, NODE_HEIGHT, computeGroupDimensions, type PortSide } from "./nodeGeometry";
+import { NODE_WIDTH, NODE_HEIGHT, CHILD_ROW_GAP, computeGroupDimensions, type PortSide } from "./nodeGeometry";
 
 interface NodeLayerProps {
   services: ServiceWithPosition[];
@@ -121,13 +121,17 @@ export function NodeLayer({
           expandedWidth = groupW;
           childrenGridCols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(children.length))));
 
-          childrenSection = children.map((child) => {
+          const cols = childrenGridCols;
+          const columnArrays: React.ReactNode[][] = Array.from({ length: cols }, () => []);
+
+          children.forEach((child, idx) => {
+            const col = idx % cols;
             const childDragX = dragOffsets[child.id!]?.dx || 0;
             const childDragY = dragOffsets[child.id!]?.dy || 0;
             const isChildSelected = selectedId === child.id;
             const isChildHovered = hoveredNode === child.id;
 
-            return (
+            columnArrays[col].push(
               <div
                 key={child.id}
                 style={{
@@ -146,6 +150,20 @@ export function NodeLayer({
               </div>
             );
           });
+
+          childrenSection = columnArrays.map((colChildren, colIdx) => (
+            <div
+              key={colIdx}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: `${CHILD_ROW_GAP}px`,
+                width: `${NODE_WIDTH}px`,
+              }}
+            >
+              {colChildren}
+            </div>
+          ));
         }
 
         return (
@@ -165,7 +183,6 @@ export function NodeLayer({
               isHovered={isHovered}
               isNestTarget={isNestTarget}
               expandedWidth={expandedWidth}
-              childrenGridCols={childrenGridCols}
               childrenSection={childrenSection}
               onDoubleClick={() => onDoubleClick(service)}
               {...sharedNodeProps}

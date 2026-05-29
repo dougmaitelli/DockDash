@@ -2,7 +2,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import styled from "styled-components";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { colors } from "../../styles/vars";
-import { NODE_WIDTH, CHILD_ROW_GAP, CHILD_COLUMN_GAP, GROUP_CARD_INNER_PADDING, PortSide } from "./nodeGeometry";
+import { CHILD_COLUMN_GAP, GROUP_CARD_INNER_PADDING, PortSide } from "./nodeGeometry";
 import { IconArrowRight, IconDocker, IconGlobe } from "../../utils/Icons";
 import { PortTag } from "../../utils/ui";
 
@@ -60,11 +60,10 @@ const NodeBody = styled.div`
   padding: 10px 12px;
 `;
 
-const ChildrenSection = styled.div<{ $cols: number }>`
-  display: grid;
-  grid-template-columns: repeat(${(p) => p.$cols}, ${NODE_WIDTH}px);
-  column-gap: ${CHILD_COLUMN_GAP}px;
-  row-gap: ${CHILD_ROW_GAP}px;
+const ChildrenSection = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: ${CHILD_COLUMN_GAP}px;
   padding: ${GROUP_CARD_INNER_PADDING}px;
   border-top: 1px solid color-mix(in srgb, ${colors.accentBlue} 20%, ${colors.border});
 `;
@@ -240,7 +239,6 @@ interface ServiceNodeInnerProps {
   isHovered: boolean;
   isNestTarget?: boolean;
   expandedWidth?: number;
-  childrenGridCols?: number;
   childrenSection?: React.ReactNode;
   onSelect: (id: string) => void;
   onDoubleClick: () => void;
@@ -260,7 +258,6 @@ export function ServiceNodeInner({
   isHovered,
   isNestTarget,
   expandedWidth,
-  childrenGridCols = 1,
   childrenSection,
   onSelect,
   onDoubleClick,
@@ -467,7 +464,7 @@ export function ServiceNodeInner({
         </NodeBody>
       </InfoSection>
       {childrenSection && (
-        <ChildrenSection $cols={childrenGridCols}>{childrenSection}</ChildrenSection>
+        <ChildrenSection>{childrenSection}</ChildrenSection>
       )}
     </NodeCard>
   );
