@@ -83,17 +83,17 @@ export async function checkSingleDockerService(
 
   if (!service) return null;
 
-  const containerId = service.metadata?.containerId as string | undefined;
+  const containerName = service.metadata?.containerName as string | undefined;
   const dockerHost = service.metadata?.dockerHost as string | undefined;
 
   try {
     let status: ServiceStatus;
 
-    if (!containerId || !dockerHost) {
+    if (!containerName || !dockerHost) {
       status = ServiceStatus.UNKNOWN;
     } else {
       const map = stateMap ?? (await getContainersStateMap(createDockerClientForHost(dockerHost)));
-      const containerInfo = map.get(containerId);
+      const containerInfo = map.get(containerName);
 
       if (!containerInfo) {
         status = ServiceStatus.UNKNOWN;

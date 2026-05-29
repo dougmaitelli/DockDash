@@ -28,7 +28,7 @@ export async function* scanDockerContainers(
   for (const container of containers) {
     if (!container.Id || !container.Names) continue;
 
-    const name = container.Names[0].replace(/^\//, "") || container.Id.slice(0, 12);
+    const name = normalizeContainerName(container.Names[0]);
 
     const containerObj = docker.getContainer(container.Id);
     const inspect = await containerObj.inspect();
@@ -105,18 +105,26 @@ export type ContainerStateMap = Map<string, { state: string; imageTag: string }>
 
 export async function getContainersStateMap(docker: Docker): Promise<ContainerStateMap> {
   const containers = await docker.listContainers({ all: true });
+  const map: ContainerStateMap = new Map();
 
-  return new Map(
-    containers.map((c) => {
-      const { tag: imageTag } = parseImage(c.Image);
+  for (const c of containers) {
+    const { tag: imageTag } = parseImage(c.Image);
+    const entry = { state: c.State, imageTag };
 
-      return [c.Id, { state: c.State, imageTag }];
-    }),
-  );
+    for (const name of c.Names ?? []) {
+      map.set(normalizeContainerName(name), entry);
+    }
+  }
+
+  return map;
 }
 
 function detectProtocol(port: number): ServiceProtocol {
   return PORT_INFO_MAP[port]?.protocol ?? ServiceProtocol.HTTP;
+}
+
+export function normalizeContainerName(name: string): string {
+  return name.replace(/^\//, "");
 }
 
 export function parseImage(image: string): { image: string; tag: string } {
