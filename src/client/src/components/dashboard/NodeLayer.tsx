@@ -119,7 +119,7 @@ export function NodeLayer({
           const { w: groupW } = computeGroupDimensions(children.length);
 
           expandedWidth = groupW;
-          childrenGridCols = Math.max(1, Math.ceil(Math.sqrt(children.length)));
+          childrenGridCols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(children.length))));
 
           childrenSection = children.map((child) => {
             const childDragX = dragOffsets[child.id!]?.dx || 0;

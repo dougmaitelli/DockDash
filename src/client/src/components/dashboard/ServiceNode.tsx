@@ -12,15 +12,19 @@ interface NodeCardProps {
   isHovered: boolean;
   isNestTarget?: boolean;
   $expandedWidth?: number;
+  $isParent?: boolean;
 }
 
 const NodeCard = styled.div.withConfig({
   shouldForwardProp: (prop) =>
-    !["isSelected", "isHovered", "isNestTarget", "$expandedWidth", "service"].includes(prop),
+    !["isSelected", "isHovered", "isNestTarget", "$expandedWidth", "$isParent", "service"].includes(prop),
 })<NodeCardProps>`
   position: relative;
   width: ${(props) => (props.$expandedWidth ? `${props.$expandedWidth}px` : "220px")};
-  background: ${colors.bgCard};
+  background: ${(props) =>
+    props.$isParent
+      ? `color-mix(in srgb, transparent 40%, color-mix(in srgb, white 3%, ${colors.bgCard}))`
+      : colors.bgCard};
   border: 3px solid
     ${(props) =>
       props.isNestTarget
@@ -275,6 +279,7 @@ export function ServiceNodeInner({
       isHovered={isHovered}
       isNestTarget={isNestTarget}
       $expandedWidth={expandedWidth}
+      $isParent={!!childrenSection}
       className="draggable-node"
       data-service-id={service.id}
       onClick={(e: ReactMouseEvent) => {
@@ -317,36 +322,6 @@ export function ServiceNodeInner({
       {onPortMouseDown && isHovered && (
         <>
           <PortDot
-            className="port-left"
-            $isSource={
-              connectingSource?.serviceId === service.id && connectingSource?.side === "left"
-            }
-            $isTarget={
-              connectingSource?.serviceId === service.id && connectingSource?.side === "right"
-            }
-            onMouseDown={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              onPortMouseDown(e, service.id!, "left");
-            }}
-            onMouseEnter={() => onPortMouseEnter?.(service.id!)}
-            onMouseLeave={() => onPortMouseLeave?.()}
-          />
-          <PortDot
-            className="port-right"
-            $isSource={
-              connectingSource?.serviceId === service.id && connectingSource?.side === "right"
-            }
-            $isTarget={
-              connectingSource?.serviceId === service.id && connectingSource?.side === "left"
-            }
-            onMouseDown={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              onPortMouseDown(e, service.id!, "right");
-            }}
-            onMouseEnter={() => onPortMouseEnter?.(service.id!)}
-            onMouseLeave={() => onPortMouseLeave?.()}
-          />
-          <PortDot
             className="port-top"
             $isSource={
               connectingSource?.serviceId === service.id && connectingSource?.side === "top"
@@ -378,7 +353,41 @@ export function ServiceNodeInner({
           />
         </>
       )}
-      <InfoSection>
+      <InfoSection data-info-section>
+        {onPortMouseDown && isHovered && (
+          <>
+            <PortDot
+              className="port-left"
+              $isSource={
+                connectingSource?.serviceId === service.id && connectingSource?.side === "left"
+              }
+              $isTarget={
+                connectingSource?.serviceId === service.id && connectingSource?.side === "right"
+              }
+              onMouseDown={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onPortMouseDown(e, service.id!, "left");
+              }}
+              onMouseEnter={() => onPortMouseEnter?.(service.id!)}
+              onMouseLeave={() => onPortMouseLeave?.()}
+            />
+            <PortDot
+              className="port-right"
+              $isSource={
+                connectingSource?.serviceId === service.id && connectingSource?.side === "right"
+              }
+              $isTarget={
+                connectingSource?.serviceId === service.id && connectingSource?.side === "left"
+              }
+              onMouseDown={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onPortMouseDown(e, service.id!, "right");
+              }}
+              onMouseEnter={() => onPortMouseEnter?.(service.id!)}
+              onMouseLeave={() => onPortMouseLeave?.()}
+            />
+          </>
+        )}
         <NodeBody>
           <ServiceName>
             {service.source === ServiceSource.DOCKER ? (

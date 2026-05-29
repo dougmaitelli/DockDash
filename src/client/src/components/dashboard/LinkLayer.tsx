@@ -4,10 +4,8 @@ import { orthogonalPath, getLinkColor } from "./linkUtils";
 import type { LinkPath } from "./linkUtils";
 import {
   getNodeCenter,
-  getNodeSize,
   getPortPosition,
   getChildForcedSide,
-  portCoords,
   type PortSide,
 } from "./nodeGeometry";
 import { colors } from "../../styles/vars";
@@ -50,18 +48,6 @@ export function LinkLayer({
         const tx = tgtCenter.x * zoomLevel + panOffset.x;
         const ty = tgtCenter.y * zoomLevel + panOffset.y;
 
-        const srcSize = getNodeSize(link.source_id);
-        const tgtSize = getNodeSize(link.target_id);
-
-        if (!srcSize || !tgtSize) return null;
-
-        const { w: srcW, h: srcH } = srcSize;
-        const { w: tgtW, h: tgtH } = tgtSize;
-        const srcHalfW = (srcW * zoomLevel) / 2;
-        const srcHalfH = (srcH * zoomLevel) / 2;
-        const tgtHalfW = (tgtW * zoomLevel) / 2;
-        const tgtHalfH = (tgtH * zoomLevel) / 2;
-
         const srcForced = getChildForcedSide(link.source_id, services);
         const tgtForced = getChildForcedSide(link.target_id, services);
 
@@ -82,8 +68,15 @@ export function LinkLayer({
           }
         }
 
-        const { x: x1, y: y1 } = portCoords(sx, sy, exitSide!, srcHalfW, srcHalfH);
-        const { x: x2, y: y2 } = portCoords(tx, ty, entrySide!, tgtHalfW, tgtHalfH);
+        const srcPort = getPortPosition(link.source_id, exitSide!, services, dragOffsets);
+        const tgtPort = getPortPosition(link.target_id, entrySide!, services, dragOffsets);
+
+        if (!srcPort || !tgtPort) return null;
+
+        const x1 = srcPort.x * zoomLevel + panOffset.x;
+        const y1 = srcPort.y * zoomLevel + panOffset.y;
+        const x2 = tgtPort.x * zoomLevel + panOffset.x;
+        const y2 = tgtPort.y * zoomLevel + panOffset.y;
 
         return {
           id: link.id,

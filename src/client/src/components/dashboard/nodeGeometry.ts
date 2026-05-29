@@ -120,21 +120,53 @@ export function getNodeCenter(
   };
 }
 
+function getParentInfoSectionCenterY(
+  serviceId: string,
+  services: ServiceWithPosition[],
+  dragOffsets: Record<string, { dx: number; dy: number }>,
+): number | null {
+  const isParent = services.some((s) => s.position?.parent_id === serviceId);
+
+  if (!isParent) return null;
+
+  const service = services.find((s) => s.id === serviceId);
+
+  if (!service) return null;
+
+  const absPos = getAbsoluteNodePosition(service, services, dragOffsets);
+  const infoEl = document.querySelector(
+    `[data-service-id="${serviceId}"] [data-info-section]`,
+  ) as HTMLElement | null;
+  const infoH = infoEl?.offsetHeight ?? GROUP_PARENT_INFO_HEIGHT;
+
+  return absPos.y + CARD_BORDER_WIDTH + infoH / 2;
+}
+
 export function getPortPosition(
   serviceId: string,
   side: PortSide,
   services: ServiceWithPosition[],
   dragOffsets: Record<string, { dx: number; dy: number }>,
 ): { x: number; y: number } | null {
-  const center = getNodeCenter(serviceId, services, dragOffsets);
+  const service = services.find((s) => s.id === serviceId);
 
-  if (!center) return null;
+  if (!service) return null;
 
+  const absPos = getAbsoluteNodePosition(service, services, dragOffsets);
   const size = getNodeSize(serviceId);
 
+  if (side === "left" || side === "right") {
+    const headerCenterY = getParentInfoSectionCenterY(serviceId, services, dragOffsets);
+
+    if (headerCenterY !== null) {
+      const x = side === "left" ? absPos.x : absPos.x + (size?.w ?? NODE_WIDTH);
+      return { x, y: headerCenterY };
+    }
+  }
+
   return portCoords(
-    center.x,
-    center.y,
+    absPos.x + (size?.w ?? NODE_WIDTH) / 2,
+    absPos.y + (size?.h ?? NODE_HEIGHT) / 2,
     side,
     (size?.w ?? NODE_WIDTH) / 2,
     (size?.h ?? NODE_HEIGHT) / 2,
@@ -161,7 +193,7 @@ export function portCoords(
  * Width/height of the parent card when expanded to hold `childCount` children.
  */
 export function computeGroupDimensions(childCount: number): { w: number; h: number } {
-  const cols = Math.max(1, Math.ceil(Math.sqrt(childCount)));
+  const cols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(childCount))));
   const rows = Math.max(1, Math.ceil(childCount / cols));
 
   const childrenW = cols * NODE_WIDTH + (cols - 1) * CHILD_GAP;
@@ -179,7 +211,7 @@ export function computeGroupDimensions(childCount: number): { w: number; h: numb
  * i.e. relative to the top-left of the children area (below the info section).
  */
 export function childGridPosition(index: number, total: number): { x: number; y: number } {
-  const cols = Math.max(1, Math.ceil(Math.sqrt(total)));
+  const cols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(total))));
   const col = index % cols;
   const row = Math.floor(index / cols);
 
@@ -218,7 +250,7 @@ export function getChildForcedSide(
     services.filter((s) => s.position?.parent_id === service.position!.parent_id),
   );
 
-  const cols = Math.max(1, Math.ceil(Math.sqrt(siblings.length)));
+  const cols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(siblings.length))));
 
   if (cols === 1) return null;
 
