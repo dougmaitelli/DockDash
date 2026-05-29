@@ -40,7 +40,7 @@ function getLinkColor(type: string): string {
 
 interface EditLinkModalProps {
   link: ServiceLink;
-  onSave: (data: Pick<ServiceLink, "label" | "type" | "description">) => void;
+  onSave: (data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">) => void;
   onDelete: () => void;
   onCancel: () => void;
 }
@@ -50,9 +50,14 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
   const [editLabel, setEditLabel] = useState(link.label || "");
   const [editType, setEditType] = useState(link.type || ServiceLinkType.COMMUNICATION);
   const [editDesc, setEditDesc] = useState(link.description || "");
+  const [editTargetPort, setEditTargetPort] = useState<string>(
+    link.targetPort != null ? String(link.targetPort) : "",
+  );
 
   const handleConfirm = () => {
-    onSave({ label: editLabel, type: editType, description: editDesc });
+    const targetPort = editTargetPort.trim() !== "" ? Number(editTargetPort) : null;
+
+    onSave({ label: editLabel, type: editType, description: editDesc, targetPort });
   };
 
   return (
@@ -115,6 +120,17 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
           value={editLabel}
           onChange={(e) => setEditLabel(e.target.value)}
           placeholder={t("modals.linkLabelPlaceholder")}
+        />
+      </FormGroup>
+      <FormGroup>
+        <Label>{t("modals.linkTargetPort")}</Label>
+        <StyledInput
+          type="number"
+          min={1}
+          max={65535}
+          value={editTargetPort}
+          onChange={(e) => setEditTargetPort(e.target.value)}
+          placeholder={t("modals.linkTargetPortPlaceholder")}
         />
       </FormGroup>
       <FormGroup>

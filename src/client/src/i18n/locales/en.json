@@ -78,6 +78,8 @@
     "linkType": "Link Type",
     "linkLabel": "Label (optional)",
     "linkLabelPlaceholder": "e.g., REST API, gRPC, WebSocket",
+    "linkTargetPort": "Target Port (optional)",
+    "linkTargetPortPlaceholder": "e.g., 8080",
     "linkDescription": "Description (optional)",
     "linkDescriptionPlaceholder": "Describe the relationship...",
     "save": "Save",

@@ -88,7 +88,7 @@ router.delete("/services/:id", (req, res) => {
 
 // Create link
 router.post("/links", (req, res) => {
-  const { source_id, target_id, label, type, description } = req.body;
+  const { source_id, target_id, label, type, description, targetPort } = req.body;
 
   if (!source_id || !target_id) {
     return res.status(400).json({ error: "source_id and target_id are required" });
@@ -105,6 +105,7 @@ router.post("/links", (req, res) => {
       label: label || "",
       type: type || ServiceLinkType.COMMUNICATION,
       description: description || "",
+      targetPort: targetPort != null ? Number(targetPort) : null,
     });
 
     res.json(link);
@@ -115,13 +116,14 @@ router.post("/links", (req, res) => {
 
 // Update link
 router.put("/links/:id", (req, res) => {
-  const { label, type, description } = req.body;
+  const { label, type, description, targetPort } = req.body;
 
   try {
     const link = db.updateLink(req.params.id, {
       label: label ?? "",
       type: type ?? ServiceLinkType.COMMUNICATION,
       description: description ?? "",
+      targetPort: targetPort != null ? Number(targetPort) : null,
     });
 
     res.json(link);

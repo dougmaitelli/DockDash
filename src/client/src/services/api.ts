@@ -39,7 +39,7 @@ export const serviceApi = {
 // Link management APIs
 export const linkApi = {
   create: (data: Omit<ServiceLink, "id" | "created_at">) => api.post<ServiceLink>("/links", data),
-  update: (id: string, data: Pick<ServiceLink, "label" | "type" | "description">) =>
+  update: (id: string, data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">) =>
     api.put<ServiceLink>(`/links/${id}`, data),
   delete: (id: string) => api.delete<ApiSuccess>(`/links/${id}`),
 };

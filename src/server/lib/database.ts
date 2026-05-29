@@ -175,7 +175,7 @@ export class DatabaseService {
       ORDER BY sl.created_at DESC
     `);
 
-    return stmt.all() as ServiceLink[];
+    return (stmt.all() as any[]).map((row) => ({ ...row, targetPort: row.target_port ?? null }));
   }
 
   saveLink(link: Omit<ServiceLink, "id" | "created_at">): ServiceLink {
@@ -184,10 +184,10 @@ export class DatabaseService {
 
     const result = this.db
       .prepare(
-        `INSERT OR IGNORE INTO service_links (id, source_id, target_id, label, type, description, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR IGNORE INTO service_links (id, source_id, target_id, label, type, description, target_port, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(id, link.source_id, link.target_id, link.label, link.type, link.description, now);
+      .run(id, link.source_id, link.target_id, link.label, link.type, link.description, link.targetPort ?? null, now);
 
     if (result.changes === 0) {
       throw new Error("A link between these two services already exists");
@@ -196,16 +196,18 @@ export class DatabaseService {
     return { ...link, id, created_at: now };
   }
 
-  updateLink(id: string, data: Pick<ServiceLink, "label" | "type" | "description">): ServiceLink {
+  updateLink(id: string, data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">): ServiceLink {
     const result = this.db
-      .prepare(`UPDATE service_links SET label = ?, type = ?, description = ? WHERE id = ?`)
-      .run(data.label, data.type, data.description, id);
+      .prepare(`UPDATE service_links SET label = ?, type = ?, description = ?, target_port = ? WHERE id = ?`)
+      .run(data.label, data.type, data.description, data.targetPort ?? null, id);
 
     if (result.changes === 0) {
       throw new Error("Link not found");
     }
 
-    return this.db.prepare("SELECT * FROM service_links WHERE id = ?").get(id) as ServiceLink;
+    const row = this.db.prepare("SELECT * FROM service_links WHERE id = ?").get(id) as any;
+
+    return { ...row, targetPort: row.target_port ?? null };
   }
 
   deleteLink(id: string): void {

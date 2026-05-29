@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS service_links (
   label TEXT DEFAULT '',
   type TEXT DEFAULT 'communication',
   description TEXT DEFAULT '',
+  target_port INTEGER DEFAULT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   CHECK (source_id != target_id)
 );

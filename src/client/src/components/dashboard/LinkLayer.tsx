@@ -144,6 +144,19 @@ export function LinkLayer({
       viewBox={`0 0 ${canvasW} ${canvasH}`}
       xmlns="http://www.w3.org/2000/svg"
     >
+      <defs>
+        <marker
+          id="arrowhead"
+          markerWidth={16 * zoomLevel}
+          markerHeight={10 * zoomLevel}
+          refX={15 * zoomLevel}
+          refY={5 * zoomLevel}
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <path d={`M 0 0 L ${16 * zoomLevel} ${5 * zoomLevel} L 0 ${10 * zoomLevel} Z`} fill="context-stroke" fillOpacity={0.6} />
+        </marker>
+      </defs>
       {linkPaths.map((p) => (
         <g key={p.id}>
           <path
@@ -160,6 +173,7 @@ export function LinkLayer({
             stroke={p.color}
             strokeWidth={2}
             strokeOpacity={0.6}
+            markerEnd="url(#arrowhead)"
             style={{ pointerEvents: "none" }}
           />
           <path
@@ -198,6 +212,7 @@ export function LinkLayer({
           strokeWidth={2}
           strokeDasharray="8 4"
           strokeOpacity={0.8}
+          markerEnd="url(#arrowhead)"
           style={{ pointerEvents: "none" }}
         />
       )}

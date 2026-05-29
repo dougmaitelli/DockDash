@@ -44,7 +44,7 @@ interface DashboardCanvasProps {
   addLink: (data: Omit<ServiceLink, "id" | "created_at">) => Promise<void>;
   updateLink: (
     id: string,
-    data: Pick<ServiceLink, "label" | "type" | "description">,
+    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">,
   ) => Promise<void>;
   removeLink: (id: string) => Promise<void>;
   removeService: (id: string) => Promise<void>;
@@ -646,7 +646,7 @@ export function DashboardCanvas({
     setEditingLink(link);
   }, []);
 
-  const handleEditLinkSave = async (data: Pick<ServiceLink, "label" | "type" | "description">) => {
+  const handleEditLinkSave = async (data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">) => {
     if (!editingLink) return;
 
     await updateLink(editingLink.id, data);

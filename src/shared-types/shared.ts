@@ -53,6 +53,7 @@ export interface ServiceLink {
   label: string;
   type: ServiceLinkType;
   description: string;
+  targetPort?: number | null;
   created_at: string;
 }
 
