@@ -2,7 +2,8 @@ import type { ServiceWithPosition } from "@shared";
 
 export const NODE_WIDTH = 220;
 export const NODE_HEIGHT = 120;
-export const CHILD_GAP = 20;
+export const CHILD_ROW_GAP = 20;
+export const CHILD_COLUMN_GAP = 60;
 export const CARD_BORDER_WIDTH = 3;
 
 // Height of the parent service card's own info section (name/host/status/badges).
@@ -196,8 +197,8 @@ export function computeGroupDimensions(childCount: number): { w: number; h: numb
   const cols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(childCount))));
   const rows = Math.max(1, Math.ceil(childCount / cols));
 
-  const childrenW = cols * NODE_WIDTH + (cols - 1) * CHILD_GAP;
-  const childrenH = rows * NODE_HEIGHT + (rows - 1) * CHILD_GAP;
+  const childrenW = cols * NODE_WIDTH + (cols - 1) * CHILD_COLUMN_GAP;
+  const childrenH = rows * NODE_HEIGHT + (rows - 1) * CHILD_ROW_GAP;
 
   // Width includes borders (border-box sizing) so content area = w - 2*CARD_BORDER_WIDTH
   return {
@@ -216,8 +217,8 @@ export function childGridPosition(index: number, total: number): { x: number; y:
   const row = Math.floor(index / cols);
 
   return {
-    x: GROUP_CARD_INNER_PADDING + col * (NODE_WIDTH + CHILD_GAP),
-    y: GROUP_CARD_INNER_PADDING + row * (NODE_HEIGHT + CHILD_GAP),
+    x: GROUP_CARD_INNER_PADDING + col * (NODE_WIDTH + CHILD_COLUMN_GAP),
+    y: GROUP_CARD_INNER_PADDING + row * (NODE_HEIGHT + CHILD_ROW_GAP),
   };
 }
 

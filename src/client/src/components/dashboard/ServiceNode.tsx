@@ -2,7 +2,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import styled from "styled-components";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { colors } from "../../styles/vars";
-import { NODE_WIDTH, CHILD_GAP, GROUP_CARD_INNER_PADDING, PortSide } from "./nodeGeometry";
+import { NODE_WIDTH, CHILD_ROW_GAP, CHILD_COLUMN_GAP, GROUP_CARD_INNER_PADDING, PortSide } from "./nodeGeometry";
 import { IconArrowRight, IconDocker, IconGlobe } from "../../utils/Icons";
 import { PortTag } from "../../utils/ui";
 
@@ -63,7 +63,8 @@ const NodeBody = styled.div`
 const ChildrenSection = styled.div<{ $cols: number }>`
   display: grid;
   grid-template-columns: repeat(${(p) => p.$cols}, ${NODE_WIDTH}px);
-  gap: ${CHILD_GAP}px;
+  column-gap: ${CHILD_COLUMN_GAP}px;
+  row-gap: ${CHILD_ROW_GAP}px;
   padding: ${GROUP_CARD_INNER_PADDING}px;
   border-top: 1px solid color-mix(in srgb, ${colors.accentBlue} 20%, ${colors.border});
 `;

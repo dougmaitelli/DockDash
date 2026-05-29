@@ -48,8 +48,19 @@ export function LinkLayer({
         const tx = tgtCenter.x * zoomLevel + panOffset.x;
         const ty = tgtCenter.y * zoomLevel + panOffset.y;
 
-        const srcForced = getChildForcedSide(link.source_id, services);
-        const tgtForced = getChildForcedSide(link.target_id, services);
+        const srcParentId = services.find((s) => s.id === link.source_id)?.position?.parent_id;
+        const tgtParentId = services.find((s) => s.id === link.target_id)?.position?.parent_id;
+        const areSiblings = srcParentId && tgtParentId && srcParentId === tgtParentId;
+
+        const flipSide = (side: PortSide | null): PortSide | null =>
+          side === "left" ? "right" : side === "right" ? "left" : side;
+
+        const srcForced = areSiblings
+          ? flipSide(getChildForcedSide(link.source_id, services))
+          : getChildForcedSide(link.source_id, services);
+        const tgtForced = areSiblings
+          ? flipSide(getChildForcedSide(link.target_id, services))
+          : getChildForcedSide(link.target_id, services);
 
         let exitSide: PortSide | null = srcForced;
         let entrySide: PortSide | null = tgtForced;
