@@ -11,7 +11,9 @@
     "start": "node dist/server/index.js",
     "lint": "eslint src/ && prettier --check \"src/\"",
     "lint:fix": "eslint --fix src/ && prettier --write \"src/\"",
-    "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit"
+    "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "axios": "^1.16.1",
@@ -19,6 +21,7 @@
     "cors": "^2.8.5",
     "dockerode": "4.0.1",
     "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "i18next": "^26.2.0",
     "react": "^19.2.6",
@@ -41,6 +44,7 @@
     "@typescript-eslint/parser": "^8.59.3",
     "@vitejs/plugin-react": "^6.0.2",
     "concurrently": "^9.2.1",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",

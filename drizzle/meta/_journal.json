@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1780087016734,
+      "tag": "0000_thin_spitfire",
+      "breakpoints": true
+    }
+  ]
+}

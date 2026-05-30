@@ -24,6 +24,8 @@ function numberToIp(num: number): string {
   return [(num >>> 24) & 255, (num >>> 16) & 255, (num >>> 8) & 255, num & 255].join(".");
 }
 
+const PORT_SCAN_TIMEOUT_MS = 1000;
+
 export function parseCIDRConfig(): CIDRConfig[] {
   const portList = config.scanPorts;
   const cidrList = config.networkCidrs;
@@ -31,13 +33,13 @@ export function parseCIDRConfig(): CIDRConfig[] {
   return cidrList.map((cidr) => ({ cidr, ports: portList }));
 }
 
-async function portScan(ip: string, port: number, timeout = 1000): Promise<boolean> {
+async function portScan(ip: string, port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = new net.Socket();
     const timer = setTimeout(() => {
       socket.destroy();
       resolve(false);
-    }, timeout);
+    }, PORT_SCAN_TIMEOUT_MS);
 
     socket.once("connect", () => {
       clearTimeout(timer);

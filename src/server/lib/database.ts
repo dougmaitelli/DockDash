@@ -1,8 +1,12 @@
 import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { eq, or, asc, desc, getTableColumns } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import path from "path";
-import fs from "fs";
 import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
+import { services, serviceLinks, servicePositions } from "./schema/index.js";
 import type {
   ServicePosition,
   Service,
@@ -15,53 +19,82 @@ import type {
 const rootDir = process.cwd();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const sqlite = new Database(process.env.DB_PATH || path.join(rootDir, "dockdash.db"));
+sqlite.pragma("journal_mode = WAL");
+sqlite.pragma("foreign_keys = ON");
+
+const orm = drizzle(sqlite);
+
+migrate(orm, { migrationsFolder: path.join(__dirname, "../../../drizzle") });
+
+// Map Drizzle row → Service (camelCase timestamps → snake_case to match the shared interface)
+function toService(row: typeof services.$inferSelect): Service {
+  return {
+    ...row,
+    ports: row.ports ?? [],
+    metadata: row.metadata ?? undefined,
+    created_at: row.createdAt,
+    updated_at: row.updatedAt,
+  } as unknown as Service;
+}
+
+// Map Drizzle row → ServicePosition
+function toPosition(row: typeof servicePositions.$inferSelect): ServicePosition {
+  return { service_id: row.serviceId, x: row.x, y: row.y, parent_id: row.parentId };
+}
+
+// Map Drizzle row → ServiceLink
+function toLink(
+  row: typeof serviceLinks.$inferSelect & { source_name?: string | null; target_name?: string | null },
+): ServiceLink {
+  return {
+    id: row.id,
+    source_id: row.sourceId,
+    source_name: row.source_name ?? undefined,
+    target_id: row.targetId,
+    target_name: row.target_name ?? undefined,
+    label: row.label ?? "",
+    type: row.type as ServiceLink["type"],
+    description: row.description ?? "",
+    targetPort: row.targetPort ?? null,
+    created_at: row.createdAt,
+  };
+}
+
 export class DatabaseService {
-  private db: Database.Database;
-
-  constructor() {
-    const dbPath = process.env.DB_PATH || path.join(rootDir, "dockdash.db");
-
-    this.db = new Database(dbPath);
-
-    this.db.pragma("journal_mode = WAL");
-    this.db.pragma("foreign_keys = ON");
-
-    const schema = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf-8");
-
-    this.db.exec(schema);
-  }
-
   upsertService(service: Service): Service {
     const id = service.id || uuidv4();
     const now = new Date().toISOString();
 
-    const stmt = this.db.prepare(`
-      INSERT INTO services (id, name, host, ports, check_port, protocol, source, status, metadata, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        name = excluded.name,
-        host = excluded.host,
-        ports = excluded.ports,
-        check_port = excluded.check_port,
-        protocol = excluded.protocol,
-        status = excluded.status,
-        metadata = excluded.metadata,
-        updated_at = excluded.updated_at
-    `);
-
-    stmt.run(
-      id,
-      service.name,
-      service.host,
-      JSON.stringify(service.ports ?? []),
-      service.checkPort,
-      service.protocol,
-      service.source,
-      service.status,
-      JSON.stringify(service.metadata),
-      now,
-      now,
-    );
+    orm
+      .insert(services)
+      .values({
+        id,
+        name: service.name,
+        host: service.host,
+        ports: service.ports ?? [],
+        checkPort: service.checkPort ?? null,
+        protocol: service.protocol,
+        source: service.source,
+        status: service.status,
+        metadata: service.metadata,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: services.id,
+        set: {
+          name: service.name,
+          host: service.host,
+          ports: service.ports ?? [],
+          checkPort: service.checkPort ?? null,
+          protocol: service.protocol,
+          status: service.status,
+          metadata: service.metadata,
+          updatedAt: now,
+        },
+      })
+      .run();
 
     return { ...service, id, created_at: now, updated_at: now };
   }
@@ -71,19 +104,22 @@ export class DatabaseService {
     data: { name?: string; host?: string; ports?: number[]; checkPort?: number; protocol?: string },
   ): Service {
     const existing = this.getService(id);
-
     if (!existing) throw new Error("Service not found");
 
     const now = new Date().toISOString();
-    const name = data.name ?? existing.name;
-    const host = data.host ?? existing.host;
-    const ports = data.ports ?? existing.ports;
-    const checkPort = data.checkPort !== undefined ? data.checkPort : existing.checkPort;
-    const protocol = data.protocol ?? existing.protocol;
 
-    this.db
-      .prepare(`UPDATE services SET name = ?, host = ?, ports = ?, check_port = ?, protocol = ?, updated_at = ? WHERE id = ?`)
-      .run(name, host, JSON.stringify(ports), checkPort, protocol, now, id);
+    orm
+      .update(services)
+      .set({
+        name: data.name ?? existing.name,
+        host: data.host ?? existing.host,
+        ports: data.ports ?? existing.ports,
+        checkPort: data.checkPort !== undefined ? data.checkPort : (existing.checkPort ?? null),
+        protocol: data.protocol ?? existing.protocol,
+        updatedAt: now,
+      })
+      .where(eq(services.id, id))
+      .run();
 
     return this.getService(id)!;
   }
@@ -93,101 +129,90 @@ export class DatabaseService {
     patch: Record<string, string | number | boolean | string[] | number[]>,
   ): void {
     const service = this.getService(id);
-
     if (!service) return;
 
-    const merged = { ...(service.metadata ?? {}), ...patch };
-    const now = new Date().toISOString();
-
-    this.db
-      .prepare(`UPDATE services SET metadata = ?, updated_at = ? WHERE id = ?`)
-      .run(JSON.stringify(merged), now, id);
+    orm
+      .update(services)
+      .set({
+        metadata: { ...(service.metadata ?? {}), ...patch },
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(services.id, id))
+      .run();
   }
 
-  updateServiceStatus(id: string, status: ServiceStatus, lastChecked?: string): void {
-    const now = lastChecked || new Date().toISOString();
-
-    this.db
-      .prepare(
-        `
-      UPDATE services SET status = ?, updated_at = ? WHERE id = ?
-    `,
-      )
-      .run(status, now, id);
+  updateServiceStatus(id: string, status: ServiceStatus): void {
+    orm
+      .update(services)
+      .set({ status, updatedAt: new Date().toISOString() })
+      .where(eq(services.id, id))
+      .run();
   }
 
   getServices(): Service[] {
-    const stmt = this.db.prepare("SELECT * FROM services ORDER BY name");
-    const rows = stmt.all() as Service[];
-
-    return rows.map((row) => ({
-      ...row,
-      ports: typeof row.ports === "string" ? JSON.parse(row.ports) : (row.ports ?? []),
-      checkPort: (row as any).check_port,
-      metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata,
-    }));
+    return orm.select().from(services).orderBy(asc(services.name)).all().map(toService);
   }
 
   getService(id: string): Service | undefined {
-    const stmt = this.db.prepare("SELECT * FROM services WHERE id = ?");
-    const row = stmt.get(id) as Service;
-
-    if (!row) return undefined;
-
-    return {
-      ...row,
-      ports: typeof row.ports === "string" ? JSON.parse(row.ports) : (row.ports ?? []),
-      checkPort: (row as any).check_port,
-      metadata: typeof row.metadata === "string" ? JSON.parse(row.metadata) : row.metadata,
-    };
+    const row = orm.select().from(services).where(eq(services.id, id)).get();
+    return row ? toService(row) : undefined;
   }
 
   deleteService(id: string): void {
-    this.db.prepare("DELETE FROM services WHERE id = ?").run(id);
-    this.db.prepare("DELETE FROM service_positions WHERE service_id = ?").run(id);
+    orm.delete(services).where(eq(services.id, id)).run();
   }
 
   saveServicePosition(serviceId: string, x: number, y: number, parentId?: string | null): void {
-    this.db
-      .prepare(
-        `
-      INSERT INTO service_positions (service_id, x, y, parent_id) VALUES (?, ?, ?, ?)
-      ON CONFLICT(service_id) DO UPDATE SET x = excluded.x, y = excluded.y, parent_id = excluded.parent_id
-    `,
-      )
-      .run(serviceId, x, y, parentId ?? null);
+    orm
+      .insert(servicePositions)
+      .values({ serviceId, x, y, parentId: parentId ?? null })
+      .onConflictDoUpdate({
+        target: servicePositions.serviceId,
+        set: { x, y, parentId: parentId ?? null },
+      })
+      .run();
   }
 
   getServicePositions(): ServicePosition[] {
-    const stmt = this.db.prepare("SELECT * FROM service_positions");
-
-    return stmt.all() as ServicePosition[];
+    return orm.select().from(servicePositions).all().map(toPosition);
   }
 
   getLinks(): ServiceLink[] {
-    const stmt = this.db.prepare(`
-      SELECT sl.*,
-        s1.name as source_name, s1.host as source_host,
-        s2.name as target_name, s2.host as target_host
-      FROM service_links sl
-      JOIN services s1 ON sl.source_id = s1.id
-      JOIN services s2 ON sl.target_id = s2.id
-      ORDER BY sl.created_at DESC
-    `);
+    const source = alias(services, "source_svc");
+    const target = alias(services, "target_svc");
 
-    return (stmt.all() as any[]).map((row) => ({ ...row, targetPort: row.target_port ?? null }));
+    return orm
+      .select({
+        ...getTableColumns(serviceLinks),
+        source_name: source.name,
+        target_name: target.name,
+      })
+      .from(serviceLinks)
+      .innerJoin(source, eq(serviceLinks.sourceId, source.id))
+      .innerJoin(target, eq(serviceLinks.targetId, target.id))
+      .orderBy(desc(serviceLinks.createdAt))
+      .all()
+      .map(toLink);
   }
 
   saveLink(link: Omit<ServiceLink, "id" | "created_at">): ServiceLink {
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    const result = this.db
-      .prepare(
-        `INSERT OR IGNORE INTO service_links (id, source_id, target_id, label, type, description, target_port, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(id, link.source_id, link.target_id, link.label, link.type, link.description, link.targetPort ?? null, now);
+    const result = orm
+      .insert(serviceLinks)
+      .values({
+        id,
+        sourceId: link.source_id,
+        targetId: link.target_id,
+        label: link.label,
+        type: link.type,
+        description: link.description,
+        targetPort: link.targetPort ?? null,
+        createdAt: now,
+      })
+      .onConflictDoNothing()
+      .run();
 
     if (result.changes === 0) {
       throw new Error("A link between these two services already exists");
@@ -196,40 +221,49 @@ export class DatabaseService {
     return { ...link, id, created_at: now };
   }
 
-  updateLink(id: string, data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">): ServiceLink {
-    const result = this.db
-      .prepare(`UPDATE service_links SET label = ?, type = ?, description = ?, target_port = ? WHERE id = ?`)
-      .run(data.label, data.type, data.description, data.targetPort ?? null, id);
+  updateLink(
+    id: string,
+    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">,
+  ): ServiceLink {
+    const result = orm
+      .update(serviceLinks)
+      .set({
+        label: data.label,
+        type: data.type,
+        description: data.description,
+        targetPort: data.targetPort ?? null,
+      })
+      .where(eq(serviceLinks.id, id))
+      .run();
 
-    if (result.changes === 0) {
-      throw new Error("Link not found");
-    }
+    if (result.changes === 0) throw new Error("Link not found");
 
-    const row = this.db.prepare("SELECT * FROM service_links WHERE id = ?").get(id) as any;
+    const row = orm.select().from(serviceLinks).where(eq(serviceLinks.id, id)).get()!;
 
-    return { ...row, targetPort: row.target_port ?? null };
+    return toLink(row);
   }
 
   deleteLink(id: string): void {
-    this.db.prepare("DELETE FROM service_links WHERE id = ?").run(id);
+    orm.delete(serviceLinks).where(eq(serviceLinks.id, id)).run();
   }
 
   getLinksForService(serviceId: string): ServiceLink[] {
-    const stmt = this.db.prepare(`
-      SELECT * FROM service_links WHERE source_id = ? OR target_id = ? ORDER BY created_at DESC
-    `);
-
-    return stmt.all(serviceId, serviceId) as ServiceLink[];
+    return orm
+      .select()
+      .from(serviceLinks)
+      .where(or(eq(serviceLinks.sourceId, serviceId), eq(serviceLinks.targetId, serviceId)))
+      .orderBy(desc(serviceLinks.createdAt))
+      .all()
+      .map(toLink);
   }
 
   getDashboardData(): DashboardData {
-    const services = this.getServices();
-    const rawPositions = this.getServicePositions();
-    const positionMap = new Map(rawPositions.map((p) => [p.service_id, p]));
+    const allServices = this.getServices();
+    const positionMap = new Map(this.getServicePositions().map((p) => [p.service_id, p]));
     const links = this.getLinks();
 
     return {
-      services: services.map((service) => ({
+      services: allServices.map((service) => ({
         ...service,
         position: positionMap.get(service.id ?? "") ?? null,
       })),
@@ -238,9 +272,10 @@ export class DatabaseService {
   }
 
   getServiceStatuses(): ServiceStatusItem[] {
-    const stmt = this.db.prepare("SELECT id, status FROM services");
-
-    return stmt.all() as ServiceStatusItem[];
+    return orm
+      .select({ id: services.id, status: services.status })
+      .from(services)
+      .all() as ServiceStatusItem[];
   }
 }
 
