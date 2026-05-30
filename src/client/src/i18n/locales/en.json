@@ -18,7 +18,7 @@
     "zoom": {
       "in": "Zoom in",
       "out": "Zoom out",
-      "reset": "Reset view"
+      "fit": "Fit to screen"
     },
     "linkTypes": {
       "communication": "Communication",

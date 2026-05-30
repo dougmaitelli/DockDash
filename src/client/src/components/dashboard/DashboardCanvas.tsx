@@ -201,12 +201,8 @@ export function DashboardCanvas({
 
   const selectedService = services.find((s) => s.id === selectedId);
 
-  // Initial fit to content
-  useEffect(() => {
-    if (initialFitDone.current) return;
-
+  const fitToContent = useCallback(() => {
     if (services.length === 0) return;
-
     if (canvasDimensions.w === 0 || canvasDimensions.h === 0) return;
 
     const PADDING = 60;
@@ -254,8 +250,17 @@ export function DashboardCanvas({
       y: canvasDimensions.h / 2 - bboxCenterY * fitZoom,
     });
     setZoomLevel(fitZoom);
-    initialFitDone.current = true;
   }, [services, canvasDimensions]);
+
+  // Initial fit to content
+  useEffect(() => {
+    if (initialFitDone.current) return;
+    if (services.length === 0) return;
+    if (canvasDimensions.w === 0 || canvasDimensions.h === 0) return;
+
+    fitToContent();
+    initialFitDone.current = true;
+  }, [fitToContent]);
 
   // Keyboard handling
   const handleKeyDown = useCallback(
@@ -788,10 +793,7 @@ export function DashboardCanvas({
         maxZoom={MAX_ZOOM}
         onZoomIn={() => setZoomLevel(Math.min(MAX_ZOOM, zoomLevel + 0.25))}
         onZoomOut={() => setZoomLevel(Math.max(MIN_ZOOM, zoomLevel - 0.25))}
-        onReset={() => {
-          setPanOffset({ x: 0, y: 0 });
-          setZoomLevel(1);
-        }}
+        onFit={fitToContent}
       />
 
       {addingService && (
