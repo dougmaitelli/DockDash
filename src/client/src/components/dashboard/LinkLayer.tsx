@@ -2,12 +2,7 @@ import { useMemo } from "react";
 import type { ServiceLink, ServiceWithPosition } from "@shared";
 import { orthogonalPath, getLinkColor } from "./linkUtils";
 import type { LinkPath } from "./linkUtils";
-import {
-  getNodeCenter,
-  getPortPosition,
-  getChildForcedSide,
-  type PortSide,
-} from "./nodeGeometry";
+import { getNodeCenter, getPortPosition, getChildForcedSide, type PortSide } from "./nodeGeometry";
 import { colors } from "../../styles/vars";
 
 interface LinkLayerProps {
@@ -154,7 +149,11 @@ export function LinkLayer({
           orient="auto"
           markerUnits="userSpaceOnUse"
         >
-          <path d={`M 0 0 L ${16 * zoomLevel} ${5 * zoomLevel} L 0 ${10 * zoomLevel} Z`} fill="context-stroke" fillOpacity={0.6} />
+          <path
+            d={`M 0 0 L ${16 * zoomLevel} ${5 * zoomLevel} L 0 ${10 * zoomLevel} Z`}
+            fill="context-stroke"
+            fillOpacity={0.6}
+          />
         </marker>
       </defs>
       {linkPaths.map((p) => (

@@ -17,7 +17,9 @@ interface NodeCardProps {
 
 const NodeCard = styled.div.withConfig({
   shouldForwardProp: (prop) =>
-    !["isSelected", "isHovered", "isNestTarget", "$expandedWidth", "$isParent", "service"].includes(prop),
+    !["isSelected", "isHovered", "isNestTarget", "$expandedWidth", "$isParent", "service"].includes(
+      prop,
+    ),
 })<NodeCardProps>`
   position: relative;
   width: ${(props) => (props.$expandedWidth ? `${props.$expandedWidth}px` : "220px")};
@@ -130,7 +132,6 @@ const ImageTag = styled.span`
   font-family: "SF Mono", "Fira Code", monospace;
   flex-shrink: 0;
 `;
-
 
 const TagRow = styled.div`
   display: flex;
@@ -412,7 +413,9 @@ export function ServiceNodeInner({
           )}
           <ServiceHost>
             {service.host}
-            {service.ports?.map((p) => <PortTag key={p}>:{p}</PortTag>)}
+            {service.ports?.map((p) => (
+              <PortTag key={p}>:{p}</PortTag>
+            ))}
           </ServiceHost>
           <StatusBadge status={service.status}>
             <span
@@ -463,9 +466,7 @@ export function ServiceNodeInner({
           </div>
         </NodeBody>
       </InfoSection>
-      {childrenSection && (
-        <ChildrenSection>{childrenSection}</ChildrenSection>
-      )}
+      {childrenSection && <ChildrenSection>{childrenSection}</ChildrenSection>}
     </NodeCard>
   );
 }

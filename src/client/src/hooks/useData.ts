@@ -193,7 +193,10 @@ export function useDashboard() {
   }, []);
 
   const updateLink = useCallback(
-    async (id: string, data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">) => {
+    async (
+      id: string,
+      data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">,
+    ) => {
       const res = await linkApi.update(id, data);
 
       setData((prev) => {

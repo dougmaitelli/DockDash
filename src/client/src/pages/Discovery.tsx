@@ -15,7 +15,6 @@ const Page = styled.div`
   margin: 0 auto;
 `;
 
-
 const SectionTitle = styled.h2`
   font-size: 1.1rem;
   font-weight: 600;
@@ -139,7 +138,6 @@ const ResultMeta = styled.div`
   align-items: center;
   gap: 8px;
 `;
-
 
 const StatusDot = styled.span<{ status: string }>`
   width: 8px;
@@ -357,7 +355,9 @@ export default function Discovery() {
       )}
 
       <Section>
-        <SectionTitle><IconDocker size={18} /> {t("discovery.dockerTitle")}</SectionTitle>
+        <SectionTitle>
+          <IconDocker size={18} /> {t("discovery.dockerTitle")}
+        </SectionTitle>
         <SectionDesc>{t("discovery.dockerDesc")}</SectionDesc>
         <div
           style={{
@@ -434,7 +434,9 @@ export default function Discovery() {
                         {t("discovery.tagDocker")}
                       </Tag>
                       {svc.host}
-                      {svc.ports?.map((p) => <PortTag key={p}>:{p}</PortTag>)}
+                      {svc.ports?.map((p) => (
+                        <PortTag key={p}>:{p}</PortTag>
+                      ))}
                       <Tag bg={colors.accentYellowAlpha10} color={colors.accentYellow}>
                         {svc.protocol}
                       </Tag>
@@ -469,7 +471,9 @@ export default function Discovery() {
       </Section>
 
       <Section>
-        <SectionTitle><IconGlobe size={18} /> {t("discovery.networkTitle")}</SectionTitle>
+        <SectionTitle>
+          <IconGlobe size={18} /> {t("discovery.networkTitle")}
+        </SectionTitle>
         <SectionDesc>{t("discovery.networkDesc")}</SectionDesc>
         <CIDRInput>
           {cidrs.length > 0 && (
@@ -560,7 +564,9 @@ export default function Discovery() {
                         {t("discovery.tagNetwork")}
                       </Tag>
                       {svc.host}
-                      {svc.ports?.map((p) => <PortTag key={p}>:{p}</PortTag>)}
+                      {svc.ports?.map((p) => (
+                        <PortTag key={p}>:{p}</PortTag>
+                      ))}
                       <Tag bg={colors.accentYellowAlpha10} color={colors.accentYellow}>
                         {svc.protocol}
                       </Tag>

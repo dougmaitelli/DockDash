@@ -15,7 +15,6 @@ const Page = styled.div`
   margin: 0 auto;
 `;
 
-
 const SectionTitle = styled.h2`
   font-size: 1rem;
   font-weight: 600;

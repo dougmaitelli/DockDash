@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db } from "../lib/database.js";
-import { checkAllServices, checkSingleService } from "../services/healthCheck.js";
+import { db } from "../lib/databaseService.js";
+import { healthCheckService } from "../services/healthCheckService.js";
 import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
 import type {
   ApiSuccess,
@@ -48,14 +48,14 @@ router.post("/services", (req, res) => {
     updated_at: new Date().toISOString(),
   });
 
-  checkSingleService(service.id!);
+  healthCheckService.checkSingleService(service.id!);
 
   res.json(service);
 });
 
 // Update service
 router.put("/services/:id", (req, res) => {
-  const { name, host, ports, checkPort, protocol } = req.body;
+  const { name, host, checkPort, protocol } = req.body;
 
   if (!name || !host) {
     return res.status(400).json({ error: "name and host are required" });
@@ -69,7 +69,7 @@ router.put("/services/:id", (req, res) => {
       protocol: protocol || "http",
     });
 
-    checkSingleService(req.params.id);
+    healthCheckService.checkSingleService(req.params.id);
 
     res.json(service);
   } catch (err) {
@@ -162,7 +162,8 @@ router.get("/dashboard", (_req, res) => {
 });
 
 router.post("/checkAllServices", (_req, res) => {
-  checkAllServices()
+  healthCheckService
+    .checkAllServices()
     .then((result) => {
       console.log(`Health check: ${result.updated} updated, ${result.errors} errors`);
     })

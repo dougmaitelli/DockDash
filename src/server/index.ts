@@ -4,8 +4,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import discoveryRoutes from "./routes/discovery.js";
 import serviceRoutes from "./routes/services.js";
-import { checkAllServices } from "./services/healthCheck.js";
-import { checkAllServicesForUpdates } from "./services/updateChecker.js";
+import { healthCheckService } from "./services/healthCheckService.js";
+import { updateCheckerService } from "./services/updateCheckerService.js";
 import { config } from "./lib/config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -53,7 +53,7 @@ app.listen(PORT, () => {
   // Background health check job
   const healthCheckInterval = setInterval(async () => {
     try {
-      const result = await checkAllServices();
+      const result = await healthCheckService.checkAllServices();
 
       if (result.updated > 0 || result.errors > 0) {
         console.log(`Health check: ${result.updated} updated, ${result.errors} errors`);
@@ -69,7 +69,7 @@ app.listen(PORT, () => {
   const runUpdateCheck = async () => {
     try {
       console.log("Update check: starting…");
-      await checkAllServicesForUpdates();
+      await updateCheckerService.checkAllServicesForUpdates();
       console.log("Update check: done");
     } catch (err) {
       console.error("Update check failed:", err instanceof Error ? err.message : String(err));

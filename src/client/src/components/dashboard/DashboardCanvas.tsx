@@ -410,10 +410,7 @@ export function DashboardCanvas({
           const cx = finalAbsX + NODE_WIDTH / 2;
           const cy = finalAbsY + NODE_HEIGHT / 2;
           const insideGroup =
-            cx >= parentX &&
-            cx <= parentX + groupW &&
-            cy >= parentY &&
-            cy <= parentY + groupH;
+            cx >= parentX && cx <= parentX + groupW && cy >= parentY && cy <= parentY + groupH;
 
           if (insideGroup) {
             shouldUpdate = false; // snap back to grid position
@@ -646,7 +643,9 @@ export function DashboardCanvas({
     setEditingLink(link);
   }, []);
 
-  const handleEditLinkSave = async (data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">) => {
+  const handleEditLinkSave = async (
+    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">,
+  ) => {
     if (!editingLink) return;
 
     await updateLink(editingLink.id, data);

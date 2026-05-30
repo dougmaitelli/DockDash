@@ -161,6 +161,7 @@ export function getPortPosition(
 
     if (headerCenterY !== null) {
       const x = side === "left" ? absPos.x : absPos.x + (size?.w ?? NODE_WIDTH);
+
       return { x, y: headerCenterY };
     }
   }

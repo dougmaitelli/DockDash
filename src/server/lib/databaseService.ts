@@ -16,16 +16,8 @@ import type {
   ServiceStatus,
 } from "@shared";
 
-const rootDir = process.cwd();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const sqlite = new Database(process.env.DB_PATH || path.join(rootDir, "dockdash.db"));
-sqlite.pragma("journal_mode = WAL");
-sqlite.pragma("foreign_keys = ON");
-
-const orm = drizzle(sqlite);
-
-migrate(orm, { migrationsFolder: path.join(__dirname, "../../../drizzle") });
+const MIGRATIONS_FOLDER = path.join(__dirname, "../../../drizzle");
 
 // Map Drizzle row → Service (camelCase timestamps → snake_case to match the shared interface)
 function toService(row: typeof services.$inferSelect): Service {
@@ -45,7 +37,10 @@ function toPosition(row: typeof servicePositions.$inferSelect): ServicePosition 
 
 // Map Drizzle row → ServiceLink
 function toLink(
-  row: typeof serviceLinks.$inferSelect & { source_name?: string | null; target_name?: string | null },
+  row: typeof serviceLinks.$inferSelect & {
+    source_name?: string | null;
+    target_name?: string | null;
+  },
 ): ServiceLink {
   return {
     id: row.id,
@@ -62,11 +57,31 @@ function toLink(
 }
 
 export class DatabaseService {
+  private static instance: DatabaseService | null = null;
+  private readonly orm: ReturnType<typeof drizzle>;
+
+  constructor() {
+    if (DatabaseService.instance) {
+      throw new Error("DatabaseService is a singleton — use the exported db instance");
+    }
+
+    const sqlite = new Database(process.env.DB_PATH || path.join(process.cwd(), "dockdash.db"));
+
+    sqlite.pragma("journal_mode = WAL");
+    sqlite.pragma("foreign_keys = ON");
+
+    this.orm = drizzle(sqlite);
+
+    migrate(this.orm, { migrationsFolder: MIGRATIONS_FOLDER });
+
+    DatabaseService.instance = this;
+  }
+
   upsertService(service: Service): Service {
     const id = service.id || uuidv4();
     const now = new Date().toISOString();
 
-    orm
+    this.orm
       .insert(services)
       .values({
         id,
@@ -104,11 +119,12 @@ export class DatabaseService {
     data: { name?: string; host?: string; ports?: number[]; checkPort?: number; protocol?: string },
   ): Service {
     const existing = this.getService(id);
+
     if (!existing) throw new Error("Service not found");
 
     const now = new Date().toISOString();
 
-    orm
+    this.orm
       .update(services)
       .set({
         name: data.name ?? existing.name,
@@ -129,9 +145,10 @@ export class DatabaseService {
     patch: Record<string, string | number | boolean | string[] | number[]>,
   ): void {
     const service = this.getService(id);
+
     if (!service) return;
 
-    orm
+    this.orm
       .update(services)
       .set({
         metadata: { ...(service.metadata ?? {}), ...patch },
@@ -142,7 +159,7 @@ export class DatabaseService {
   }
 
   updateServiceStatus(id: string, status: ServiceStatus): void {
-    orm
+    this.orm
       .update(services)
       .set({ status, updatedAt: new Date().toISOString() })
       .where(eq(services.id, id))
@@ -150,20 +167,21 @@ export class DatabaseService {
   }
 
   getServices(): Service[] {
-    return orm.select().from(services).orderBy(asc(services.name)).all().map(toService);
+    return this.orm.select().from(services).orderBy(asc(services.name)).all().map(toService);
   }
 
   getService(id: string): Service | undefined {
-    const row = orm.select().from(services).where(eq(services.id, id)).get();
+    const row = this.orm.select().from(services).where(eq(services.id, id)).get();
+
     return row ? toService(row) : undefined;
   }
 
   deleteService(id: string): void {
-    orm.delete(services).where(eq(services.id, id)).run();
+    this.orm.delete(services).where(eq(services.id, id)).run();
   }
 
   saveServicePosition(serviceId: string, x: number, y: number, parentId?: string | null): void {
-    orm
+    this.orm
       .insert(servicePositions)
       .values({ serviceId, x, y, parentId: parentId ?? null })
       .onConflictDoUpdate({
@@ -174,14 +192,14 @@ export class DatabaseService {
   }
 
   getServicePositions(): ServicePosition[] {
-    return orm.select().from(servicePositions).all().map(toPosition);
+    return this.orm.select().from(servicePositions).all().map(toPosition);
   }
 
   getLinks(): ServiceLink[] {
     const source = alias(services, "source_svc");
     const target = alias(services, "target_svc");
 
-    return orm
+    return this.orm
       .select({
         ...getTableColumns(serviceLinks),
         source_name: source.name,
@@ -199,7 +217,7 @@ export class DatabaseService {
     const id = uuidv4();
     const now = new Date().toISOString();
 
-    const result = orm
+    const result = this.orm
       .insert(serviceLinks)
       .values({
         id,
@@ -225,7 +243,7 @@ export class DatabaseService {
     id: string,
     data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">,
   ): ServiceLink {
-    const result = orm
+    const result = this.orm
       .update(serviceLinks)
       .set({
         label: data.label,
@@ -238,17 +256,17 @@ export class DatabaseService {
 
     if (result.changes === 0) throw new Error("Link not found");
 
-    const row = orm.select().from(serviceLinks).where(eq(serviceLinks.id, id)).get()!;
+    const row = this.orm.select().from(serviceLinks).where(eq(serviceLinks.id, id)).get()!;
 
     return toLink(row);
   }
 
   deleteLink(id: string): void {
-    orm.delete(serviceLinks).where(eq(serviceLinks.id, id)).run();
+    this.orm.delete(serviceLinks).where(eq(serviceLinks.id, id)).run();
   }
 
   getLinksForService(serviceId: string): ServiceLink[] {
-    return orm
+    return this.orm
       .select()
       .from(serviceLinks)
       .where(or(eq(serviceLinks.sourceId, serviceId), eq(serviceLinks.targetId, serviceId)))
@@ -272,7 +290,7 @@ export class DatabaseService {
   }
 
   getServiceStatuses(): ServiceStatusItem[] {
-    return orm
+    return this.orm
       .select({ id: services.id, status: services.status })
       .from(services)
       .all() as ServiceStatusItem[];

@@ -16,7 +16,9 @@ export const serviceLinks = sqliteTable(
     type: text("type").default("communication"),
     description: text("description").default(""),
     targetPort: integer("target_port"),
-    createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(datetime('now'))`),
   },
   (table) => [
     index("idx_links_source").on(table.sourceId),

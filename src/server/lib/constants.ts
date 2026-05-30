@@ -40,6 +40,10 @@ export const PORT_INFO_MAP: Record<number, PortInfo> = {
   27017: { protocol: ServiceProtocol.TCP,   name: "MongoDB" },
 };
 
+export function detectProtocolByPort(port: number): ServiceProtocol {
+  return PORT_INFO_MAP[port]?.protocol ?? ServiceProtocol.TCP;
+}
+
 export const HTTP_PROTOCOLS = [ServiceProtocol.HTTP, ServiceProtocol.HTTPS];
 export const TCP_CHECKABLE_PROTOCOLS = [
   ServiceProtocol.HTTP,

@@ -2,7 +2,13 @@ import { useMemo } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { ServiceWithPosition } from "@shared";
 import { ServiceNodeInner } from "./ServiceNode";
-import { NODE_WIDTH, NODE_HEIGHT, CHILD_ROW_GAP, computeGroupDimensions, type PortSide } from "./nodeGeometry";
+import {
+  NODE_WIDTH,
+  NODE_HEIGHT,
+  CHILD_ROW_GAP,
+  computeGroupDimensions,
+  type PortSide,
+} from "./nodeGeometry";
 
 interface NodeLayerProps {
   services: ServiceWithPosition[];
@@ -147,7 +153,7 @@ export function NodeLayer({
                   onDoubleClick={() => onDoubleClick(child)}
                   {...sharedNodeProps}
                 />
-              </div>
+              </div>,
             );
           });
 

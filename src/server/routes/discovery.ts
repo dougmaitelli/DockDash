@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { createDockerClients, scanDockerContainers } from "../services/dockerService.js";
-import { scanNetworkStream, parseCIDRConfig } from "../services/networkScanner.js";
+import { dockerService } from "../services/dockerService.js";
+import { networkScanner } from "../services/networkScanner.js";
 import { config } from "../lib/config.js";
 import type {
   DockerHostHealth,
@@ -14,7 +14,7 @@ const router = Router();
 
 // Docker hosts health
 router.get("/docker/health", async (_req, res) => {
-  const clients = createDockerClients();
+  const clients = dockerService.createDockerClients();
 
   const results: DockerHostHealth[] = await Promise.all(
     clients.map(async ({ host, docker }): Promise<DockerHostHealth> => {
@@ -55,10 +55,10 @@ router.get("/docker/scan/stream", async (req, res) => {
   let count = 0;
 
   try {
-    for (const { host, docker } of createDockerClients()) {
+    for (const { host, docker } of dockerService.createDockerClients()) {
       if (closed) break;
 
-      for await (const service of scanDockerContainers(docker, host)) {
+      for await (const service of dockerService.scanDockerContainers(docker, host)) {
         if (closed) break;
 
         res.write(`data: ${JSON.stringify(service)}\n\n`);
@@ -92,7 +92,7 @@ router.get("/network/scan/stream", async (req, res) => {
 
   const cidrParam = req.query.cidrs as string | undefined;
   const portsParam = req.query.ports as string | undefined;
-  const config = parseCIDRConfig();
+  const config = networkScanner.parseCIDRConfig();
   const cidrList = cidrParam?.split(",").filter(Boolean) ?? config.map((c) => c.cidr);
   const portList =
     portsParam
@@ -114,7 +114,7 @@ router.get("/network/scan/stream", async (req, res) => {
     for (const cidr of cidrList) {
       if (closed) break;
 
-      for await (const services of scanNetworkStream(cidr, portList)) {
+      for await (const services of networkScanner.scanNetworkStream(cidr, portList)) {
         if (closed) break;
 
         for (const svc of services) {
