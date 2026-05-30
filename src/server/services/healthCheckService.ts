@@ -2,8 +2,18 @@ import net from "net";
 import axios from "axios";
 import { db } from "../lib/databaseService.js";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
-import { USER_AGENT, HTTP_PROTOCOLS, TCP_CHECKABLE_PROTOCOLS } from "../lib/constants.js";
-import { dockerService, DOCKER_CONTAINER_STATE, DOCKER_CONTAINER_DOWN_STATES, type ContainerStateMap } from "./dockerService.js";
+import {
+  USER_AGENT,
+  HTTP_PROTOCOLS,
+  TCP_CHECKABLE_PROTOCOLS,
+  detectProtocolByPort,
+} from "../lib/constants.js";
+import {
+  dockerService,
+  DOCKER_CONTAINER_STATE,
+  DOCKER_CONTAINER_DOWN_STATES,
+  type ContainerStateMap,
+} from "./dockerService.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -187,8 +197,10 @@ export class HealthCheckService {
 
     if (!port) return ServiceStatus.UNKNOWN;
 
-    if (HTTP_PROTOCOLS.includes(service.protocol)) {
-      const httpOk = await this.checkHttp(service.host, port, service.protocol);
+    const protocol = detectProtocolByPort(port);
+
+    if (HTTP_PROTOCOLS.includes(protocol)) {
+      const httpOk = await this.checkHttp(service.host, port, protocol);
 
       if (httpOk) return ServiceStatus.UP;
 
@@ -196,7 +208,7 @@ export class HealthCheckService {
       return (await this.checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
     }
 
-    if (TCP_CHECKABLE_PROTOCOLS.includes(service.protocol)) {
+    if (TCP_CHECKABLE_PROTOCOLS.includes(protocol)) {
       return (await this.checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
     }
 

@@ -31,7 +31,7 @@ export const serviceApi = {
     api.post<Service>("/services", data),
   update: (
     id: string,
-    data: { name: string; host: string; checkPort?: number | null; protocol?: string },
+    data: { name: string; host: string; ports?: number[]; checkPort?: number | null },
   ) => api.put<Service>(`/services/${id}`, data),
   delete: (id: string) => api.delete<ApiSuccess>(`/services/${id}`),
 };
@@ -39,8 +39,10 @@ export const serviceApi = {
 // Link management APIs
 export const linkApi = {
   create: (data: Omit<ServiceLink, "id" | "created_at">) => api.post<ServiceLink>("/links", data),
-  update: (id: string, data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">) =>
-    api.put<ServiceLink>(`/links/${id}`, data),
+  update: (
+    id: string,
+    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
+  ) => api.put<ServiceLink>(`/links/${id}`, data),
   delete: (id: string) => api.delete<ApiSuccess>(`/links/${id}`),
 };
 

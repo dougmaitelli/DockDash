@@ -54,6 +54,7 @@ export interface ServiceLink {
   type: ServiceLinkType;
   description: string;
   targetPort?: number | null;
+  protocol?: ServiceProtocol | null;
   created_at: string;
 }
 

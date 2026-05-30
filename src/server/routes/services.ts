@@ -29,7 +29,7 @@ router.get("/services/:id", (req, res) => {
 
 // Import / upsert service manually
 router.post("/services", (req, res) => {
-  const { name, host, ports, checkPort, protocol, source, status, metadata } = req.body;
+  const { name, host, ports, checkPort, source, status, metadata } = req.body;
 
   if (!name || !host) {
     return res.status(400).json({ error: "name and host are required" });
@@ -40,7 +40,6 @@ router.post("/services", (req, res) => {
     host,
     ports: Array.isArray(ports) ? ports : [],
     checkPort,
-    protocol: protocol || "http",
     source: source || ServiceSource.NETWORK,
     status: status || ServiceStatus.UNKNOWN,
     metadata: metadata || {},
@@ -55,7 +54,7 @@ router.post("/services", (req, res) => {
 
 // Update service
 router.put("/services/:id", (req, res) => {
-  const { name, host, checkPort, protocol } = req.body;
+  const { name, host, ports, checkPort } = req.body;
 
   if (!name || !host) {
     return res.status(400).json({ error: "name and host are required" });
@@ -65,8 +64,8 @@ router.put("/services/:id", (req, res) => {
     const service = db.updateService(req.params.id, {
       name,
       host,
+      ports: Array.isArray(ports) ? ports : [],
       checkPort,
-      protocol: protocol || "http",
     });
 
     healthCheckService.checkSingleService(req.params.id);
@@ -88,7 +87,7 @@ router.delete("/services/:id", (req, res) => {
 
 // Create link
 router.post("/links", (req, res) => {
-  const { source_id, target_id, label, type, description, targetPort } = req.body;
+  const { source_id, target_id, label, type, description, targetPort, protocol } = req.body;
 
   if (!source_id || !target_id) {
     return res.status(400).json({ error: "source_id and target_id are required" });
@@ -106,6 +105,7 @@ router.post("/links", (req, res) => {
       type: type || ServiceLinkType.COMMUNICATION,
       description: description || "",
       targetPort: targetPort != null ? Number(targetPort) : null,
+      protocol: protocol || null,
     });
 
     res.json(link);
@@ -116,7 +116,7 @@ router.post("/links", (req, res) => {
 
 // Update link
 router.put("/links/:id", (req, res) => {
-  const { label, type, description, targetPort } = req.body;
+  const { label, type, description, targetPort, protocol } = req.body;
 
   try {
     const link = db.updateLink(req.params.id, {
@@ -124,6 +124,7 @@ router.put("/links/:id", (req, res) => {
       type: type ?? ServiceLinkType.COMMUNICATION,
       description: description ?? "",
       targetPort: targetPort != null ? Number(targetPort) : null,
+      protocol: protocol ?? null,
     });
 
     res.json(link);

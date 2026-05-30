@@ -1,4 +1,4 @@
-import { ServiceSource, ServiceStatus, ServiceProtocol } from "./shared.js";
+import { ServiceSource, ServiceStatus } from "./shared.js";
 
 export class Service {
   id?: string;
@@ -6,7 +6,6 @@ export class Service {
   host!: string;
   ports: number[] = [];
   checkPort?: number | null;
-  protocol!: ServiceProtocol;
   source!: ServiceSource;
   status: ServiceStatus = ServiceStatus.UNKNOWN;
   metadata?: Record<string, string | number | boolean | string[] | number[]>;

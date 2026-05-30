@@ -2,7 +2,8 @@ import { useState } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import type { ServiceLink } from "@shared";
-import { LINK_TYPES, ServiceLinkType } from "../../types";
+import { ServiceProtocol } from "@shared";
+import { LINK_TYPES, ServiceLinkType, SERVICE_PROTOCOLS } from "../../types";
 import { colors } from "../../styles/vars";
 import { rawColors } from "../../styles/themes/dark.theme";
 import {
@@ -10,6 +11,7 @@ import {
   SecondaryButton,
   DangerButton,
   StyledInput,
+  NumberInput,
   StyledSelect,
 } from "../../utils/ui";
 import { IconArrowRight } from "../../utils/Icons";
@@ -40,7 +42,9 @@ function getLinkColor(type: string): string {
 
 interface EditLinkModalProps {
   link: ServiceLink;
-  onSave: (data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">) => void;
+  onSave: (
+    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
+  ) => void;
   onDelete: () => void;
   onCancel: () => void;
 }
@@ -53,11 +57,15 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
   const [editTargetPort, setEditTargetPort] = useState<string>(
     link.targetPort != null ? String(link.targetPort) : "",
   );
+  const [editProtocol, setEditProtocol] = useState<ServiceProtocol | "">(
+    (link.protocol as ServiceProtocol) ?? "",
+  );
 
   const handleConfirm = () => {
     const targetPort = editTargetPort.trim() !== "" ? Number(editTargetPort) : null;
+    const protocol = editProtocol !== "" ? editProtocol : null;
 
-    onSave({ label: editLabel, type: editType, description: editDesc, targetPort });
+    onSave({ label: editLabel, type: editType, description: editDesc, targetPort, protocol });
   };
 
   return (
@@ -124,14 +132,27 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
       </FormGroup>
       <FormGroup>
         <Label>{t("modals.linkTargetPort")}</Label>
-        <StyledInput
-          type="number"
+        <NumberInput
           min={1}
           max={65535}
           value={editTargetPort}
           onChange={(e) => setEditTargetPort(e.target.value)}
           placeholder={t("modals.linkTargetPortPlaceholder")}
         />
+      </FormGroup>
+      <FormGroup>
+        <Label>{t("modals.linkProtocol")}</Label>
+        <StyledSelect
+          value={editProtocol}
+          onChange={(e) => setEditProtocol(e.target.value as ServiceProtocol | "")}
+        >
+          <option value="">{t("modals.linkProtocolNone")}</option>
+          {SERVICE_PROTOCOLS.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </StyledSelect>
       </FormGroup>
       <FormGroup>
         <Label>{t("modals.linkDescription")}</Label>

@@ -1,3 +1,4 @@
+import { type ComponentPropsWithoutRef } from "react";
 import styled from "styled-components";
 import { colors } from "../styles/vars";
 
@@ -73,6 +74,37 @@ export const StyledInput = styled.input`
     -moz-appearance: textfield;
   }
 `;
+
+// Blocks all non-digit keystrokes — browsers (especially Firefox) allow
+// arbitrary letters in <input type="number"> without this guard.
+const ALLOWED_NUMBER_KEYS = new Set([
+  "Backspace",
+  "Delete",
+  "Tab",
+  "Enter",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "Home",
+  "End",
+]);
+
+export function NumberInput({ onKeyDown, ...props }: ComponentPropsWithoutRef<"input">) {
+  return (
+    <StyledInput
+      {...props}
+      type="number"
+      onKeyDown={(e) => {
+        if (!ALLOWED_NUMBER_KEYS.has(e.key) && !/^\d$/.test(e.key) && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+        }
+
+        onKeyDown?.(e);
+      }}
+    />
+  );
+}
 
 export const PortTag = styled.span`
   display: inline-block;

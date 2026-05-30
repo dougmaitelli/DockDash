@@ -52,6 +52,7 @@ function toLink(
     type: row.type as ServiceLink["type"],
     description: row.description ?? "",
     targetPort: row.targetPort ?? null,
+    protocol: (row.protocol as ServiceLink["protocol"]) ?? null,
     created_at: row.createdAt,
   };
 }
@@ -89,7 +90,6 @@ export class DatabaseService {
         host: service.host,
         ports: service.ports ?? [],
         checkPort: service.checkPort ?? null,
-        protocol: service.protocol,
         source: service.source,
         status: service.status,
         metadata: service.metadata,
@@ -103,7 +103,6 @@ export class DatabaseService {
           host: service.host,
           ports: service.ports ?? [],
           checkPort: service.checkPort ?? null,
-          protocol: service.protocol,
           status: service.status,
           metadata: service.metadata,
           updatedAt: now,
@@ -116,7 +115,7 @@ export class DatabaseService {
 
   updateService(
     id: string,
-    data: { name?: string; host?: string; ports?: number[]; checkPort?: number; protocol?: string },
+    data: { name?: string; host?: string; ports?: number[]; checkPort?: number },
   ): Service {
     const existing = this.getService(id);
 
@@ -129,9 +128,8 @@ export class DatabaseService {
       .set({
         name: data.name ?? existing.name,
         host: data.host ?? existing.host,
-        ports: data.ports ?? existing.ports,
+        ports: data.ports ?? [],
         checkPort: data.checkPort !== undefined ? data.checkPort : (existing.checkPort ?? null),
-        protocol: data.protocol ?? existing.protocol,
         updatedAt: now,
       })
       .where(eq(services.id, id))
@@ -227,6 +225,7 @@ export class DatabaseService {
         type: link.type,
         description: link.description,
         targetPort: link.targetPort ?? null,
+        protocol: link.protocol ?? null,
         createdAt: now,
       })
       .onConflictDoNothing()
@@ -241,7 +240,7 @@ export class DatabaseService {
 
   updateLink(
     id: string,
-    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">,
+    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
   ): ServiceLink {
     const result = this.orm
       .update(serviceLinks)
@@ -250,6 +249,7 @@ export class DatabaseService {
         type: data.type,
         description: data.description,
         targetPort: data.targetPort ?? null,
+        protocol: data.protocol ?? null,
       })
       .where(eq(serviceLinks.id, id))
       .run();

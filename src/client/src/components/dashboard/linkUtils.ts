@@ -8,6 +8,9 @@ export interface LinkPath {
   d: string;
   midX: number;
   midY: number;
+  endX: number;
+  endY: number;
+  entrySide: PortSide;
   link: ServiceLink;
   color: string;
 }

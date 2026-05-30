@@ -89,6 +89,9 @@ export function LinkLayer({
           d: orthogonalPath(x1, y1, exitSide!, x2, y2, entrySide!, zoomLevel),
           midX: (x1 + x2) / 2,
           midY: (y1 + y2) / 2,
+          endX: x2,
+          endY: y2,
+          entrySide: entrySide!,
           link,
           color: getLinkColor(link.type),
         };
@@ -139,69 +142,94 @@ export function LinkLayer({
       viewBox={`0 0 ${canvasW} ${canvasH}`}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <defs>
-        <marker
-          id="arrowhead"
-          markerWidth={16 * zoomLevel}
-          markerHeight={10 * zoomLevel}
-          refX={15 * zoomLevel}
-          refY={5 * zoomLevel}
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path
-            d={`M 0 0 L ${16 * zoomLevel} ${5 * zoomLevel} L 0 ${10 * zoomLevel} Z`}
-            fill="context-stroke"
-            fillOpacity={0.6}
-          />
-        </marker>
-      </defs>
-      {linkPaths.map((p) => (
-        <g key={p.id}>
-          <path
-            d={p.d}
-            fill="none"
-            stroke="transparent"
-            strokeWidth={16}
-            style={{ cursor: "pointer", pointerEvents: "stroke" }}
-            onDoubleClick={() => onEditLink(p.link)}
-          />
-          <path
-            d={p.d}
-            fill="none"
-            stroke={p.color}
-            strokeWidth={2}
-            strokeOpacity={0.6}
-            markerEnd="url(#arrowhead)"
-            style={{ pointerEvents: "none" }}
-          />
-          <path
-            d={p.d}
-            fill="none"
-            stroke={p.color}
-            strokeWidth={6}
-            strokeDasharray="6 4"
-            strokeOpacity={0.4}
-            style={{ pointerEvents: "none" }}
-          />
-          {p.link.label && (
-            <text
-              x={p.midX}
-              y={p.midY}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize={15}
-              fill={p.color}
-              stroke={colors.bgPrimary}
-              strokeWidth={3}
-              paintOrder="stroke"
-              style={{ pointerEvents: "none", userSelect: "none" }}
-            >
-              {p.link.label}
-            </text>
-          )}
-        </g>
-      ))}
+      {linkPaths.map((p) => {
+        const boxW = 34 * zoomLevel;
+        const boxH = 17 * zoomLevel;
+        const hasPort = p.link.targetPort != null;
+
+        const portBoxOffset = {
+          left: { cx: -boxW / 2, cy: 0 },
+          right: { cx: boxW / 2, cy: 0 },
+          top: { cx: 0, cy: -boxH / 2 },
+          bottom: { cx: 0, cy: boxH / 2 },
+        }[p.entrySide];
+
+        const bx = p.endX + portBoxOffset.cx;
+        const by = p.endY + portBoxOffset.cy;
+
+        return (
+          <g key={p.id}>
+            <path
+              d={p.d}
+              fill="none"
+              stroke="transparent"
+              strokeWidth={16}
+              style={{ cursor: "pointer", pointerEvents: "stroke" }}
+              onDoubleClick={() => onEditLink(p.link)}
+            />
+            <path
+              d={p.d}
+              fill="none"
+              stroke={p.color}
+              strokeWidth={2}
+              strokeOpacity={0.6}
+              style={{ pointerEvents: "none" }}
+            />
+            <path
+              d={p.d}
+              fill="none"
+              stroke={p.color}
+              strokeWidth={6}
+              strokeDasharray="6 4"
+              strokeOpacity={0.4}
+              style={{ pointerEvents: "none" }}
+            />
+            {p.link.label && (
+              <text
+                x={p.midX}
+                y={p.midY}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize={15}
+                fill={p.color}
+                stroke={colors.bgPrimary}
+                strokeWidth={3}
+                paintOrder="stroke"
+                style={{ pointerEvents: "none", userSelect: "none" }}
+              >
+                {p.link.label}
+              </text>
+            )}
+            {hasPort && (
+              <g style={{ pointerEvents: "none" }}>
+                <rect
+                  x={bx - boxW / 2}
+                  y={by - boxH / 2}
+                  width={boxW}
+                  height={boxH}
+                  rx={3 * zoomLevel}
+                  fill={colors.bgCard}
+                  stroke={p.color}
+                  strokeWidth={1.5}
+                  strokeOpacity={0.8}
+                />
+                <text
+                  x={bx}
+                  y={by}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={10 * zoomLevel}
+                  fill={p.color}
+                  fontFamily="monospace"
+                  style={{ userSelect: "none" }}
+                >
+                  {p.link.targetPort}
+                </text>
+              </g>
+            )}
+          </g>
+        );
+      })}
 
       {previewPath && (
         <path
@@ -211,7 +239,6 @@ export function LinkLayer({
           strokeWidth={2}
           strokeDasharray="8 4"
           strokeOpacity={0.8}
-          markerEnd="url(#arrowhead)"
           style={{ pointerEvents: "none" }}
         />
       )}

@@ -2,7 +2,12 @@ import axios from "axios";
 import net from "net";
 import { v4 as uuidv4 } from "uuid";
 import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
-import { USER_AGENT, PORT_INFO_MAP, HTTP_PROTOCOLS, detectProtocolByPort } from "../lib/constants.js";
+import {
+  USER_AGENT,
+  PORT_INFO_MAP,
+  HTTP_PROTOCOLS,
+  detectProtocolByPort,
+} from "../lib/constants.js";
 import { config } from "../lib/config.js";
 
 interface CIDRConfig {
@@ -78,7 +83,6 @@ export class NetworkScanner {
           host: ip,
           ports: detectedPorts.map((p) => p.port).sort((a, b) => a - b),
           checkPort: primary?.port,
-          protocol: primary?.protocol ?? ServiceProtocol.TCP,
           source: ServiceSource.NETWORK,
           status: ServiceStatus.UP,
           created_at: now,
@@ -178,7 +182,6 @@ export class NetworkScanner {
       return undefined;
     }
   }
-
 }
 
 export const networkScanner = new NetworkScanner();

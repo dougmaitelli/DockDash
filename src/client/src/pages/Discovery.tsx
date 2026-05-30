@@ -3,7 +3,8 @@ import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { colors } from "../styles/vars";
 import { IconPlus, IconX, IconScan, IconCheck, IconDocker, IconGlobe } from "../utils/Icons";
-import { PrimaryButton, SecondaryButton, PortTag, Section } from "../utils/ui";
+import { PrimaryButton, SecondaryButton, PortTag, Section, StyledInput } from "../utils/ui";
+import { TagArrayInput } from "../utils/TagArrayInput";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
 import { discoveryApi } from "../services/api";
@@ -37,65 +38,6 @@ const ButtonRow = styled.div`
   flex-wrap: wrap;
 `;
 
-const CIDRInput = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-`;
-
-const CIDRTagsRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-`;
-
-const CIDRInputRow = styled.div`
-  display: flex;
-  gap: 10px;
-`;
-
-const CIDRTag = styled.span`
-  padding: 4px 12px;
-  background: ${colors.accentBlueAlpha10};
-  border: 1px solid ${colors.accentBlueAlpha20};
-  border-radius: 16px;
-  font-size: 0.8rem;
-  color: ${colors.accentBlue};
-  display: flex;
-  align-items: center;
-  gap: 6px;
-`;
-
-const RemoveTag = styled.button`
-  background: none;
-  border: none;
-  color: ${colors.textSecondary};
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 0;
-  line-height: 1;
-
-  &:hover {
-    color: ${colors.accentRed};
-  }
-`;
-
-const CIDRInputField = styled.input`
-  flex: 1;
-  min-width: 200px;
-  padding: 8px 12px;
-  border: 1px solid ${colors.border};
-  border-radius: 6px;
-  background: ${colors.bgPrimary};
-  color: ${colors.textPrimary};
-  font-size: 0.85rem;
-  outline: none;
-
-  &:focus {
-    border-color: ${colors.accentBlue};
-  }
-`;
 
 const ResultList = styled.div`
   margin-top: 16px;
@@ -185,8 +127,6 @@ export default function Discovery() {
   const [dockerResults, setDockerResults] = useState<Service[]>([]);
   const [networkResults, setNetworkResults] = useState<Service[]>([]);
   const [cidrs, setCidrs] = useState<string[]>([]);
-  const [newCidr, setNewCidr] = useState("");
-  const [cidrError, setCidrError] = useState("");
   const [scanPorts, setScanPorts] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const dockerScanRef = useRef<EventSource | null>(null);
@@ -248,49 +188,31 @@ export default function Discovery() {
     });
   };
 
-  const isValidCIDR = (value: string) => {
+  const validateCidr = (value: string, existing: string[]) => {
     const parts = value.split("/");
 
-    if (parts.length !== 2) return false;
+    if (parts.length !== 2) return t("discovery.invalidCidr");
 
     const [ip, prefix] = parts;
     const prefixNum = parseInt(prefix, 10);
 
-    if (isNaN(prefixNum) || prefixNum < 0 || prefixNum > 32) return false;
+    if (isNaN(prefixNum) || prefixNum < 0 || prefixNum > 32) return t("discovery.invalidCidr");
 
     const octets = ip.split(".");
 
-    if (octets.length !== 4) return false;
+    if (octets.length !== 4) return t("discovery.invalidCidr");
 
-    return octets.every((o) => {
+    const valid = octets.every((o) => {
       const n = parseInt(o, 10);
 
       return !isNaN(n) && n >= 0 && n <= 255 && String(n) === o;
     });
-  };
 
-  const addCidr = () => {
-    if (!newCidr) return;
+    if (!valid) return t("discovery.invalidCidr");
 
-    if (!isValidCIDR(newCidr)) {
-      setCidrError(t("discovery.invalidCidr"));
+    if (existing.includes(value)) return t("discovery.duplicateCidr");
 
-      return;
-    }
-
-    if (cidrs.includes(newCidr)) {
-      setCidrError(t("discovery.duplicateCidr"));
-
-      return;
-    }
-
-    setCidrs([...cidrs, newCidr]);
-    setNewCidr("");
-    setCidrError("");
-  };
-
-  const removeCidr = (index: number) => {
-    setCidrs(cidrs.filter((_, i) => i !== index));
+    return null;
   };
 
   const availableDocker = dockerResults.filter((s) => !services.some((e) => Service.equals(s, e)));
@@ -305,7 +227,7 @@ export default function Discovery() {
           name: svc.name,
           host: svc.host,
           ports: svc.ports,
-          protocol: svc.protocol,
+
           source: ServiceSource.DOCKER,
           status: svc.status,
           metadata: svc.metadata,
@@ -322,7 +244,7 @@ export default function Discovery() {
           name: svc.name,
           host: svc.host,
           ports: svc.ports,
-          protocol: svc.protocol,
+
           source: ServiceSource.NETWORK,
           status: svc.status,
           metadata: svc.metadata,
@@ -437,9 +359,6 @@ export default function Discovery() {
                       {svc.ports?.map((p) => (
                         <PortTag key={p}>:{p}</PortTag>
                       ))}
-                      <Tag bg={colors.accentYellowAlpha10} color={colors.accentYellow}>
-                        {svc.protocol}
-                      </Tag>
                     </ResultMeta>
                   </ResultInfo>
                   {imported ? (
@@ -453,7 +372,7 @@ export default function Discovery() {
                           name: svc.name,
                           host: svc.host,
                           ports: svc.ports,
-                          protocol: svc.protocol,
+
                           source: ServiceSource.DOCKER,
                           status: svc.status,
                           metadata: svc.metadata,
@@ -475,38 +394,14 @@ export default function Discovery() {
           <IconGlobe size={18} /> {t("discovery.networkTitle")}
         </SectionTitle>
         <SectionDesc>{t("discovery.networkDesc")}</SectionDesc>
-        <CIDRInput>
-          {cidrs.length > 0 && (
-            <CIDRTagsRow>
-              {cidrs.map((c, i) => (
-                <CIDRTag key={i}>
-                  {c}
-                  <RemoveTag onClick={() => removeCidr(i)}>
-                    <IconX size={14} />
-                  </RemoveTag>
-                </CIDRTag>
-              ))}
-            </CIDRTagsRow>
-          )}
-          <CIDRInputRow>
-            <CIDRInputField
-              value={newCidr}
-              onChange={(e) => {
-                setNewCidr(e.target.value);
-                setCidrError("");
-              }}
-              placeholder={t("discovery.cidrPlaceholder")}
-              onKeyDown={(e) => e.key === "Enter" && addCidr()}
-              style={cidrError ? { borderColor: colors.accentRed } : undefined}
-            />
-            <SecondaryButton onClick={addCidr}>
-              <IconPlus size={14} /> {t("discovery.addCidr")}
-            </SecondaryButton>
-          </CIDRInputRow>
-          {cidrError && (
-            <span style={{ fontSize: "0.75rem", color: colors.accentRed }}>{cidrError}</span>
-          )}
-        </CIDRInput>
+        <div style={{ marginBottom: 16 }}>
+          <TagArrayInput
+            values={cidrs}
+            onChange={setCidrs}
+            validate={validateCidr}
+            placeholder={t("discovery.cidrPlaceholder")}
+          />
+        </div>
         <div style={{ marginBottom: 16 }}>
           <label
             style={{
@@ -518,7 +413,7 @@ export default function Discovery() {
           >
             {t("discovery.scanPortsLabel")}
           </label>
-          <CIDRInputField
+          <StyledInput
             value={scanPorts}
             onChange={(e) => setScanPorts(e.target.value)}
             placeholder={t("discovery.portsPlaceholder")}
@@ -567,9 +462,6 @@ export default function Discovery() {
                       {svc.ports?.map((p) => (
                         <PortTag key={p}>:{p}</PortTag>
                       ))}
-                      <Tag bg={colors.accentYellowAlpha10} color={colors.accentYellow}>
-                        {svc.protocol}
-                      </Tag>
                     </ResultMeta>
                   </ResultInfo>
                   {imported ? (
@@ -583,7 +475,7 @@ export default function Discovery() {
                           name: svc.name,
                           host: svc.host,
                           ports: svc.ports,
-                          protocol: svc.protocol,
+
                           source: ServiceSource.NETWORK,
                           status: svc.status,
                           metadata: svc.metadata,

@@ -2,17 +2,16 @@ import { useState, Fragment } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import type { Service } from "@shared";
-import { ServiceProtocol, ServiceSource } from "@shared";
-import { SERVICE_PROTOCOLS } from "../../types";
+import { ServiceSource } from "@shared";
 import { colors } from "../../styles/vars";
 import {
   PrimaryButton,
   SecondaryButton,
   DangerButton,
   StyledInput,
-  StyledSelect,
-  PortTag,
+  NumberInput,
 } from "../../utils/ui";
+import { NumberTagArrayInput } from "../../utils/TagArrayInput";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
 import { IconDocker, IconGlobe } from "../../utils/Icons";
 
@@ -74,18 +73,9 @@ const MetaValue = styled.span`
   word-break: break-all;
 `;
 
-const Row = styled.div`
-  display: flex;
-  gap: 12px;
-
-  > * {
-    flex: 1;
-  }
-`;
-
 interface EditServiceModalProps {
   service?: Service;
-  onSave: (data: Pick<Service, "name" | "host" | "checkPort" | "protocol">) => void;
+  onSave: (data: Pick<Service, "name" | "host" | "ports" | "checkPort">) => void;
   onDelete?: () => void;
   onCancel: () => void;
 }
@@ -94,10 +84,8 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
   const { t } = useTranslation();
   const [editNodeName, setEditNodeName] = useState(service?.name ?? "");
   const [editNodeHost, setEditNodeHost] = useState(service?.host ?? "");
+  const [editPorts, setEditPorts] = useState<number[]>(service?.ports ?? []);
   const [editCheckPort, setEditCheckPort] = useState(service?.checkPort?.toString() ?? "");
-  const [editNodeProtocol, setEditNodeProtocol] = useState<ServiceProtocol>(
-    service?.protocol ?? ServiceProtocol.HTTP,
-  );
   const [metadataExpanded, setMetadataExpanded] = useState(false);
 
   const metadataEntries = service?.metadata
@@ -107,14 +95,28 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
       }))
     : [];
 
+  const handlePortsChange = (vals: string[]) => {
+    setEditPorts(vals.map(Number).sort((a, b) => a - b));
+  };
+
+  const validatePort = (value: string, existing: string[]) => {
+    const n = parseInt(value, 10);
+
+    if (isNaN(n) || n < 1 || n > 65535) return t("modals.portsInvalidPort");
+
+    if (existing.includes(value)) return t("modals.portsDuplicate");
+
+    return null;
+  };
+
   const handleConfirm = () => {
     const checkPort = parseInt(editCheckPort, 10);
 
     onSave({
       name: editNodeName,
       host: editNodeHost,
+      ports: editPorts,
       checkPort: isNaN(checkPort) ? null : checkPort,
-      protocol: editNodeProtocol,
     });
   };
 
@@ -166,40 +168,26 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
           placeholder={t("modals.hostPlaceholder")}
         />
       </FormGroup>
-      {service?.ports && service.ports.length > 0 && (
-        <FormGroup>
-          <Label>{t("modals.ports")}</Label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, paddingTop: 4 }}>
-            {service.ports.map((p) => (
-              <PortTag key={p}>:{p}</PortTag>
-            ))}
-          </div>
-        </FormGroup>
-      )}
-      <Row>
-        <FormGroup>
-          <Label>{t("modals.checkPort")}</Label>
-          <StyledInput
-            type="number"
-            value={editCheckPort}
-            onChange={(e) => setEditCheckPort(e.target.value)}
-            placeholder={t("modals.checkPortPlaceholder")}
-          />
-        </FormGroup>
-        <FormGroup>
-          <Label>{t("modals.protocol")}</Label>
-          <StyledSelect
-            value={editNodeProtocol}
-            onChange={(e) => setEditNodeProtocol(e.target.value as ServiceProtocol)}
-          >
-            {SERVICE_PROTOCOLS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </StyledSelect>
-        </FormGroup>
-      </Row>
+      <FormGroup>
+        <Label>{t("modals.ports")}</Label>
+        <NumberTagArrayInput
+          values={editPorts.map(String)}
+          onChange={handlePortsChange}
+          validate={validatePort}
+          min={1}
+          max={65535}
+          formatTag={(v) => `:${v}`}
+          placeholder={t("modals.portsPlaceholder")}
+        />
+      </FormGroup>
+      <FormGroup>
+        <Label>{t("modals.checkPort")}</Label>
+        <NumberInput
+          value={editCheckPort}
+          onChange={(e) => setEditCheckPort(e.target.value)}
+          placeholder={t("modals.checkPortPlaceholder")}
+        />
+      </FormGroup>
       {metadataEntries.length > 0 && (
         <>
           <MetadataToggle onClick={() => setMetadataExpanded((v) => !v)}>

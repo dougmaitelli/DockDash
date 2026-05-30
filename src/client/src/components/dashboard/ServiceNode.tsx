@@ -446,17 +446,6 @@ export function ServiceNodeInner({
                 padding: "1px 6px",
                 borderRadius: 4,
                 fontSize: "0.65rem",
-                background: colors.accentPurpleAlpha10,
-                color: colors.accentPurple,
-              }}
-            >
-              {service.protocol}
-            </span>
-            <span
-              style={{
-                padding: "1px 6px",
-                borderRadius: 4,
-                fontSize: "0.65rem",
                 background: colors.accentYellowAlpha10,
                 color: colors.accentYellow,
               }}

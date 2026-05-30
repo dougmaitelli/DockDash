@@ -10,7 +10,6 @@ export const services = sqliteTable("services", {
     .notNull()
     .default(sql`'[]'`),
   checkPort: integer("check_port"),
-  protocol: text("protocol").default("http"),
   source: text("source").notNull().default("docker"),
   status: text("status").notNull().default("unknown"),
   metadata: text("metadata", { mode: "json" })

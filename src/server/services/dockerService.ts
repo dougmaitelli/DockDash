@@ -1,7 +1,6 @@
 import Docker from "dockerode";
 import { v4 as uuidv4 } from "uuid";
-import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
-import { detectProtocolByPort } from "../lib/constants.js";
+import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { config } from "../lib/config.js";
 
 export type ContainerStateMap = Map<string, { state: string; imageTag: string }>;
@@ -69,23 +68,6 @@ export class DockerService {
 
       const boundPort = containerPorts.find((p) => p.PublicPort);
       const host = boundPort?.IP || "localhost";
-      let protocol: ServiceProtocol = ServiceProtocol.TCP;
-
-      if (boundPort?.Type === "tcp") {
-        protocol = detectProtocolByPort(boundPort.PublicPort!);
-      }
-
-      if (hostPorts.length === 0 && inspect.Config) {
-        const exposedPorts = Object.keys(inspect.Config.ExposedPorts || {});
-
-        if (exposedPorts.length > 0) {
-          const portMatch = exposedPorts[0].match(/\/(\w+)/);
-
-          if (portMatch) {
-            protocol = detectProtocolByPort(parseInt(portMatch[1], 10));
-          }
-        }
-      }
 
       const networks = inspect.NetworkSettings?.Networks || {};
       const networkNames = Object.keys(networks);
@@ -97,7 +79,6 @@ export class DockerService {
         host,
         ports: hostPorts,
         checkPort: hostPorts[0],
-        protocol,
         source: ServiceSource.DOCKER,
         status:
           container.State === DOCKER_CONTAINER_STATE.RUNNING
@@ -155,7 +136,6 @@ export class DockerService {
 
     return { image: withoutDigest, tag: "latest" };
   }
-
 }
 
 export const dockerService = new DockerService();

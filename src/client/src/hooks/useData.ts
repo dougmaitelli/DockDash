@@ -139,7 +139,7 @@ export function useDashboard() {
   );
 
   const updateService = useCallback(
-    async (id: string, data: Pick<Service, "name" | "host" | "checkPort" | "protocol">) => {
+    async (id: string, data: Pick<Service, "name" | "host" | "ports" | "checkPort">) => {
       const res = await serviceApi.update(id, data);
 
       setData((prev) => {
@@ -195,7 +195,7 @@ export function useDashboard() {
   const updateLink = useCallback(
     async (
       id: string,
-      data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort">,
+      data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
     ) => {
       const res = await linkApi.update(id, data);
 
