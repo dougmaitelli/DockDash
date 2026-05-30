@@ -1,5 +1,5 @@
 import type Docker from "dockerode";
-import { db } from "../lib/databaseService.js";
+import { db } from "../db/databaseService.js";
 import { ServiceSource } from "@shared";
 import { dockerService } from "./dockerService.js";
 import { registryClient } from "./registryClient.js";

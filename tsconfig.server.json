@@ -15,10 +15,10 @@
     "declarationMap": true,
     "sourceMap": true,
     "paths": {
-      "@shared": ["./src/shared-types/index.js"],
-      "@shared/*": ["./src/shared-types/*.js"]
+      "@shared": ["./src/shared/index.js"],
+      "@shared/*": ["./src/shared/*.js"]
     }
   },
-  "include": ["src/server/**/*", "src/shared-types/**/*"],
+  "include": ["src/server/**/*", "src/types/**/*"],
   "exclude": ["node_modules"]
 }

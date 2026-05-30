@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../lib/databaseService.js";
+import { db } from "../db/databaseService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
 import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
 import type {
@@ -7,7 +7,7 @@ import type {
   SavePositionsRequest,
   SavePositionsResponse,
   CheckAllServicesResponse,
-} from "../../shared-types/api.js";
+} from "@shared/api";
 
 const router = Router();
 

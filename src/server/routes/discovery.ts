@@ -7,8 +7,8 @@ import type {
   DashboardConfig,
   SseScanDonePayload,
   SseScanErrorPayload,
-} from "../../shared-types/api.js";
-import { SSE_EVENT } from "../../shared-types/api.js";
+} from "@shared/api";
+import { SSE_EVENT } from "@shared/api";
 
 const router = Router();
 

@@ -1,6 +1,6 @@
 import net from "net";
 import axios from "axios";
-import { db } from "../lib/databaseService.js";
+import { db } from "../db/databaseService.js";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 import {
   USER_AGENT,

@@ -14,10 +14,10 @@
     "noEmit": true,
     "paths": {
       "@/*": ["./src/client/src/*"],
-      "@shared": ["./src/shared-types"],
-      "@shared/*": ["./src/shared-types/*"]
+      "@shared": ["./src/shared"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
-  "include": ["src/client/src", "src/shared-types/**/*"],
+  "include": ["src/client/src", "src/types/**/*"],
   "exclude": ["node_modules"]
 }
