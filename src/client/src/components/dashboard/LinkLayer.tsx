@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ServiceLink, ServiceWithPosition } from "@shared";
 import { orthogonalPath, getLinkColor } from "./linkUtils";
 import type { LinkPath } from "./linkUtils";
@@ -129,6 +129,8 @@ export function LinkLayer({
     return orthogonalPath(sx, sy, connectingSource.side, tx, ty, entrySide, zoomLevel);
   }, [connectingSource, mouseCanvasPos, services, dragOffsets, panOffset, zoomLevel]);
 
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
   return (
     <svg
       style={{
@@ -142,10 +144,11 @@ export function LinkLayer({
       viewBox={`0 0 ${canvasW} ${canvasH}`}
       xmlns="http://www.w3.org/2000/svg"
     >
-      {linkPaths.map((p) => {
+      {[...linkPaths].sort((a, b) => (a.id === hoveredId ? 1 : b.id === hoveredId ? -1 : 0)).map((p) => {
         const boxW = 34 * zoomLevel;
         const boxH = 17 * zoomLevel;
         const hasPort = p.link.targetPort != null;
+        const hovered = hoveredId === p.id;
 
         const portBoxOffset = {
           left: { cx: -boxW / 2, cy: 0 },
@@ -165,23 +168,25 @@ export function LinkLayer({
               stroke="transparent"
               strokeWidth={16}
               style={{ cursor: "pointer", pointerEvents: "stroke" }}
+              onMouseEnter={() => setHoveredId(p.id)}
+              onMouseLeave={() => setHoveredId(null)}
               onDoubleClick={() => onEditLink(p.link)}
             />
             <path
               d={p.d}
               fill="none"
-              stroke={p.color}
-              strokeWidth={2}
-              strokeOpacity={0.6}
+              stroke={hovered ? colors.accentBlueLighter : p.color}
+              strokeWidth={hovered ? 2.5 : 2}
+              strokeOpacity={hovered ? 1 : 0.6}
               style={{ pointerEvents: "none" }}
             />
             <path
               d={p.d}
               fill="none"
-              stroke={p.color}
-              strokeWidth={6}
+              stroke={hovered ? colors.accentBlueLighter : p.color}
+              strokeWidth={hovered ? 7 : 6}
               strokeDasharray="6 4"
-              strokeOpacity={0.4}
+              strokeOpacity={hovered ? 0.65 : 0.4}
               style={{ pointerEvents: "none" }}
             />
             {p.link.label && (
