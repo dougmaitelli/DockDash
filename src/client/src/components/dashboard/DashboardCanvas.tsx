@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { colors } from "../../styles/vars";
 import { EditLinkModal } from "../modals/EditLinkModal";
 import { EditServiceModal } from "../modals/EditServiceModal";
+import { ConfirmDialog } from "../modals/ConfirmDialog";
+import { ServiceDrawer } from "../modals/ServiceDrawer";
 import { dashboardApi } from "../../services/api";
 import { ErrorOverlay } from "./ErrorOverlay";
 import { EmptyOverlay } from "./EmptyOverlay";
@@ -176,6 +178,7 @@ export function DashboardCanvas({
   const [editingLink, setEditingLink] = useState<ServiceLink | null>(null);
   const [editingNode, setEditingNode] = useState<Service | null>(null);
   const [addingService, setAddingService] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   // Connection dragging state
   const [connectingSource, setConnectingSource] = useState<{
@@ -201,9 +204,10 @@ export function DashboardCanvas({
 
   const selectedService = services.find((s) => s.id === selectedId);
 
-  const fitToContent = useCallback(() => {
-    if (services.length === 0) return;
-    if (canvasDimensions.w === 0 || canvasDimensions.h === 0) return;
+  const fitToContent = useCallback((): boolean => {
+    if (services.length === 0) return false;
+
+    if (canvasDimensions.w === 0 || canvasDimensions.h === 0) return false;
 
     const PADDING = 60;
     let minX = Infinity,
@@ -250,16 +254,15 @@ export function DashboardCanvas({
       y: canvasDimensions.h / 2 - bboxCenterY * fitZoom,
     });
     setZoomLevel(fitZoom);
+
+    return true;
   }, [services, canvasDimensions]);
 
   // Initial fit to content
   useEffect(() => {
     if (initialFitDone.current) return;
-    if (services.length === 0) return;
-    if (canvasDimensions.w === 0 || canvasDimensions.h === 0) return;
 
-    fitToContent();
-    initialFitDone.current = true;
+    if (fitToContent()) initialFitDone.current = true;
   }, [fitToContent]);
 
   // Keyboard handling
@@ -267,11 +270,10 @@ export function DashboardCanvas({
     (e: KeyboardEvent) => {
       if (e.key === "Delete" && selectedId) {
         e.preventDefault();
-        removeService(selectedId);
-        setSelectedId(null);
+        setPendingDeleteId(selectedId);
       }
     },
-    [removeService, selectedId],
+    [selectedId],
   );
 
   useEffect(() => {
@@ -717,12 +719,7 @@ export function DashboardCanvas({
             {t("dashboard.addService")}
           </SecondaryButton>
           {selectedService && (
-            <DangerButton
-              onClick={async () => {
-                await removeService(selectedService.id!);
-                setSelectedId(null);
-              }}
-            >
+            <DangerButton onClick={() => setPendingDeleteId(selectedService.id!)}>
               <IconTrash size={14} />
               {t("dashboard.remove")}
             </DangerButton>
@@ -816,11 +813,27 @@ export function DashboardCanvas({
       )}
 
       {editingNode && (
-        <EditServiceModal
+        <ServiceDrawer
           service={editingNode}
           onSave={handleEditNodeConfirm}
           onDelete={handleEditNodeDelete}
-          onCancel={() => setEditingNode(null)}
+          onClose={() => setEditingNode(null)}
+        />
+      )}
+
+      {pendingDeleteId && (
+        <ConfirmDialog
+          message={t("modals.confirmDeleteService")}
+          onConfirm={async () => {
+            await removeService(pendingDeleteId);
+
+            if (selectedId === pendingDeleteId) setSelectedId(null);
+
+            if (editingNode?.id === pendingDeleteId) setEditingNode(null);
+
+            setPendingDeleteId(null);
+          }}
+          onCancel={() => setPendingDeleteId(null)}
         />
       )}
 

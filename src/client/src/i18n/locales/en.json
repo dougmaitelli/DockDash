@@ -90,6 +90,8 @@
     "add": "Add",
     "cancel": "Cancel",
     "delete": "Delete",
+    "confirmDeleteService": "Are you sure you want to delete this service? This cannot be undone.",
+    "confirmDeleteLink": "Are you sure you want to delete this link? This cannot be undone.",
     "metadata": "Metadata"
   }
 }

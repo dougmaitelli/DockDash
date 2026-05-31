@@ -38,7 +38,6 @@ const ButtonRow = styled.div`
   flex-wrap: wrap;
 `;
 
-
 const ResultList = styled.div`
   margin-top: 16px;
   display: flex;

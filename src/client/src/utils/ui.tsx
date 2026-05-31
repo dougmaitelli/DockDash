@@ -77,7 +77,7 @@ export const StyledInput = styled.input`
 
 // Blocks all non-digit keystrokes — browsers (especially Firefox) allow
 // arbitrary letters in <input type="number"> without this guard.
-const ALLOWED_NUMBER_KEYS = new Set([
+const DIGIT_CONTROL_KEYS = new Set([
   "Backspace",
   "Delete",
   "Tab",
@@ -90,15 +90,17 @@ const ALLOWED_NUMBER_KEYS = new Set([
   "End",
 ]);
 
+export function isNonDigitKey(e: { key: string; ctrlKey: boolean; metaKey: boolean }): boolean {
+  return !DIGIT_CONTROL_KEYS.has(e.key) && !/^\d$/.test(e.key) && !e.ctrlKey && !e.metaKey;
+}
+
 export function NumberInput({ onKeyDown, ...props }: ComponentPropsWithoutRef<"input">) {
   return (
     <StyledInput
       {...props}
       type="number"
       onKeyDown={(e) => {
-        if (!ALLOWED_NUMBER_KEYS.has(e.key) && !/^\d$/.test(e.key) && !e.ctrlKey && !e.metaKey) {
-          e.preventDefault();
-        }
+        if (isNonDigitKey(e)) e.preventDefault();
 
         onKeyDown?.(e);
       }}
@@ -114,6 +116,13 @@ export const PortTag = styled.span`
   border-radius: 4px;
   font-size: 0.65rem;
   font-family: "SF Mono", "Fira Code", monospace;
+`;
+
+export const ModalBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 199;
+  background: ${colors.blackAlpha50};
 `;
 
 export const Section = styled.div`

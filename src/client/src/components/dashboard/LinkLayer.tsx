@@ -144,97 +144,99 @@ export function LinkLayer({
       viewBox={`0 0 ${canvasW} ${canvasH}`}
       xmlns="http://www.w3.org/2000/svg"
     >
-      {[...linkPaths].sort((a, b) => (a.id === hoveredId ? 1 : b.id === hoveredId ? -1 : 0)).map((p) => {
-        const boxW = 34 * zoomLevel;
-        const boxH = 17 * zoomLevel;
-        const hasPort = p.link.targetPort != null;
-        const hovered = hoveredId === p.id;
+      {[...linkPaths]
+        .sort((a, b) => (a.id === hoveredId ? 1 : b.id === hoveredId ? -1 : 0))
+        .map((p) => {
+          const boxW = 34 * zoomLevel;
+          const boxH = 17 * zoomLevel;
+          const hasPort = p.link.targetPort != null;
+          const hovered = hoveredId === p.id;
 
-        const portBoxOffset = {
-          left: { cx: -boxW / 2, cy: 0 },
-          right: { cx: boxW / 2, cy: 0 },
-          top: { cx: 0, cy: -boxH / 2 },
-          bottom: { cx: 0, cy: boxH / 2 },
-        }[p.entrySide];
+          const portBoxOffset = {
+            left: { cx: -boxW / 2, cy: 0 },
+            right: { cx: boxW / 2, cy: 0 },
+            top: { cx: 0, cy: -boxH / 2 },
+            bottom: { cx: 0, cy: boxH / 2 },
+          }[p.entrySide];
 
-        const bx = p.endX + portBoxOffset.cx;
-        const by = p.endY + portBoxOffset.cy;
+          const bx = p.endX + portBoxOffset.cx;
+          const by = p.endY + portBoxOffset.cy;
 
-        return (
-          <g key={p.id}>
-            <path
-              d={p.d}
-              fill="none"
-              stroke="transparent"
-              strokeWidth={16}
-              style={{ cursor: "pointer", pointerEvents: "stroke" }}
-              onMouseEnter={() => setHoveredId(p.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              onDoubleClick={() => onEditLink(p.link)}
-            />
-            <path
-              d={p.d}
-              fill="none"
-              stroke={hovered ? colors.accentBlueLighter : p.color}
-              strokeWidth={hovered ? 2.5 : 2}
-              strokeOpacity={hovered ? 1 : 0.6}
-              style={{ pointerEvents: "none" }}
-            />
-            <path
-              d={p.d}
-              fill="none"
-              stroke={hovered ? colors.accentBlueLighter : p.color}
-              strokeWidth={hovered ? 7 : 6}
-              strokeDasharray="6 4"
-              strokeOpacity={hovered ? 0.65 : 0.4}
-              style={{ pointerEvents: "none" }}
-            />
-            {p.link.label && (
-              <text
-                x={p.midX}
-                y={p.midY}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={15}
-                fill={p.color}
-                stroke={colors.bgPrimary}
-                strokeWidth={3}
-                paintOrder="stroke"
-                style={{ pointerEvents: "none", userSelect: "none" }}
-              >
-                {p.link.label}
-              </text>
-            )}
-            {hasPort && (
-              <g style={{ pointerEvents: "none" }}>
-                <rect
-                  x={bx - boxW / 2}
-                  y={by - boxH / 2}
-                  width={boxW}
-                  height={boxH}
-                  rx={3 * zoomLevel}
-                  fill={colors.bgCard}
-                  stroke={p.color}
-                  strokeWidth={1.5}
-                  strokeOpacity={0.8}
-                />
+          return (
+            <g key={p.id}>
+              <path
+                d={p.d}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={16}
+                style={{ cursor: "pointer", pointerEvents: "stroke" }}
+                onMouseEnter={() => setHoveredId(p.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                onDoubleClick={() => onEditLink(p.link)}
+              />
+              <path
+                d={p.d}
+                fill="none"
+                stroke={hovered ? colors.accentBlueLighter : p.color}
+                strokeWidth={hovered ? 2.5 : 2}
+                strokeOpacity={hovered ? 1 : 0.6}
+                style={{ pointerEvents: "none" }}
+              />
+              <path
+                d={p.d}
+                fill="none"
+                stroke={hovered ? colors.accentBlueLighter : p.color}
+                strokeWidth={hovered ? 7 : 6}
+                strokeDasharray="6 4"
+                strokeOpacity={hovered ? 0.65 : 0.4}
+                style={{ pointerEvents: "none" }}
+              />
+              {p.link.label && (
                 <text
-                  x={bx}
-                  y={by}
+                  x={p.midX}
+                  y={p.midY}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  fontSize={10 * zoomLevel}
+                  fontSize={15}
                   fill={p.color}
-                  fontFamily="monospace"
-                  style={{ userSelect: "none" }}
+                  stroke={colors.bgPrimary}
+                  strokeWidth={3}
+                  paintOrder="stroke"
+                  style={{ pointerEvents: "none", userSelect: "none" }}
                 >
-                  {p.link.targetPort}
+                  {p.link.label}
                 </text>
-              </g>
-            )}
-          </g>
-        );
-      })}
+              )}
+              {hasPort && (
+                <g style={{ pointerEvents: "none" }}>
+                  <rect
+                    x={bx - boxW / 2}
+                    y={by - boxH / 2}
+                    width={boxW}
+                    height={boxH}
+                    rx={3 * zoomLevel}
+                    fill={colors.bgCard}
+                    stroke={p.color}
+                    strokeWidth={1.5}
+                    strokeOpacity={0.8}
+                  />
+                  <text
+                    x={bx}
+                    y={by}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={10 * zoomLevel}
+                    fill={p.color}
+                    fontFamily="monospace"
+                    style={{ userSelect: "none" }}
+                  >
+                    {p.link.targetPort}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
 
       {previewPath && (
         <path

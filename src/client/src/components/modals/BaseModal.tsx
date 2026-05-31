@@ -1,13 +1,9 @@
 import type { ReactNode } from "react";
 import styled from "styled-components";
 import { colors } from "../../styles/vars";
+import { ModalBackdrop } from "../../utils/ui";
 
-const ModalOverlay = styled.div`
-  position: absolute;
-  inset: 0;
-  z-index: 199;
-  background: ${colors.blackAlpha50};
-`;
+const ModalOverlay = ModalBackdrop;
 
 const ModalPanel = styled.div<{ $width: number }>`
   position: absolute;

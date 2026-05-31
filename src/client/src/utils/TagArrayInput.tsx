@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent } from "react";
 import styled from "styled-components";
 import { colors } from "../styles/vars";
-import { SecondaryButton } from "./ui";
+import { SecondaryButton, isNonDigitKey } from "./ui";
 import { IconPlus, IconX } from "./Icons";
 
 const Container = styled.div`
@@ -157,25 +157,7 @@ export function TagArrayInput({
   );
 }
 
-const DIGIT_CONTROL_KEYS = new Set([
-  "Backspace",
-  "Delete",
-  "Tab",
-  "Enter",
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowDown",
-  "Home",
-  "End",
-]);
-
-function digitOnlyFilter(e: KeyboardEvent<HTMLInputElement>): boolean {
-  return !DIGIT_CONTROL_KEYS.has(e.key) && !/^\d$/.test(e.key) && !e.ctrlKey && !e.metaKey;
-}
-
-interface NumberTagArrayInputProps
-  extends Omit<TagArrayInputProps, "filterKey" | "inputProps"> {
+interface NumberTagArrayInputProps extends Omit<TagArrayInputProps, "filterKey" | "inputProps"> {
   min?: number;
   max?: number;
 }
@@ -184,7 +166,7 @@ export function NumberTagArrayInput({ min, max, ...props }: NumberTagArrayInputP
   return (
     <TagArrayInput
       {...props}
-      filterKey={digitOnlyFilter}
+      filterKey={isNonDigitKey}
       inputProps={{ type: "text", inputMode: "numeric", min, max }}
     />
   );

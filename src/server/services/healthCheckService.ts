@@ -2,11 +2,7 @@ import net from "net";
 import axios from "axios";
 import { db } from "../db/databaseService.js";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
-import {
-  USER_AGENT,
-  HTTP_PROTOCOLS,
-  detectProtocolByPort,
-} from "../lib/constants.js";
+import { USER_AGENT, HTTP_PROTOCOLS, detectProtocolByPort } from "../lib/constants.js";
 import {
   dockerService,
   DOCKER_CONTAINER_STATE,
