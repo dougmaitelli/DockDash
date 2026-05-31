@@ -61,7 +61,15 @@
     "appearance": "Appearance",
     "colorTheme": "Color theme",
     "envVarsTitle": "Environment Variables",
-    "envVarsDesc": "These settings are configured via environment variables when starting the container. Changes require a container restart."
+    "envVarsDesc": "These settings are configured via environment variables when starting the container. Changes require a container restart.",
+    "notificationsTitle": "Notifications",
+    "notificationsDesc": "Send alerts via Apprise when services go down, recover, or have image updates available.",
+    "notificationsStatus": "Status",
+    "notificationsConfigured": "Configured",
+    "notificationsNotConfigured": "Not configured — set APPRISE_URL",
+    "notificationsTest": "Send Test",
+    "notificationsTestSent": "Sent!",
+    "notificationsTestFailed": "Failed"
   },
   "modals": {
     "editServiceTitle": "Edit Service",

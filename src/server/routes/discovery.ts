@@ -150,6 +150,7 @@ router.get("/config", (_req, res) => {
     refreshInterval: config.refreshInterval,
     healthCheckInterval: config.healthCheckInterval,
     updateCheckInterval: config.updateCheckInterval,
+    appriseConfigured: config.appriseConfigured,
   };
 
   res.json(cfg);

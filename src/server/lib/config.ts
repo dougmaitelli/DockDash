@@ -68,6 +68,30 @@ class Config {
       ? parseInt(process.env.HEALTH_HISTORY_TTL_DAYS, 10)
       : DEFAULT_HEALTH_HISTORY_TTL_DAYS;
   }
+
+  get appriseUrl(): string | null {
+    return process.env.APPRISE_URL || null;
+  }
+
+  get appriseUrls(): string[] {
+    return process.env.APPRISE_URLS
+      ? process.env.APPRISE_URLS.split(",")
+          .map((u) => u.trim())
+          .filter(Boolean)
+      : [];
+  }
+
+  get appriseTags(): string[] {
+    return process.env.APPRISE_TAGS
+      ? process.env.APPRISE_TAGS.split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
+  }
+
+  get appriseConfigured(): boolean {
+    return !!this.appriseUrl;
+  }
 }
 
 export const config = new Config();

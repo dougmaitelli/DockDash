@@ -52,6 +52,7 @@ export interface DashboardConfig {
   refreshInterval: number;
   healthCheckInterval: number;
   updateCheckInterval: number;
+  appriseConfigured: boolean;
 }
 
 // ---------------------------------------------------------------------------

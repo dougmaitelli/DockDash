@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../db/databaseService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
 import { dockerService } from "../services/dockerService.js";
+import { notificationService } from "../services/notificationService.js";
 import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
 import type {
   ApiSuccess,
@@ -298,6 +299,26 @@ router.get("/services/:id/logs/stream", async (req, res) => {
   } catch (err) {
     if (!closed) sendError(err instanceof Error ? err.message : String(err));
   }
+});
+
+router.post("/notifications/test", async (_req, res) => {
+  if (!notificationService.configured) {
+    return res.status(400).json({ error: "Apprise not configured" });
+  }
+
+  try {
+    await notificationService.notify(
+      "DockDash Test Notification",
+      "Apprise notifications are configured correctly.",
+      "info",
+    );
+  } catch (err) {
+    return res.status(502).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+
+  const response: ApiSuccess = { success: true };
+
+  res.json(response);
 });
 
 router.get("/services/:id/health-history", (req, res) => {

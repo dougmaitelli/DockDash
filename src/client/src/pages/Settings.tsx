@@ -7,7 +7,7 @@ import { useTheme } from "../context/ThemeContext";
 import { themeSelections } from "../styles/themes";
 import type { ThemeSelection } from "../styles/themes";
 import type { DashboardConfig } from "@shared";
-import { StyledSelect, Section } from "../utils/ui";
+import { StyledSelect, Section, SecondaryButton } from "../utils/ui";
 
 const Page = styled.div`
   padding: 24px;
@@ -52,6 +52,19 @@ const HelpText = styled.p`
   margin-top: 8px;
 `;
 
+const NotificationStatusBadge = styled.span<{ $configured: boolean }>`
+  font-size: 0.8rem;
+  color: ${({ $configured }) => ($configured ? colors.accentGreen : colors.textMuted)};
+`;
+
+const NotificationRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid ${colors.border};
+`;
+
 const ThemeRow = styled.div`
   display: flex;
   align-items: center;
@@ -65,10 +78,33 @@ const ThemeLabel = styled.label`
   white-space: nowrap;
 `;
 
+type TestState = "idle" | "sending" | "sent" | "failed";
+
 export default function Settings() {
   const { t } = useTranslation();
   const [config, setConfig] = useState<DashboardConfig | null>(null);
+  const [testState, setTestState] = useState<TestState>("idle");
+  const [testError, setTestError] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
+
+  const handleTestNotification = async () => {
+    setTestState("sending");
+    setTestError(null);
+
+    try {
+      await discoveryApi.testNotification();
+      setTestState("sent");
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Unknown error";
+      setTestError(msg);
+      setTestState("failed");
+    } finally {
+      setTimeout(() => setTestState("idle"), 5000);
+    }
+  };
 
   useEffect(() => {
     discoveryApi.getConfig().then((res) => setConfig(res.data));
@@ -92,6 +128,39 @@ export default function Settings() {
             ))}
           </StyledSelect>
         </ThemeRow>
+      </Section>
+
+      <Section>
+        <SectionTitle>{t("settings.notificationsTitle")}</SectionTitle>
+        <HelpText>{t("settings.notificationsDesc")}</HelpText>
+
+        <div style={{ marginTop: 16 }}>
+          <NotificationRow>
+            <ConfigKey>{t("settings.notificationsStatus")}</ConfigKey>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <NotificationStatusBadge $configured={!!config?.appriseConfigured}>
+                {config?.appriseConfigured
+                  ? t("settings.notificationsConfigured")
+                  : t("settings.notificationsNotConfigured")}
+              </NotificationStatusBadge>
+              {config?.appriseConfigured && (
+                <SecondaryButton
+                  onClick={handleTestNotification}
+                  disabled={testState === "sending"}
+                >
+                  {testState === "sent"
+                    ? t("settings.notificationsTestSent")
+                    : testState === "failed"
+                      ? t("settings.notificationsTestFailed")
+                      : t("settings.notificationsTest")}
+                </SecondaryButton>
+              )}
+            </div>
+          </NotificationRow>
+          {testState === "failed" && testError && (
+            <HelpText style={{ color: colors.accentRed, marginTop: 8 }}>{testError}</HelpText>
+          )}
+        </div>
       </Section>
 
       <Section>

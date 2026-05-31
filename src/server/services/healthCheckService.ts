@@ -9,6 +9,7 @@ import {
   DOCKER_CONTAINER_DOWN_STATES,
   type ContainerStateMap,
 } from "./dockerService.js";
+import { notificationService } from "./notificationService.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -54,6 +55,7 @@ export class HealthCheckService {
       }
 
       this.logStatusChange(service.name, service.status, status);
+      this.notifyStatusChange(service.name, service.status, status);
       db.updateServiceStatus(service.id || "", status);
       db.addHealthHistory(service.id || "", status);
 
@@ -77,6 +79,7 @@ export class HealthCheckService {
       const status = await this.checkNetworkService(service);
 
       this.logStatusChange(service.name, service.status, status);
+      this.notifyStatusChange(service.name, service.status, status);
       db.updateServiceStatus(service.id || "", status);
       db.addHealthHistory(service.id || "", status);
 
@@ -211,6 +214,24 @@ export class HealthCheckService {
   private logStatusChange(name: string, oldStatus: ServiceStatus, newStatus: ServiceStatus): void {
     if (oldStatus !== newStatus) {
       console.log(`Service "${name}" status changed: ${oldStatus} -> ${newStatus}`);
+    }
+  }
+
+  private notifyStatusChange(
+    name: string,
+    oldStatus: ServiceStatus,
+    newStatus: ServiceStatus,
+  ): void {
+    if (oldStatus === newStatus) return;
+
+    if (newStatus === ServiceStatus.DOWN) {
+      notificationService
+        .notify(`Service Down: ${name}`, `${name} is no longer reachable.`, "failure")
+        .catch(() => {});
+    } else if (newStatus === ServiceStatus.UP && oldStatus === ServiceStatus.DOWN) {
+      notificationService
+        .notify(`Service Recovered: ${name}`, `${name} is back online.`, "success")
+        .catch(() => {});
     }
   }
 }

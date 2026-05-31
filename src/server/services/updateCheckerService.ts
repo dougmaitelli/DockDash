@@ -3,6 +3,7 @@ import { db } from "../db/databaseService.js";
 import { ServiceSource } from "@shared";
 import { dockerService } from "./dockerService.js";
 import { registryClient } from "./registryClient.js";
+import { notificationService } from "./notificationService.js";
 
 // ---------------------------------------------------------------------------
 // SemVer helpers
@@ -159,11 +160,21 @@ export class UpdateCheckerService {
       return;
     }
 
+    const previousHasUpdate = service.metadata?.hasUpdate as boolean | undefined;
+
     db.updateServiceMetadata(service.id || "", {
       hasUpdate,
       ...(latestVersion !== undefined ? { latestVersion } : {}),
       updateCheckedAt: new Date().toISOString(),
     });
+
+    if (hasUpdate && !previousHasUpdate) {
+      const msg = latestVersion
+        ? `A newer version is available: ${latestVersion}`
+        : "A newer image digest is available.";
+
+      notificationService.notify(`Update Available: ${service.name}`, msg, "warning").catch(() => {});
+    }
   }
 }
 

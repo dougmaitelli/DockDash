@@ -22,6 +22,7 @@ const api = axios.create({
 export const discoveryApi = {
   dockerHealth: () => api.get<DockerHostHealth[]>("/docker/health"),
   getConfig: () => api.get<DashboardConfig>("/config"),
+  testNotification: () => api.post<ApiSuccess>("/notifications/test"),
 };
 
 // Service management APIs

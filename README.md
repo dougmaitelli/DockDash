@@ -52,6 +52,11 @@ All configuration is done via environment variables. Changes require a container
 | `DB_PATH` | `/app/data/dockdash.db` | Path to the SQLite database file |
 | `REFRESH_INTERVAL` | `30000` | Discovery refresh interval in milliseconds |
 | `HEALTH_CHECK_INTERVAL` | `30000` | How often the server re-checks service health (ms) |
+| `UPDATE_CHECK_INTERVAL` | `3600000` | How often to check Docker images for updates (ms) |
+| `HEALTH_HISTORY_TTL_DAYS` | `30` | How many days of health check history to retain |
+| `APPRISE_URL` | — | Full notify endpoint of the [Apprise REST API](https://github.com/caronc/apprise-api) server (e.g. `http://apprise:8000/notify/myconfig`) |
+| `APPRISE_TAGS` | — | Optional — comma-separated tags to filter which configured Apprise endpoints receive notifications (e.g. `admin`) |
+| `APPRISE_URLS` | — | Optional — comma-separated Apprise notification URLs sent inline (e.g. `slack://token/channel`) |
 
 ### Docker socket
 
@@ -83,6 +88,34 @@ SCAN_PORTS=80,443,3000,8080,9090
 #### Default scan ports
 
 22, 80, 443, 3000, 3001, 3306, 5432, 6379, 8080, 8443, 9090, 27017
+
+### Notifications (Apprise)
+
+DockDash can send push notifications when services go down, recover, or have Docker image updates available. It integrates with the [Apprise REST API](https://github.com/caronc/apprise-api), a self-hosted sidecar that forwards notifications to 80+ services (Slack, Discord, Telegram, email, etc.).
+
+Set `APPRISE_URL` to the full notify endpoint of your Apprise server. The path encodes the config key for stateful mode (`/notify/{key}`).
+
+If you use tag-based routing on the Apprise side, set `APPRISE_TAGS` to match:
+
+```
+APPRISE_URL=http://192.168.7.5:8000/notify/apprise
+APPRISE_TAGS=admin
+```
+
+`APPRISE_URLS` is optional — use it to add extra inline notification targets (Slack, Discord, etc.) without pre-configuring them on the Apprise server:
+
+```
+APPRISE_URL=http://apprise:8000/notify
+APPRISE_URLS=slack://tokenA/tokenB/tokenC/#channel,discord://webhook_id/webhook_token
+```
+
+All three variables can be combined.
+
+Once configured, the **Settings** page shows a "Send Test" button to verify delivery. Notifications are sent for:
+
+- Service goes **down** (failure alert)
+- Service **recovers** after being down (success alert)
+- Docker image **update available** (warning alert)
 
 ## Development
 
