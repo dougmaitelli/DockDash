@@ -157,7 +157,7 @@ export class NetworkScanner {
 
                 if (healthTitle) return healthTitle[1].trim();
 
-                return `${ip}:${port} (healthy)`;
+                return ip;
               }
             } catch {
               // continue
@@ -167,7 +167,7 @@ export class NetworkScanner {
           // fall through
         }
 
-        return `${ip}:${port}`;
+        return ip;
       }
 
       // SSH
