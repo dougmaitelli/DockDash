@@ -45,9 +45,3 @@ export function detectProtocolByPort(port: number): ServiceProtocol {
 }
 
 export const HTTP_PROTOCOLS = [ServiceProtocol.HTTP, ServiceProtocol.HTTPS];
-export const TCP_CHECKABLE_PROTOCOLS = [
-  ServiceProtocol.HTTP,
-  ServiceProtocol.HTTPS,
-  ServiceProtocol.TCP,
-  ServiceProtocol.SSH,
-];

@@ -5,7 +5,6 @@ import { Service, ServiceSource, ServiceStatus } from "@shared";
 import {
   USER_AGENT,
   HTTP_PROTOCOLS,
-  TCP_CHECKABLE_PROTOCOLS,
   detectProtocolByPort,
 } from "../lib/constants.js";
 import {
@@ -208,11 +207,7 @@ export class HealthCheckService {
       return (await this.checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
     }
 
-    if (TCP_CHECKABLE_PROTOCOLS.includes(protocol)) {
-      return (await this.checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
-    }
-
-    return ServiceStatus.UNKNOWN;
+    return (await this.checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
   }
 
   private logStatusChange(name: string, oldStatus: ServiceStatus, newStatus: ServiceStatus): void {
