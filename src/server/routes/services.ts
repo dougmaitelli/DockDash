@@ -186,4 +186,11 @@ router.get("/serviceStatuses", (_req, res) => {
   res.json(statuses);
 });
 
+router.get("/services/:id/health-history", (req, res) => {
+  const days = Math.max(1, parseInt(req.query.days as string, 10) || 7);
+  const history = db.getHealthHistory(req.params.id, days);
+
+  res.json(history);
+});
+
 export default router;

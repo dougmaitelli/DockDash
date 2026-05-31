@@ -1,12 +1,12 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { eq, or, asc, desc, getTableColumns } from "drizzle-orm";
+import { eq, or, asc, desc, getTableColumns, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import path from "path";
 import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
-import { services, serviceLinks, servicePositions } from "./schema/index.js";
+import { services, serviceLinks, servicePositions, serviceHealthHistory } from "./schema/index.js";
 import type {
   ServicePosition,
   Service,
@@ -14,6 +14,7 @@ import type {
   DashboardData,
   ServiceStatusItem,
   ServiceStatus,
+  ServiceHealthHistoryItem,
 } from "@shared";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -294,6 +295,40 @@ export class DatabaseService {
       .select({ id: services.id, status: services.status })
       .from(services)
       .all() as ServiceStatusItem[];
+  }
+
+  addHealthHistory(serviceId: string, status: ServiceStatus): void {
+    const now = new Date().toISOString();
+
+    this.orm
+      .insert(serviceHealthHistory)
+      .values({ id: uuidv4(), serviceId, status, checkedAt: now })
+      .run();
+  }
+
+  getHealthHistory(serviceId: string, days: number): ServiceHealthHistoryItem[] {
+    const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
+
+    return this.orm
+      .select({ status: serviceHealthHistory.status, checkedAt: serviceHealthHistory.checkedAt })
+      .from(serviceHealthHistory)
+      .where(
+        sql`${serviceHealthHistory.serviceId} = ${serviceId} AND ${serviceHealthHistory.checkedAt} >= ${cutoff}`,
+      )
+      .orderBy(asc(serviceHealthHistory.checkedAt))
+      .all()
+      .map((row) => ({ status: row.status as ServiceStatus, checked_at: row.checkedAt }));
+  }
+
+  cleanOldHistory(ttlDays: number): number {
+    const cutoff = new Date(Date.now() - ttlDays * 86_400_000).toISOString();
+
+    const result = this.orm
+      .delete(serviceHealthHistory)
+      .where(lt(serviceHealthHistory.checkedAt, cutoff))
+      .run();
+
+    return result.changes;
   }
 }
 

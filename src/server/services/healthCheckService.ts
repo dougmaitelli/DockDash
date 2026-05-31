@@ -55,6 +55,7 @@ export class HealthCheckService {
 
       this.logStatusChange(service.name, service.status, status);
       db.updateServiceStatus(service.id || "", status);
+      db.addHealthHistory(service.id || "", status);
 
       return status;
     } catch (err) {
@@ -77,6 +78,7 @@ export class HealthCheckService {
 
       this.logStatusChange(service.name, service.status, status);
       db.updateServiceStatus(service.id || "", status);
+      db.addHealthHistory(service.id || "", status);
 
       return status;
     } catch (err) {

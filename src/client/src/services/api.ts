@@ -5,6 +5,7 @@ import type {
   ServicePosition,
   DashboardData,
   ServiceStatusItem,
+  ServiceHealthHistoryItem,
   DockerHostHealth,
   DashboardConfig,
   ApiSuccess,
@@ -34,6 +35,8 @@ export const serviceApi = {
     data: { name: string; host: string; ports?: number[]; checkPort?: number | null },
   ) => api.put<Service>(`/services/${id}`, data),
   delete: (id: string) => api.delete<ApiSuccess>(`/services/${id}`),
+  getHealthHistory: (id: string, days: number) =>
+    api.get<ServiceHealthHistoryItem[]>(`/services/${id}/health-history`, { params: { days } }),
 };
 
 // Link management APIs

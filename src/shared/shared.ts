@@ -63,6 +63,11 @@ export interface DashboardData {
   links: ServiceLink[];
 }
 
+export interface ServiceHealthHistoryItem {
+  status: ServiceStatus;
+  checked_at: string;
+}
+
 /** Stored inside service.metadata for Docker services once an update check has run. */
 export interface ServiceUpdateInfo {
   hasUpdate: boolean;

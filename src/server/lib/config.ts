@@ -9,6 +9,7 @@ export const DEFAULT_SCAN_PORTS = [...Object.keys(PORT_INFO_MAP).map(Number), 30
 export const DEFAULT_HEALTH_CHECK_INTERVAL = 30000;
 export const DEFAULT_REFRESH_INTERVAL = 30000;
 export const DEFAULT_UPDATE_CHECK_INTERVAL = 3_600_000; // 1 hour
+export const DEFAULT_HEALTH_HISTORY_TTL_DAYS = 30;
 
 class Config {
   get port(): number {
@@ -60,6 +61,12 @@ class Config {
     return process.env.UPDATE_CHECK_INTERVAL
       ? parseInt(process.env.UPDATE_CHECK_INTERVAL, 10)
       : DEFAULT_UPDATE_CHECK_INTERVAL;
+  }
+
+  get healthHistoryTtlDays(): number {
+    return process.env.HEALTH_HISTORY_TTL_DAYS
+      ? parseInt(process.env.HEALTH_HISTORY_TTL_DAYS, 10)
+      : DEFAULT_HEALTH_HISTORY_TTL_DAYS;
   }
 }
 

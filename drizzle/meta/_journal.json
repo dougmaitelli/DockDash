@@ -15,6 +15,13 @@
       "when": 1780126385038,
       "tag": "0001_tearful_landau",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1780192099122,
+      "tag": "0002_far_living_tribunal",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,7 @@ import { NumberTagArrayInput } from "../../utils/TagArrayInput";
 import { IconDocker, IconGlobe, IconX } from "../../utils/Icons";
 import { FormGroup, Label } from "./BaseModal";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { HealthHistoryGraph } from "./HealthHistoryGraph";
 
 const ANIM_MS = 220;
 
@@ -264,6 +265,8 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
         </Header>
 
         <Body>
+          <HealthHistoryGraph serviceId={service.id!} />
+
           <FormGroup>
             <Label>{t("modals.name")}</Label>
             <StyledInput

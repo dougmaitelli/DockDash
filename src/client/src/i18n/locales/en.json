@@ -92,6 +92,17 @@
     "delete": "Delete",
     "confirmDeleteService": "Are you sure you want to delete this service? This cannot be undone.",
     "confirmDeleteLink": "Are you sure you want to delete this link? This cannot be undone.",
-    "metadata": "Metadata"
+    "metadata": "Metadata",
+    "healthHistory": "Health History",
+    "healthHistoryUptime": "{{pct}}% uptime",
+    "healthHistoryNoData": "No data yet",
+    "healthHistoryPeriod1d": "1d",
+    "healthHistoryPeriod7d": "7d",
+    "healthHistoryPeriod30d": "30d",
+    "healthHistoryStatusUp": "Up",
+    "healthHistoryStatusDown": "Down",
+    "healthHistoryStatusUnknown": "Unknown",
+    "healthHistoryStatusMixed": "Mixed (up & down)",
+    "healthHistoryNoChecks": "No checks"
   }
 }

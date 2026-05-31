@@ -6,6 +6,7 @@ import discoveryRoutes from "./routes/discovery.js";
 import serviceRoutes from "./routes/services.js";
 import { healthCheckService } from "./services/healthCheckService.js";
 import { updateCheckerService } from "./services/updateCheckerService.js";
+import { db } from "./db/databaseService.js";
 import { config } from "./lib/config.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -13,6 +14,7 @@ const app = express();
 const PORT = config.port;
 const HEALTH_CHECK_INTERVAL = config.healthCheckInterval;
 const UPDATE_CHECK_INTERVAL = config.updateCheckInterval;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 // Middleware
 app.use(cors());
@@ -80,6 +82,24 @@ app.listen(PORT, () => {
 
   updateCheckInterval.unref();
   runUpdateCheck();
+
+  // Daily cleanup of old health history
+  const historyCleanupInterval = setInterval(() => {
+    try {
+      const removed = db.cleanOldHistory(config.healthHistoryTtlDays);
+
+      if (removed > 0) {
+        console.log(`Health history cleanup: removed ${removed} old entries`);
+      }
+    } catch (err) {
+      console.error(
+        "Health history cleanup failed:",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }, ONE_DAY_MS);
+
+  historyCleanupInterval.unref();
 });
 
 export default app;
