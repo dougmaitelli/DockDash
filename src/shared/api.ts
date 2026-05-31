@@ -7,6 +7,7 @@ import type { ServicePosition } from "./shared.js";
 export const SSE_EVENT = {
   DONE: "done",
   SCAN_ERROR: "scan-error",
+  LOG_ERROR: "log-error",
 } as const;
 
 // ---------------------------------------------------------------------------

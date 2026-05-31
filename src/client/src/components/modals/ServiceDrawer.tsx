@@ -10,15 +10,17 @@ import {
   DangerButton,
   StyledInput,
   NumberInput,
-  ModalBackdrop,
 } from "../../utils/ui";
 import { NumberTagArrayInput } from "../../utils/TagArrayInput";
 import { IconDocker, IconGlobe, IconX } from "../../utils/Icons";
 import { FormGroup, Label } from "./BaseModal";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
+import { DockerLogs } from "./DockerLogs";
 
 const ANIM_MS = 220;
+
+type Tab = "details" | "logs";
 
 const slideIn = keyframes`
   from { transform: translateX(-100%); }
@@ -30,41 +32,20 @@ const slideOut = keyframes`
   to   { transform: translateX(-100%); }
 `;
 
-const Backdrop = styled(ModalBackdrop)<{ $closing: boolean }>`
-  z-index: 100;
-  background: ${colors.blackAlpha20};
-  animation: ${({ $closing }) => ($closing ? "fadeOut" : "fadeIn")} ${ANIM_MS}ms ease;
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  @keyframes fadeOut {
-    from {
-      opacity: 1;
-    }
-    to {
-      opacity: 0;
-    }
-  }
-`;
-
-const Drawer = styled.div<{ $closing: boolean }>`
+const Drawer = styled.div<{ $closing: boolean; $wide: boolean }>`
   position: fixed;
   left: 0;
   top: 0;
   height: 100%;
-  width: 600px;
+  width: ${({ $wide }) => ($wide ? "900px" : "600px")};
   background: ${colors.bgSecondary};
   border-right: 1px solid ${colors.border};
   z-index: 101;
   display: flex;
   flex-direction: column;
   animation: ${({ $closing }) => ($closing ? slideOut : slideIn)} ${ANIM_MS}ms ease;
+  transition: width ${ANIM_MS}ms ease;
+  animation-fill-mode: both;
   box-shadow: 6px 0 32px ${colors.blackAlpha40};
 `;
 
@@ -115,10 +96,34 @@ const CloseButton = styled.button`
   }
 `;
 
-const Body = styled.div`
+const TabBar = styled.div`
+  display: flex;
+  border-bottom: 1px solid ${colors.border};
+  padding: 0 20px;
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  background: none;
+  border: none;
+  border-bottom: 2px solid ${({ $active }) => ($active ? colors.accentBlue : "transparent")};
+  padding: 10px 14px 8px;
+  margin-bottom: -1px;
+  font-size: 0.8rem;
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+  color: ${({ $active }) => ($active ? colors.textPrimary : colors.textMuted)};
+  cursor: pointer;
+
+  &:hover {
+    color: ${colors.textPrimary};
+  }
+`;
+
+const Body = styled.div<{ $padded?: boolean }>`
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: ${({ $padded }) => ($padded ? "20px" : "16px 20px 0")};
+  display: flex;
+  flex-direction: column;
 `;
 
 const MetadataToggle = styled.button`
@@ -188,11 +193,14 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
   const { t } = useTranslation();
   const [closing, setClosing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [tab, setTab] = useState<Tab>("details");
   const [editName, setEditName] = useState(service.name);
   const [editHost, setEditHost] = useState(service.host);
   const [editPorts, setEditPorts] = useState<number[]>(service.ports ?? []);
   const [editCheckPort, setEditCheckPort] = useState(service.checkPort?.toString() ?? "");
   const [metadataExpanded, setMetadataExpanded] = useState(false);
+
+  const isDocker = service.source === ServiceSource.DOCKER;
 
   const dismiss = () => {
     setClosing(true);
@@ -244,10 +252,9 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
           onCancel={() => setConfirmingDelete(false)}
         />
       )}
-      <Backdrop $closing={closing} onClick={dismiss} />
-      <Drawer $closing={closing} onClick={(e) => e.stopPropagation()}>
+      <Drawer $closing={closing} $wide={tab === "logs"}>
         <Header>
-          {service.source === ServiceSource.DOCKER ? (
+          {isDocker ? (
             <IconDocker
               size={18}
               style={{ color: colors.textMuted, flexShrink: 0, marginTop: 2 }}
@@ -264,74 +271,93 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
           </CloseButton>
         </Header>
 
-        <Body>
-          <HealthHistoryGraph serviceId={service.id!} />
-
-          <FormGroup>
-            <Label>{t("modals.name")}</Label>
-            <StyledInput
-              value={editName}
-              onChange={(e) => setEditName(e.target.value)}
-              placeholder={t("modals.namePlaceholder")}
-            />
-          </FormGroup>
-          <FormGroup>
-            <Label>{t("modals.host")}</Label>
-            <StyledInput
-              value={editHost}
-              onChange={(e) => setEditHost(e.target.value)}
-              placeholder={t("modals.hostPlaceholder")}
-            />
-          </FormGroup>
-          <FormGroup>
-            <Label>{t("modals.ports")}</Label>
-            <NumberTagArrayInput
-              values={editPorts.map(String)}
-              onChange={handlePortsChange}
-              validate={validatePort}
-              min={1}
-              max={65535}
-              formatTag={(v) => `:${v}`}
-              placeholder={t("modals.portsPlaceholder")}
-            />
-          </FormGroup>
-          <FormGroup>
-            <Label>{t("modals.checkPort")}</Label>
-            <NumberInput
-              value={editCheckPort}
-              onChange={(e) => setEditCheckPort(e.target.value)}
-              placeholder={t("modals.checkPortPlaceholder")}
-            />
-          </FormGroup>
-
-          {metadataEntries.length > 0 && (
-            <>
-              <MetadataToggle onClick={() => setMetadataExpanded((v) => !v)}>
-                <span>{metadataExpanded ? "▾" : "▸"}</span>
-                {t("modals.metadata")}
-              </MetadataToggle>
-              {metadataExpanded && (
-                <MetadataGrid>
-                  {metadataEntries.map(({ key, value }) => (
-                    <Fragment key={key}>
-                      <MetaKey>{key}</MetaKey>
-                      <MetaValue>{value}</MetaValue>
-                    </Fragment>
-                  ))}
-                </MetadataGrid>
-              )}
-            </>
+        <TabBar>
+          <TabButton $active={tab === "details"} onClick={() => setTab("details")}>
+            {t("modals.tabDetails")}
+          </TabButton>
+          {isDocker && (
+            <TabButton $active={tab === "logs"} onClick={() => setTab("logs")}>
+              {t("modals.tabLogs")}
+            </TabButton>
           )}
-        </Body>
+        </TabBar>
+
+        {tab === "details" ? (
+          <Body $padded>
+            <HealthHistoryGraph serviceId={service.id!} />
+
+            <FormGroup>
+              <Label>{t("modals.name")}</Label>
+              <StyledInput
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder={t("modals.namePlaceholder")}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>{t("modals.host")}</Label>
+              <StyledInput
+                value={editHost}
+                onChange={(e) => setEditHost(e.target.value)}
+                placeholder={t("modals.hostPlaceholder")}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>{t("modals.ports")}</Label>
+              <NumberTagArrayInput
+                values={editPorts.map(String)}
+                onChange={handlePortsChange}
+                validate={validatePort}
+                min={1}
+                max={65535}
+                formatTag={(v) => `:${v}`}
+                placeholder={t("modals.portsPlaceholder")}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>{t("modals.checkPort")}</Label>
+              <NumberInput
+                value={editCheckPort}
+                onChange={(e) => setEditCheckPort(e.target.value)}
+                placeholder={t("modals.checkPortPlaceholder")}
+              />
+            </FormGroup>
+
+            {metadataEntries.length > 0 && (
+              <>
+                <MetadataToggle onClick={() => setMetadataExpanded((v) => !v)}>
+                  <span>{metadataExpanded ? "▾" : "▸"}</span>
+                  {t("modals.metadata")}
+                </MetadataToggle>
+                {metadataExpanded && (
+                  <MetadataGrid>
+                    {metadataEntries.map(({ key, value }) => (
+                      <Fragment key={key}>
+                        <MetaKey>{key}</MetaKey>
+                        <MetaValue>{value}</MetaValue>
+                      </Fragment>
+                    ))}
+                  </MetadataGrid>
+                )}
+              </>
+            )}
+          </Body>
+        ) : (
+          <Body>
+            <DockerLogs serviceId={service.id!} />
+          </Body>
+        )}
 
         <Footer>
           <DangerButton onClick={() => setConfirmingDelete(true)}>
             {t("modals.delete")}
           </DangerButton>
-          <FooterRight>
-            <SecondaryButton onClick={dismiss}>{t("modals.cancel")}</SecondaryButton>
-            <PrimaryButton onClick={handleSave}>{t("modals.save")}</PrimaryButton>
-          </FooterRight>
+          {tab === "details" && (
+            <FooterRight>
+              <SecondaryButton onClick={dismiss}>{t("modals.cancel")}</SecondaryButton>
+              <PrimaryButton onClick={handleSave}>{t("modals.save")}</PrimaryButton>
+            </FooterRight>
+          )}
         </Footer>
       </Drawer>
     </>

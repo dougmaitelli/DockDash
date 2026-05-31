@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "../db/databaseService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
+import { dockerService } from "../services/dockerService.js";
 import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
 import type {
   ApiSuccess,
@@ -8,6 +9,7 @@ import type {
   SavePositionsResponse,
   CheckAllServicesResponse,
 } from "@shared/api";
+import { SSE_EVENT } from "@shared/api";
 
 const router = Router();
 
@@ -184,6 +186,118 @@ router.get("/serviceStatuses", (_req, res) => {
   const statuses = db.getServiceStatuses();
 
   res.json(statuses);
+});
+
+router.get("/services/:id/logs/stream", async (req, res) => {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const sendError = (message: string) => {
+    res.write(`event: ${SSE_EVENT.LOG_ERROR}\ndata: ${JSON.stringify({ message })}\n\n`);
+    res.end();
+  };
+
+  const service = db.getService(req.params.id);
+
+  if (!service || service.source !== ServiceSource.DOCKER) {
+    sendError("Not a Docker service");
+
+    return;
+  }
+
+  const containerName = service.metadata?.containerName as string | undefined;
+  const dockerHost = service.metadata?.dockerHost as string | undefined;
+
+  if (!containerName || !dockerHost) {
+    sendError("Container metadata not available");
+
+    return;
+  }
+
+  let closed = false;
+  let logStream: (NodeJS.ReadableStream & { destroy?: () => void }) | null = null;
+
+  req.on("close", () => {
+    closed = true;
+    logStream?.destroy?.();
+  });
+
+  try {
+    const docker = dockerService.createDockerClientForHost(dockerHost);
+    const containers = await docker.listContainers({ all: true });
+    const containerInfo = containers.find((c) =>
+      c.Names?.some((n) => n.replace(/^\//, "") === containerName),
+    );
+
+    if (!containerInfo) {
+      if (!closed) sendError(`Container "${containerName}" not found`);
+
+      return;
+    }
+
+    if (closed) return;
+
+    const container = docker.getContainer(containerInfo.Id);
+    const inspect = await container.inspect();
+    const isTty = inspect.Config?.Tty ?? false;
+
+    container.logs(
+      { follow: true, stdout: true, stderr: true, tail: 100, timestamps: true },
+      (err, stream) => {
+        if (err || !stream) {
+          if (!closed) sendError(err?.message ?? "Stream unavailable");
+
+          return;
+        }
+
+        logStream = stream;
+
+        const sendLine = (line: string) => {
+          if (!closed) res.write(`data: ${line}\n\n`);
+        };
+
+        if (isTty) {
+          stream.on("data", (chunk: Buffer) => {
+            chunk.toString("utf8").split("\n").filter(Boolean).forEach(sendLine);
+          });
+        } else {
+          // Demux Docker multiplexed stream: 8-byte header (1 type + 3 pad + 4 size) + payload
+          let buf = Buffer.alloc(0);
+
+          stream.on("data", (chunk: Buffer) => {
+            buf = Buffer.concat([buf, chunk]);
+
+            while (buf.length >= 8) {
+              const size = buf.readUInt32BE(4);
+
+              if (buf.length < 8 + size) break;
+
+              const type = buf[0];
+              const payload = buf.slice(8, 8 + size);
+
+              if (type === 1 || type === 2) {
+                payload.toString("utf8").split("\n").filter(Boolean).forEach(sendLine);
+              }
+
+              buf = buf.slice(8 + size);
+            }
+          });
+        }
+
+        stream.on("end", () => {
+          if (!closed) res.end();
+        });
+
+        stream.on("error", (streamErr) => {
+          if (!closed) sendError(streamErr.message);
+        });
+      },
+    );
+  } catch (err) {
+    if (!closed) sendError(err instanceof Error ? err.message : String(err));
+  }
 });
 
 router.get("/services/:id/health-history", (req, res) => {

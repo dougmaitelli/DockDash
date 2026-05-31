@@ -134,6 +134,15 @@ export function IconDocker({ size = 16, ...props }: IconProps) {
   );
 }
 
+export function IconTerminal({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2)} {...props}>
+      <polyline points="4 17 10 11 4 5" />
+      <line x1="12" y1="19" x2="20" y2="19" />
+    </svg>
+  );
+}
+
 export function IconGlobe({ size = 16, ...props }: IconProps) {
   return (
     <svg {...defaults(size, 1.8)} {...props}>

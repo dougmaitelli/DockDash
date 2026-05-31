@@ -103,6 +103,13 @@
     "healthHistoryStatusDown": "Down",
     "healthHistoryStatusUnknown": "Unknown",
     "healthHistoryStatusMixed": "Mixed (up & down)",
-    "healthHistoryNoChecks": "No checks"
+    "healthHistoryNoChecks": "No checks",
+    "tabDetails": "Details",
+    "tabLogs": "Logs",
+    "logsConnecting": "Connecting...",
+    "logsLive": "Live",
+    "logsDisconnected": "Disconnected",
+    "logsReconnect": "Reconnect",
+    "logsNoOutput": "No output yet"
   }
 }
