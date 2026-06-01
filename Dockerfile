@@ -21,7 +21,7 @@ WORKDIR /app
 COPY --from=builder /app/dist/. ./
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/src/server/lib/schema.sql ./server/lib/schema.sql
+COPY --from=builder /app/drizzle ./drizzle
 
 RUN mkdir -p /app/data
 

@@ -4,7 +4,6 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { eq, or, asc, desc, getTableColumns, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import path from "path";
-import { fileURLToPath } from "url";
 import { v4 as uuidv4 } from "uuid";
 import { services, serviceLinks, servicePositions, serviceHealthHistory } from "./schema/index.js";
 import type {
@@ -17,8 +16,7 @@ import type {
   ServiceHealthHistoryItem,
 } from "@shared";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MIGRATIONS_FOLDER = path.join(__dirname, "../../../drizzle");
+const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 
 // Map Drizzle row → Service (camelCase timestamps → snake_case to match the shared interface)
 function toService(row: typeof services.$inferSelect): Service {
