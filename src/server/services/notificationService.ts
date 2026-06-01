@@ -22,11 +22,12 @@ class NotificationService {
     try {
       await axios.post(url, payload, { timeout: 5000 });
     } catch (err) {
-      const message = axios.isAxiosError(err) && err.response
-        ? `HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`
-        : err instanceof Error
-          ? err.message
-          : String(err);
+      const message =
+        axios.isAxiosError(err) && err.response
+          ? `HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`
+          : err instanceof Error
+            ? err.message
+            : String(err);
 
       console.error("Apprise notification failed:", message);
       throw new Error(message);

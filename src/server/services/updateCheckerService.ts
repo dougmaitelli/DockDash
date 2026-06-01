@@ -173,7 +173,9 @@ export class UpdateCheckerService {
         ? `A newer version is available: ${latestVersion}`
         : "A newer image digest is available.";
 
-      notificationService.notify(`Update Available: ${service.name}`, msg, "warning").catch(() => {});
+      notificationService
+        .notify(`Update Available: ${service.name}`, msg, "warning")
+        .catch(() => {});
     }
   }
 }

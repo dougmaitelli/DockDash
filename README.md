@@ -7,6 +7,8 @@ A self-hosted dashboard for visualizing Docker containers and network services. 
 - **Docker discovery** — scans running containers and exposes their ports as services
 - **Network scanning** — port-scans CIDR ranges to find services not managed by Docker
 - **Health monitoring** — periodically checks every service and shows live status
+- **Health history** — visualizes uptime over the last 1, 7, or 30 days as a color-coded timeline per service
+- **Docker logs** — streams live container logs directly in the UI with timestamp parsing and ANSI stripping
 - **Update monitoring** — checks Docker images against registries and flags outdated containers
 - **Interactive canvas** — drag nodes, draw connections between services, zoom and pan
 

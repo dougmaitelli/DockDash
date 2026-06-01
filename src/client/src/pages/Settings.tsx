@@ -95,10 +95,8 @@ export default function Settings() {
       await discoveryApi.testNotification();
       setTestState("sent");
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "Unknown error";
+      const msg = err instanceof Error ? err.message : "Unknown error";
+
       setTestError(msg);
       setTestState("failed");
     } finally {
