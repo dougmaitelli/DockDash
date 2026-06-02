@@ -119,6 +119,10 @@
     "logsLive": "Live",
     "logsDisconnected": "Disconnected",
     "logsReconnect": "Reconnect",
-    "logsNoOutput": "No output yet"
+    "logsNoOutput": "No output yet",
+    "containerStop": "Stop",
+    "containerStart": "Start",
+    "containerRestart": "Restart",
+    "containerActionFailed": "Action failed: {{error}}"
   }
 }

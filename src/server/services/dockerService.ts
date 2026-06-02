@@ -4,7 +4,10 @@ import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { config } from "../lib/config.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 
-export type ContainerStateMap = Map<string, { state: string; imageTag: string }>;
+export type ContainerStateMap = Map<
+  string,
+  { containerId: string; state: string; imageTag: string }
+>;
 
 export const DOCKER_CONTAINER_STATE = {
   RUNNING: "running",
@@ -107,7 +110,7 @@ export class DockerService {
 
     for (const c of containers) {
       const { tag: imageTag } = this.parseImage(c.Image);
-      const entry = { state: c.State, imageTag };
+      const entry = { containerId: c.Id, state: c.State, imageTag };
 
       for (const name of c.Names ?? []) {
         map.set(this.normalizeContainerName(name), entry);

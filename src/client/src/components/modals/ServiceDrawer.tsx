@@ -1,7 +1,7 @@
-import { useState, Fragment } from "react";
+import { useState, Fragment, useCallback } from "react";
 import styled, { keyframes } from "styled-components";
 import { useTranslation } from "react-i18next";
-import type { Service } from "@shared";
+import type { Service, ContainerAction } from "@shared";
 import { ServiceSource } from "@shared";
 import { colors } from "../../styles/vars";
 import {
@@ -18,6 +18,7 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
 import { DockerLogs } from "./DockerLogs";
 import { Changelog } from "./Changelog";
+import { ContainerControls } from "./ContainerControls";
 
 const ANIM_MS = 220;
 
@@ -183,6 +184,11 @@ const FooterRight = styled.div`
   gap: 8px;
 `;
 
+const HeaderActions = styled.div`
+  display: flex;
+  flex-shrink: 0;
+`;
+
 interface ServiceDrawerProps {
   service: Service;
   onSave: (data: Pick<Service, "name" | "host" | "ports" | "checkPort">) => void;
@@ -202,6 +208,13 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
   const [metadataExpanded, setMetadataExpanded] = useState(false);
 
   const isDocker = service.source === ServiceSource.DOCKER;
+  const [logsReconnectTrigger, setLogsReconnectTrigger] = useState(0);
+
+  const handleContainerActionComplete = useCallback((action: ContainerAction) => {
+    if (action === "start" || action === "restart") {
+      setTimeout(() => setLogsReconnectTrigger((n) => n + 1), 500);
+    }
+  }, []);
 
   const dismiss = () => {
     setClosing(true);
@@ -267,6 +280,14 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
             <HeaderName>{service.name}</HeaderName>
             <HeaderId>{service.id}</HeaderId>
           </HeaderInfo>
+          {isDocker && (
+            <HeaderActions>
+              <ContainerControls
+                service={service}
+                onActionComplete={handleContainerActionComplete}
+              />
+            </HeaderActions>
+          )}
           <CloseButton onClick={dismiss}>
             <IconX size={16} />
           </CloseButton>
@@ -350,7 +371,7 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
           </Body>
         ) : tab === "logs" ? (
           <Body>
-            <DockerLogs serviceId={service.id!} />
+            <DockerLogs serviceId={service.id!} reconnectTrigger={logsReconnectTrigger} />
           </Body>
         ) : (
           <Body>

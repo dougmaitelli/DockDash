@@ -58,6 +58,7 @@ export class HealthCheckService {
           const latestVersion = service.metadata?.latestVersion as string | undefined;
 
           const patch: Record<string, string | number | boolean | string[] | number[]> = {
+            containerId: containerInfo.containerId,
             imageTag: newTag,
           };
 
@@ -66,14 +67,14 @@ export class HealthCheckService {
             patch.latestVersion = "";
           }
 
-          db.updateServiceMetadata(service.id || "", patch);
+          db.updateServiceMetadata(service.id!, patch);
         }
       }
 
       this.logStatusChange(service.name, service.status, status);
       this.notifyStatusChange(service.name, service.status, status);
-      db.updateServiceStatus(service.id || "", status);
-      db.addHealthHistory(service.id || "", status);
+      db.updateServiceStatus(service.id!, status);
+      db.addHealthHistory(service.id!, status);
 
       return status;
     } catch (err) {
@@ -96,8 +97,8 @@ export class HealthCheckService {
 
       this.logStatusChange(service.name, service.status, status);
       this.notifyStatusChange(service.name, service.status, status);
-      db.updateServiceStatus(service.id || "", status);
-      db.addHealthHistory(service.id || "", status);
+      db.updateServiceStatus(service.id!, status);
+      db.addHealthHistory(service.id!, status);
 
       return status;
     } catch (err) {
@@ -155,11 +156,11 @@ export class HealthCheckService {
         const host = service.metadata?.dockerHost as string | undefined;
 
         status = await this.checkSingleDockerService(
-          service.id || "",
+          service.id!,
           host ? stateMapByHost.get(host) : undefined,
         );
       } else {
-        status = await this.checkSingleNetworkService(service.id || "");
+        status = await this.checkSingleNetworkService(service.id!);
       }
 
       if (status === null) {

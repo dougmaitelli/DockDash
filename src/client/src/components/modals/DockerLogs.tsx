@@ -115,9 +115,10 @@ const EmptyState = styled.div`
 
 interface DockerLogsProps {
   serviceId: string;
+  reconnectTrigger?: number;
 }
 
-export function DockerLogs({ serviceId }: DockerLogsProps) {
+export function DockerLogs({ serviceId, reconnectTrigger }: DockerLogsProps) {
   const { t } = useTranslation();
   const [lines, setLines] = useState<string[]>([]);
   const [status, setStatus] = useState<ConnStatus>("connecting");
@@ -157,7 +158,7 @@ export function DockerLogs({ serviceId }: DockerLogsProps) {
     };
 
     return () => es.close();
-  }, [serviceId, connectKey]);
+  }, [serviceId, connectKey, reconnectTrigger]);
 
   // Auto-scroll to bottom when new lines arrive, only if already at bottom
   useEffect(() => {

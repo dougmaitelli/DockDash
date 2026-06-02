@@ -9,6 +9,7 @@ import type {
   DockerHostHealth,
   DashboardConfig,
   ApiSuccess,
+  ContainerAction,
   SavePositionsRequest,
   SavePositionsResponse,
   CheckAllServicesResponse,
@@ -40,6 +41,8 @@ export const serviceApi = {
   getHealthHistory: (id: string, days: number) =>
     api.get<ServiceHealthHistoryItem[]>(`/services/${id}/health-history`, { params: { days } }),
   getChangelog: (id: string) => api.get<ChangelogResponse>(`/services/${id}/changelog`),
+  containerAction: (id: string, action: ContainerAction) =>
+    api.post<ApiSuccess>(`/services/${id}/container/${action}`),
 };
 
 // Link management APIs

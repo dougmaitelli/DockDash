@@ -10,6 +10,7 @@ import { t } from "../i18n/index.js";
 import { config } from "../lib/config.js";
 import type {
   ApiSuccess,
+  ContainerAction,
   SavePositionsRequest,
   SavePositionsResponse,
   CheckAllServicesResponse,
@@ -192,6 +193,43 @@ router.get("/serviceStatuses", (_req, res) => {
   const statuses = db.getServiceStatuses();
 
   res.json(statuses);
+});
+
+router.post("/services/:id/container/:action", async (req, res) => {
+  const validActions: ContainerAction[] = ["stop", "start", "restart"];
+  const action = req.params.action as ContainerAction;
+
+  if (!validActions.includes(action)) {
+    return res.status(400).json({ error: "Invalid action" });
+  }
+
+  const service = db.getService(req.params.id);
+
+  if (!service) return res.status(404).json({ error: "Service not found" });
+
+  if (service.source !== ServiceSource.DOCKER) {
+    return res.status(400).json({ error: "Not a Docker service" });
+  }
+
+  const containerId = service.metadata?.containerId as string | undefined;
+  const dockerHost = service.metadata?.dockerHost as string | undefined;
+
+  if (!containerId || !dockerHost) {
+    return res.status(400).json({ error: "Container metadata not available" });
+  }
+
+  const docker = dockerService.createDockerClientForHost(dockerHost);
+  const container = docker.getContainer(containerId);
+
+  if (action === "stop") await container.stop();
+  else if (action === "start") await container.start();
+  else await container.restart();
+
+  healthCheckService.checkSingleService(req.params.id);
+
+  const response: ApiSuccess = { success: true };
+
+  res.json(response);
 });
 
 router.get("/services/:id/logs/stream", async (req, res) => {

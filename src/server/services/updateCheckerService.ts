@@ -152,7 +152,7 @@ export class UpdateCheckerService {
 
     const previousHasUpdate = service.metadata?.hasUpdate as boolean | undefined;
 
-    db.updateServiceMetadata(service.id || "", {
+    db.updateServiceMetadata(service.id!, {
       hasUpdate,
       ...(latestVersion !== undefined ? { latestVersion } : {}),
       updateCheckedAt: new Date().toISOString(),

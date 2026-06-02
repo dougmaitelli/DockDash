@@ -24,6 +24,8 @@ export interface ApiSuccess {
   success: boolean;
 }
 
+export type ContainerAction = "stop" | "start" | "restart";
+
 // ---------------------------------------------------------------------------
 // GET /api/docker/health
 // ---------------------------------------------------------------------------

@@ -230,7 +230,7 @@ export function sortSiblings(siblings: ServiceWithPosition[]): ServiceWithPositi
 
     if (tA !== tB) return tA < tB ? -1 : 1;
 
-    return (a.id || "") < (b.id || "") ? -1 : 1;
+    return a.id! < b.id! ? -1 : 1;
   });
 }
 

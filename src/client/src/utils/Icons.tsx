@@ -143,6 +143,22 @@ export function IconTerminal({ size = 14, ...props }: IconProps) {
   );
 }
 
+export function IconStop({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2)} fill="currentColor" stroke="none" {...props}>
+      <rect x="5" y="5" width="14" height="14" rx="1" />
+    </svg>
+  );
+}
+
+export function IconPlay({ size = 14, ...props }: IconProps) {
+  return (
+    <svg {...defaults(size, 2)} fill="currentColor" stroke="none" {...props}>
+      <polygon points="6,3 20,12 6,21" />
+    </svg>
+  );
+}
+
 export function IconGlobe({ size = 16, ...props }: IconProps) {
   return (
     <svg {...defaults(size, 1.8)} {...props}>
