@@ -1,5 +1,11 @@
 import type { ServiceWithPosition } from "./ServiceWithPosition.js";
 
+export enum ContainerAction {
+  STOP = "stop",
+  START = "start",
+  RESTART = "restart",
+}
+
 export enum ServiceSource {
   DOCKER = "docker",
   NETWORK = "network",

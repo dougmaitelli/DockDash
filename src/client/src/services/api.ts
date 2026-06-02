@@ -7,7 +7,6 @@ import type {
   ServiceStatusItem,
   ServiceHealthHistoryItem,
   DockerHostHealth,
-  DashboardConfig,
   ApiSuccess,
   ContainerAction,
   SavePositionsRequest,
@@ -23,7 +22,6 @@ const api = axios.create({
 // Discovery APIs
 export const discoveryApi = {
   dockerHealth: () => api.get<DockerHostHealth[]>("/docker/health"),
-  getConfig: () => api.get<DashboardConfig>("/config"),
   testNotification: () => api.post<ApiSuccess>("/notifications/test"),
 };
 

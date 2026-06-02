@@ -1,8 +1,8 @@
 import { useState, Fragment, useCallback } from "react";
 import styled, { keyframes } from "styled-components";
 import { useTranslation } from "react-i18next";
-import type { Service, ContainerAction } from "@shared";
-import { ServiceSource } from "@shared";
+import type { Service } from "@shared";
+import { ServiceSource, ContainerAction } from "@shared";
 import { colors } from "../../styles/vars";
 import {
   PrimaryButton,
@@ -19,6 +19,7 @@ import { HealthHistoryGraph } from "./HealthHistoryGraph";
 import { DockerLogs } from "./DockerLogs";
 import { Changelog } from "./Changelog";
 import { ContainerControls } from "./ContainerControls";
+import { useConfig } from "../../context/ConfigContext";
 
 const ANIM_MS = 220;
 
@@ -207,11 +208,12 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
   const [editCheckPort, setEditCheckPort] = useState(service.checkPort?.toString() ?? "");
   const [metadataExpanded, setMetadataExpanded] = useState(false);
 
+  const config = useConfig();
   const isDocker = service.source === ServiceSource.DOCKER;
   const [logsReconnectTrigger, setLogsReconnectTrigger] = useState(0);
 
   const handleContainerActionComplete = useCallback((action: ContainerAction) => {
-    if (action === "start" || action === "restart") {
+    if (action === ContainerAction.START || action === ContainerAction.RESTART) {
       setTimeout(() => setLogsReconnectTrigger((n) => n + 1), 500);
     }
   }, []);
@@ -280,7 +282,7 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
             <HeaderName>{service.name}</HeaderName>
             <HeaderId>{service.id}</HeaderId>
           </HeaderInfo>
-          {isDocker && (
+          {isDocker && config?.containerControlsEnabled && (
             <HeaderActions>
               <ContainerControls
                 service={service}

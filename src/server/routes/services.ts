@@ -4,13 +4,12 @@ import { healthCheckService } from "../services/healthCheckService.js";
 import { dockerService } from "../services/dockerService.js";
 import { notificationService } from "../services/notificationService.js";
 import { changelogService } from "../services/changelogService.js";
-import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
+import { ServiceSource, ServiceStatus, ServiceLinkType, ContainerAction } from "@shared";
 import { APP_NAME } from "../lib/constants.js";
 import { t } from "../i18n/index.js";
 import { config } from "../lib/config.js";
 import type {
   ApiSuccess,
-  ContainerAction,
   SavePositionsRequest,
   SavePositionsResponse,
   CheckAllServicesResponse,
@@ -196,10 +195,13 @@ router.get("/serviceStatuses", (_req, res) => {
 });
 
 router.post("/services/:id/container/:action", async (req, res) => {
-  const validActions: ContainerAction[] = ["stop", "start", "restart"];
+  if (!config.containerControlsEnabled) {
+    return res.status(403).json({ error: "Container controls are disabled" });
+  }
+
   const action = req.params.action as ContainerAction;
 
-  if (!validActions.includes(action)) {
+  if (!Object.values(ContainerAction).includes(action)) {
     return res.status(400).json({ error: "Invalid action" });
   }
 

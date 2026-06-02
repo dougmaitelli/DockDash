@@ -7,7 +7,7 @@ import { PrimaryButton, SecondaryButton, PortTag, Section, StyledInput } from ".
 import { TagArrayInput } from "../utils/TagArrayInput";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
-import { discoveryApi } from "../services/api";
+import { useConfig } from "../context/ConfigContext";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 const Page = styled.div`
@@ -120,6 +120,7 @@ export default function Discovery() {
   const { t } = useTranslation();
   const { services, refresh, importService } = useDiscovery();
   const { health } = useDockerHealth();
+  const appConfig = useConfig();
 
   const [scanningDocker, setScanningDocker] = useState(false);
   const [scanningNetwork, setScanningNetwork] = useState(false);
@@ -132,8 +133,10 @@ export default function Discovery() {
   const networkScanRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    discoveryApi.getConfig().then((res) => setCidrs(res.data.networkCidrs));
+    if (appConfig) setCidrs(appConfig.networkCidrs);
+  }, [appConfig]);
 
+  useEffect(() => {
     return () => {
       dockerScanRef.current?.close();
       networkScanRef.current?.close();

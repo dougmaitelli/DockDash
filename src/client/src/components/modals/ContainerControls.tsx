@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
-import type { Service, ContainerAction } from "@shared";
-import { ServiceStatus } from "@shared";
+import type { Service } from "@shared";
+import { ServiceStatus, ContainerAction } from "@shared";
 import { colors } from "../../styles/vars";
 import { IconStop, IconPlay, IconRefresh } from "../../utils/Icons";
 import { serviceApi } from "../../services/api";
@@ -96,21 +96,21 @@ export function ContainerControls({ service, onActionComplete }: ContainerContro
     <Wrap>
       <ButtonRow>
         <StopBtn
-          onClick={() => handleAction("stop")}
+          onClick={() => handleAction(ContainerAction.STOP)}
           disabled={activeAction !== null || service.status !== ServiceStatus.UP}
           title={t("modals.containerStop")}
         >
           <IconStop size={13} />
         </StopBtn>
         <StartBtn
-          onClick={() => handleAction("start")}
+          onClick={() => handleAction(ContainerAction.START)}
           disabled={activeAction !== null || service.status !== ServiceStatus.DOWN}
           title={t("modals.containerStart")}
         >
           <IconPlay size={13} />
         </StartBtn>
         <RestartBtn
-          onClick={() => handleAction("restart")}
+          onClick={() => handleAction(ContainerAction.RESTART)}
           disabled={activeAction !== null || service.status !== ServiceStatus.UP}
           title={t("modals.containerRestart")}
         >

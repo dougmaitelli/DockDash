@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { colors } from "../styles/vars";
 import { discoveryApi } from "../services/api";
 import { useTheme } from "../context/ThemeContext";
+import { useConfig } from "../context/ConfigContext";
 import { themeSelections } from "../styles/themes";
 import type { ThemeSelection } from "../styles/themes";
-import type { DashboardConfig } from "@shared";
 import { StyledSelect, Section, SecondaryButton } from "../utils/ui";
 
 const Page = styled.div`
@@ -82,7 +82,7 @@ type TestState = "idle" | "sending" | "sent" | "failed";
 
 export default function Settings() {
   const { t } = useTranslation();
-  const [config, setConfig] = useState<DashboardConfig | null>(null);
+  const config = useConfig();
   const [testState, setTestState] = useState<TestState>("idle");
   const [testError, setTestError] = useState<string | null>(null);
   const { theme, setTheme } = useTheme();
@@ -103,10 +103,6 @@ export default function Settings() {
       setTimeout(() => setTestState("idle"), 5000);
     }
   };
-
-  useEffect(() => {
-    discoveryApi.getConfig().then((res) => setConfig(res.data));
-  }, []);
 
   return (
     <Page>

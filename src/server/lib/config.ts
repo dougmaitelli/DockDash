@@ -97,6 +97,10 @@ class Config {
     return process.env.GITHUB_TOKEN || null;
   }
 
+  get containerControlsEnabled(): boolean {
+    return process.env.DISABLE_CONTAINER_CONTROLS !== "true";
+  }
+
   get locale(): string {
     return process.env.LOCALE || "en";
   }
