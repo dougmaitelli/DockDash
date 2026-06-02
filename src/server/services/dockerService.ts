@@ -2,6 +2,7 @@ import Docker from "dockerode";
 import { v4 as uuidv4 } from "uuid";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { config } from "../lib/config.js";
+import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 
 export type ContainerStateMap = Map<string, { state: string; imageTag: string }>;
 
@@ -134,7 +135,7 @@ export class DockerService {
       return { image: segments.join("/"), tag: lastSegment.slice(colonIdx + 1) };
     }
 
-    return { image: withoutDigest, tag: "latest" };
+    return { image: withoutDigest, tag: DOCKER_LATEST_TAG };
   }
 }
 

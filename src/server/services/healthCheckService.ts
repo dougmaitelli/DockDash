@@ -10,6 +10,7 @@ import {
   type ContainerStateMap,
 } from "./dockerService.js";
 import { notificationService } from "./notificationService.js";
+import { UpdateCheckerService } from "./updateCheckerService.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -50,7 +51,25 @@ export class HealthCheckService {
         }
 
         if (containerInfo) {
-          db.updateServiceMetadata(service.id || "", { imageTag: containerInfo.imageTag });
+          const prevTag = service.metadata?.imageTag as string | undefined;
+          const newTag = containerInfo.imageTag;
+          const hasUpdate = service.metadata?.hasUpdate as boolean | undefined;
+          const latestVersion = service.metadata?.latestVersion as string | undefined;
+
+          const patch: Record<string, string | number | boolean | string[] | number[]> = {
+            imageTag: newTag,
+          };
+
+          if (
+            hasUpdate &&
+            newTag !== prevTag &&
+            UpdateCheckerService.isUpdateApplied(newTag, latestVersion)
+          ) {
+            patch.hasUpdate = false;
+            patch.latestVersion = "";
+          }
+
+          db.updateServiceMetadata(service.id || "", patch);
         }
       }
 

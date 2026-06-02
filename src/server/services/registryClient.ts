@@ -1,4 +1,5 @@
 import axios from "axios";
+import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 
 // Accept header that prefers manifest lists (multi-arch) over single-platform manifests.
 // The digest from a manifest list is the stable "pull digest" shown by `docker pull`.
@@ -35,7 +36,7 @@ export class RegistryClient {
     const lastSegment = segments[segments.length - 1];
     const colonIdx = lastSegment.lastIndexOf(":");
 
-    let tag = "latest";
+    let tag = DOCKER_LATEST_TAG;
 
     if (colonIdx >= 0) {
       segments[segments.length - 1] = lastSegment.slice(0, colonIdx);

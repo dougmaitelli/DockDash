@@ -1,6 +1,7 @@
 import { ServiceProtocol } from "@shared";
 
 export const USER_AGENT = "DockDash/1.0";
+export const DOCKER_LATEST_TAG = "latest";
 
 export interface PortInfo {
   protocol: ServiceProtocol;

@@ -4,6 +4,7 @@ import { ServiceSource } from "@shared";
 import { dockerService } from "./dockerService.js";
 import { registryClient } from "./registryClient.js";
 import { notificationService } from "./notificationService.js";
+import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 
 // ---------------------------------------------------------------------------
 // SemVer helpers
@@ -48,7 +49,7 @@ export class UpdateCheckerService {
     }
   }
 
-  private extractSemVer(tag: string): ParsedTag | null {
+  static extractSemVer(tag: string): ParsedTag | null {
     const match = SEMVER_RE.exec(tag);
 
     if (!match) return null;
@@ -61,7 +62,7 @@ export class UpdateCheckerService {
     return { version, prefix, suffix, parts };
   }
 
-  private compareSemVer(a: number[], b: number[]): number {
+  static compareSemVer(a: number[], b: number[]): number {
     for (let i = 0; i < Math.max(a.length, b.length); i++) {
       const diff = (a[i] ?? 0) - (b[i] ?? 0);
 
@@ -69,6 +70,17 @@ export class UpdateCheckerService {
     }
 
     return 0;
+  }
+
+  static isUpdateApplied(newTag: string, latestVersion: string | undefined): boolean {
+    const newParsed = UpdateCheckerService.extractSemVer(newTag);
+    const latestParsed = latestVersion ? UpdateCheckerService.extractSemVer(latestVersion) : null;
+
+    return (
+      !newParsed ||
+      !latestParsed ||
+      UpdateCheckerService.compareSemVer(newParsed.parts, latestParsed.parts) >= 0
+    );
   }
 
   /**
@@ -104,7 +116,7 @@ export class UpdateCheckerService {
     let latestVersion: string | undefined;
 
     try {
-      if (imageTag === "latest") {
+      if (imageTag === DOCKER_LATEST_TAG) {
         const [localDigest, registryDigest] = await Promise.all([
           this.getLocalImageDigest(docker, containerId),
           registryClient.getManifestDigest(ref),
@@ -119,7 +131,7 @@ export class UpdateCheckerService {
           latestVersion = `newer digest (${registryDigest.slice(7, 19)}…)`;
         }
       } else {
-        const parsed = this.extractSemVer(imageTag);
+        const parsed = UpdateCheckerService.extractSemVer(imageTag);
 
         if (!parsed) return; // Non-SemVer tag, nothing to compare
 
@@ -133,14 +145,14 @@ export class UpdateCheckerService {
         for (const tag of allTags) {
           if (!tag.startsWith(parsed.prefix) || !tag.endsWith(parsed.suffix)) continue;
 
-          const candidate = this.extractSemVer(tag);
+          const candidate = UpdateCheckerService.extractSemVer(tag);
 
           if (!candidate) continue;
 
           // Ensure prefix and suffix match exactly (not just startsWith/endsWith)
           if (candidate.prefix !== parsed.prefix || candidate.suffix !== parsed.suffix) continue;
 
-          if (this.compareSemVer(candidate.parts, highestParts) > 0) {
+          if (UpdateCheckerService.compareSemVer(candidate.parts, highestParts) > 0) {
             highestParts = candidate.parts;
             highestTag = tag;
           }
