@@ -41,12 +41,11 @@ export const SecondaryButton = styled(ActionButton)`
 `;
 
 export const DangerButton = styled(ActionButton)`
-  background: transparent;
-  border: 1px solid ${colors.border};
-  color: ${colors.accentRed};
+  background: ${colors.accentRed};
+  color: white;
 
   &:hover:not(:disabled) {
-    border-color: ${colors.accentRed};
+    background: ${colors.accentRedDark};
   }
 `;
 
