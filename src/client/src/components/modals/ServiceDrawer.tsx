@@ -358,17 +358,17 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
           </Body>
         )}
 
-        <Footer>
-          <DangerButton onClick={() => setConfirmingDelete(true)}>
-            {t("modals.delete")}
-          </DangerButton>
-          {tab === "details" && (
+        {tab === "details" && (
+          <Footer>
+            <DangerButton onClick={() => setConfirmingDelete(true)}>
+              {t("modals.delete")}
+            </DangerButton>
             <FooterRight>
               <SecondaryButton onClick={dismiss}>{t("modals.cancel")}</SecondaryButton>
               <PrimaryButton onClick={handleSave}>{t("modals.save")}</PrimaryButton>
             </FooterRight>
-          )}
-        </Footer>
+          </Footer>
+        )}
       </Drawer>
     </>
   );
