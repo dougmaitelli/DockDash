@@ -85,8 +85,8 @@ export class NetworkScanner {
           checkPort: primary?.port,
           source: ServiceSource.NETWORK,
           status: ServiceStatus.UP,
-          created_at: now,
-          updated_at: now,
+          createdAt: now,
+          updatedAt: now,
         },
       ];
     }

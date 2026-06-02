@@ -45,13 +45,13 @@ export function NodeLayer({
   onNodeMouseEnter,
   onNodeMouseLeave,
 }: NodeLayerProps) {
-  const rootServices = useMemo(() => services.filter((s) => !s.position?.parent_id), [services]);
+  const rootServices = useMemo(() => services.filter((s) => !s.position?.parentId), [services]);
 
   const childrenByParent = useMemo(() => {
     const map: Record<string, ServiceWithPosition[]> = {};
 
     for (const s of services) {
-      const pid = s.position?.parent_id;
+      const pid = s.position?.parentId;
 
       if (pid) {
         if (!map[pid]) map[pid] = [];
@@ -62,8 +62,8 @@ export function NodeLayer({
 
     for (const pid of Object.keys(map)) {
       map[pid].sort((a, b) => {
-        const tA = a.created_at || "";
-        const tB = b.created_at || "";
+        const tA = a.createdAt || "";
+        const tB = b.createdAt || "";
 
         if (tA !== tB) return tA < tB ? -1 : 1;
 

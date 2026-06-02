@@ -42,7 +42,7 @@ export const serviceApi = {
 
 // Link management APIs
 export const linkApi = {
-  create: (data: Omit<ServiceLink, "id" | "created_at">) => api.post<ServiceLink>("/links", data),
+  create: (data: Omit<ServiceLink, "id" | "createdAt">) => api.post<ServiceLink>("/links", data),
   update: (
     id: string,
     data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,

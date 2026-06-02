@@ -95,8 +95,8 @@ export class DockerService {
           imageTag,
           networkNames: networkNames,
         },
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       };
     }
   }

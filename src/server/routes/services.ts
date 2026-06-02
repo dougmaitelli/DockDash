@@ -39,6 +39,7 @@ router.post("/services", (req, res) => {
     return res.status(400).json({ error: "name and host are required" });
   }
 
+  const now = new Date().toISOString();
   const service = db.upsertService({
     name,
     host,
@@ -47,8 +48,8 @@ router.post("/services", (req, res) => {
     source: source || ServiceSource.NETWORK,
     status: status || ServiceStatus.UNKNOWN,
     metadata: metadata || {},
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   });
 
   healthCheckService.checkSingleService(service.id!);
@@ -91,20 +92,20 @@ router.delete("/services/:id", (req, res) => {
 
 // Create link
 router.post("/links", (req, res) => {
-  const { source_id, target_id, label, type, description, targetPort, protocol } = req.body;
+  const { sourceId, targetId, label, type, description, targetPort, protocol } = req.body;
 
-  if (!source_id || !target_id) {
-    return res.status(400).json({ error: "source_id and target_id are required" });
+  if (!sourceId || !targetId) {
+    return res.status(400).json({ error: "source and target are required" });
   }
 
-  if (source_id === target_id) {
+  if (sourceId === targetId) {
     return res.status(400).json({ error: "source and target cannot be the same" });
   }
 
   try {
     const link = db.saveLink({
-      source_id,
-      target_id,
+      sourceId,
+      targetId,
       label: label || "",
       type: type || ServiceLinkType.COMMUNICATION,
       description: description || "",
@@ -151,7 +152,7 @@ router.post("/positions", (req, res) => {
   const { positions } = req.body as SavePositionsRequest;
 
   for (const p of positions) {
-    db.saveServicePosition(p.service_id, p.x, p.y, p.parent_id);
+    db.saveServicePosition(p.serviceId, p.x, p.y, p.parentId);
   }
 
   const response: SavePositionsResponse = { positions: db.getServicePositions() };

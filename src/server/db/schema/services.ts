@@ -1,5 +1,6 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+import type { ServiceMetadata, ServiceStatus, ServiceSource } from "@shared";
 
 export const services = sqliteTable("services", {
   id: text("id").primaryKey(),
@@ -10,10 +11,11 @@ export const services = sqliteTable("services", {
     .notNull()
     .default(sql`'[]'`),
   checkPort: integer("check_port"),
-  source: text("source").notNull().default("docker"),
-  status: text("status").notNull().default("unknown"),
+  source: text("source").$type<ServiceSource>().notNull().default("docker"),
+  status: text("status").$type<ServiceStatus>().notNull().default("unknown"),
   metadata: text("metadata", { mode: "json" })
-    .$type<Record<string, string | number | boolean | string[] | number[]>>()
+    .$type<ServiceMetadata>()
+    .notNull()
     .default(sql`'{}'`),
   createdAt: text("created_at")
     .notNull()

@@ -18,44 +18,6 @@ import type {
 
 const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 
-// Map Drizzle row → Service (camelCase timestamps → snake_case to match the shared interface)
-function toService(row: typeof services.$inferSelect): Service {
-  return {
-    ...row,
-    ports: row.ports ?? [],
-    metadata: row.metadata ?? undefined,
-    created_at: row.createdAt,
-    updated_at: row.updatedAt,
-  } as unknown as Service;
-}
-
-// Map Drizzle row → ServicePosition
-function toPosition(row: typeof servicePositions.$inferSelect): ServicePosition {
-  return { service_id: row.serviceId, x: row.x, y: row.y, parent_id: row.parentId };
-}
-
-// Map Drizzle row → ServiceLink
-function toLink(
-  row: typeof serviceLinks.$inferSelect & {
-    source_name?: string | null;
-    target_name?: string | null;
-  },
-): ServiceLink {
-  return {
-    id: row.id,
-    source_id: row.sourceId,
-    source_name: row.source_name ?? undefined,
-    target_id: row.targetId,
-    target_name: row.target_name ?? undefined,
-    label: row.label ?? "",
-    type: row.type as ServiceLink["type"],
-    description: row.description ?? "",
-    targetPort: row.targetPort ?? null,
-    protocol: (row.protocol as ServiceLink["protocol"]) ?? null,
-    created_at: row.createdAt,
-  };
-}
-
 export class DatabaseService {
   private static instance: DatabaseService | null = null;
   private readonly orm: ReturnType<typeof drizzle>;
@@ -109,7 +71,7 @@ export class DatabaseService {
       })
       .run();
 
-    return { ...service, id, created_at: now, updated_at: now };
+    return { ...service, id, createdAt: now, updatedAt: now };
   }
 
   updateService(
@@ -137,10 +99,7 @@ export class DatabaseService {
     return this.getService(id)!;
   }
 
-  updateServiceMetadata(
-    id: string,
-    patch: Record<string, string | number | boolean | string[] | number[]>,
-  ): void {
+  updateServiceMetadata(id: string, patch: Partial<ServiceMetadata>): void {
     const service = this.getService(id);
 
     if (!service) return;
@@ -164,13 +123,13 @@ export class DatabaseService {
   }
 
   getServices(): Service[] {
-    return this.orm.select().from(services).orderBy(asc(services.name)).all().map(toService);
+    return this.orm.select().from(services).orderBy(asc(services.name)).all();
   }
 
   getService(id: string): Service | undefined {
     const row = this.orm.select().from(services).where(eq(services.id, id)).get();
 
-    return row ? toService(row) : undefined;
+    return row ?? undefined;
   }
 
   deleteService(id: string): void {
@@ -189,7 +148,7 @@ export class DatabaseService {
   }
 
   getServicePositions(): ServicePosition[] {
-    return this.orm.select().from(servicePositions).all().map(toPosition);
+    return this.orm.select().from(servicePositions).all();
   }
 
   getLinks(): ServiceLink[] {
@@ -199,18 +158,17 @@ export class DatabaseService {
     return this.orm
       .select({
         ...getTableColumns(serviceLinks),
-        source_name: source.name,
-        target_name: target.name,
+        sourceName: source.name,
+        targetName: target.name,
       })
       .from(serviceLinks)
       .innerJoin(source, eq(serviceLinks.sourceId, source.id))
       .innerJoin(target, eq(serviceLinks.targetId, target.id))
       .orderBy(desc(serviceLinks.createdAt))
-      .all()
-      .map(toLink);
+      .all();
   }
 
-  saveLink(link: Omit<ServiceLink, "id" | "created_at">): ServiceLink {
+  saveLink(link: Omit<ServiceLink, "id" | "createdAt">): ServiceLink {
     const id = uuidv4();
     const now = new Date().toISOString();
 
@@ -218,8 +176,8 @@ export class DatabaseService {
       .insert(serviceLinks)
       .values({
         id,
-        sourceId: link.source_id,
-        targetId: link.target_id,
+        sourceId: link.sourceId,
+        targetId: link.targetId,
         label: link.label,
         type: link.type,
         description: link.description,
@@ -234,7 +192,7 @@ export class DatabaseService {
       throw new Error("A link between these two services already exists");
     }
 
-    return { ...link, id, created_at: now };
+    return { ...link, id, createdAt: now };
   }
 
   updateLink(
@@ -255,9 +213,7 @@ export class DatabaseService {
 
     if (result.changes === 0) throw new Error("Link not found");
 
-    const row = this.orm.select().from(serviceLinks).where(eq(serviceLinks.id, id)).get()!;
-
-    return toLink(row);
+    return this.orm.select().from(serviceLinks).where(eq(serviceLinks.id, id)).get()!;
   }
 
   deleteLink(id: string): void {
@@ -270,13 +226,12 @@ export class DatabaseService {
       .from(serviceLinks)
       .where(or(eq(serviceLinks.sourceId, serviceId), eq(serviceLinks.targetId, serviceId)))
       .orderBy(desc(serviceLinks.createdAt))
-      .all()
-      .map(toLink);
+      .all();
   }
 
   getDashboardData(): DashboardData {
     const allServices = this.getServices();
-    const positionMap = new Map(this.getServicePositions().map((p) => [p.service_id, p]));
+    const positionMap = new Map(this.getServicePositions().map((p) => [p.serviceId, p]));
     const links = this.getLinks();
 
     return {
@@ -290,9 +245,15 @@ export class DatabaseService {
 
   getServiceStatuses(): ServiceStatusItem[] {
     return this.orm
-      .select({ id: services.id, status: services.status })
+      .select({ id: services.id, status: services.status, metadata: services.metadata })
       .from(services)
-      .all() as ServiceStatusItem[];
+      .all()
+      .map((row) => ({
+        id: row.id,
+        status: row.status,
+        hasUpdate: row.metadata?.hasUpdate,
+        latestVersion: row.metadata?.latestVersion,
+      }));
   }
 
   addHealthHistory(serviceId: string, status: ServiceStatus): void {
@@ -315,7 +276,7 @@ export class DatabaseService {
       )
       .orderBy(asc(serviceHealthHistory.checkedAt))
       .all()
-      .map((row) => ({ status: row.status as ServiceStatus, checked_at: row.checkedAt }));
+      .map((row) => ({ status: row.status, checked_at: row.checkedAt }));
   }
 
   cleanOldHistory(ttlDays: number): number {

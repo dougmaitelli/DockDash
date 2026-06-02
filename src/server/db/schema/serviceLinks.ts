@@ -1,6 +1,7 @@
 import { sqliteTable, text, integer, index, uniqueIndex, check } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 import { services } from "./services.js";
+import type { ServiceLinkType, ServiceProtocol } from "@shared";
 
 export const serviceLinks = sqliteTable(
   "service_links",
@@ -13,10 +14,10 @@ export const serviceLinks = sqliteTable(
       .notNull()
       .references(() => services.id, { onDelete: "cascade" }),
     label: text("label").default(""),
-    type: text("type").default("communication"),
+    type: text("type").$type<ServiceLinkType>().notNull().default("communication"),
     description: text("description").default(""),
     targetPort: integer("target_port"),
-    protocol: text("protocol"),
+    protocol: text("protocol").$type<ServiceProtocol>(),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(datetime('now'))`),

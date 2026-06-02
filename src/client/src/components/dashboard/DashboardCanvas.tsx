@@ -43,7 +43,7 @@ interface DashboardCanvasProps {
     id: string,
     data: Pick<Service, "name" | "host" | "ports" | "checkPort">,
   ) => Promise<void>;
-  addLink: (data: Omit<ServiceLink, "id" | "created_at">) => Promise<void>;
+  addLink: (data: Omit<ServiceLink, "id" | "createdAt">) => Promise<void>;
   updateLink: (
     id: string,
     data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
@@ -125,13 +125,13 @@ function findNestTarget(
   for (const svc of services) {
     if (svc.id === draggedId || !svc.id) continue;
 
-    if (svc.position?.parent_id) continue; // can't nest into a child
+    if (svc.position?.parentId) continue; // can't nest into a child
 
     const { x: svcX, y: svcY } = getAbsoluteNodePosition(svc, services, {});
 
     // Existing children (excluding the dragged node itself in case it's re-nesting)
     const currentChildren = services.filter(
-      (s) => s.position?.parent_id === svc.id && s.id !== draggedId,
+      (s) => s.position?.parentId === svc.id && s.id !== draggedId,
     );
 
     if (currentChildren.length > 0) {
@@ -367,9 +367,9 @@ export function DashboardCanvas({
       setDragOffsets((prev) => ({ ...prev, [draggedId]: { dx, dy } }));
 
       // Show nesting indicator: only for root nodes without children
-      const draggedHasChildren = services.some((s) => s.position?.parent_id === draggedId);
+      const draggedHasChildren = services.some((s) => s.position?.parentId === draggedId);
       const draggedService = services.find((s) => s.id === draggedId);
-      const isChild = draggedService?.position?.parent_id != null;
+      const isChild = draggedService?.position?.parentId != null;
 
       if (!draggedHasChildren && !isChild) {
         const currentAbsX = nodeX + dx;
@@ -396,8 +396,8 @@ export function DashboardCanvas({
       setNestingTarget(null);
 
       const draggedService = services.find((s) => s.id === draggedId);
-      const draggedHasChildren = services.some((s) => s.position?.parent_id === draggedId);
-      const currentParentId = draggedService?.position?.parent_id ?? null;
+      const draggedHasChildren = services.some((s) => s.position?.parentId === draggedId);
+      const currentParentId = draggedService?.position?.parentId ?? null;
 
       let newX = finalAbsX;
       let newY = finalAbsY;
@@ -411,7 +411,7 @@ export function DashboardCanvas({
         if (parent) {
           const { x: parentX, y: parentY } = getAbsoluteNodePosition(parent, services, {});
           const childCount = services.filter(
-            (s) => s.position?.parent_id === currentParentId,
+            (s) => s.position?.parentId === currentParentId,
           ).length;
           const { w: groupW, h: groupH } = computeGroupDimensions(childCount);
           const cx = finalAbsX + NODE_WIDTH / 2;
@@ -533,14 +533,14 @@ export function DashboardCanvas({
     const handleMouseUp = async (_e: MouseEvent) => {
       if (connectingTarget && connectingSource && connectingTarget !== connectingSource.serviceId) {
         const alreadyLinked = links.some(
-          (l) => l.source_id === connectingSource.serviceId && l.target_id === connectingTarget,
+          (l) => l.sourceId === connectingSource.serviceId && l.targetId === connectingTarget,
         );
 
         if (!alreadyLinked) {
           try {
             await addLink({
-              source_id: connectingSource.serviceId,
-              target_id: connectingTarget,
+              sourceId: connectingSource.serviceId,
+              targetId: connectingTarget,
               label: "",
               type: ServiceLinkType.COMMUNICATION,
               description: "",

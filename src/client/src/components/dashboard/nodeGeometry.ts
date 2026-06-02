@@ -22,7 +22,7 @@ export function getAbsoluteNodePosition(
   const pos = service.position;
   const offset = dragOffsets[service.id!] || { dx: 0, dy: 0 };
 
-  if (!pos?.parent_id) {
+  if (!pos?.parentId) {
     if (pos) {
       return { x: pos.x + offset.dx, y: pos.y + offset.dy };
     }
@@ -38,7 +38,7 @@ export function getAbsoluteNodePosition(
     return { x: 100 + col * 280 + offset.dx, y: 120 + row * 200 + offset.dy };
   }
 
-  const parent = allServices.find((s) => s.id === pos.parent_id);
+  const parent = allServices.find((s) => s.id === pos.parentId);
 
   if (!parent) {
     return { x: pos.x + offset.dx, y: pos.y + offset.dy };
@@ -53,7 +53,7 @@ export function getAbsoluteNodePosition(
   // DOM offsets are drag-free and we add offset.dx/dy explicitly.
   const childEl = document.querySelector(`[data-service-id="${service.id}"]`) as HTMLElement | null;
   const parentEl = document.querySelector(
-    `[data-service-id="${pos.parent_id}"]`,
+    `[data-service-id="${pos.parentId}"]`,
   ) as HTMLElement | null;
 
   if (childEl && parentEl?.offsetParent) {
@@ -77,7 +77,7 @@ export function getAbsoluteNodePosition(
   }
 
   // Fallback when DOM isn't available yet (e.g. first render before mount)
-  const siblings = sortSiblings(allServices.filter((s) => s.position?.parent_id === pos.parent_id));
+  const siblings = sortSiblings(allServices.filter((s) => s.position?.parentId === pos.parentId));
   const idx = siblings.findIndex((s) => s.id === service.id);
 
   if (idx === -1) {
@@ -126,7 +126,7 @@ function getParentInfoSectionCenterY(
   services: ServiceWithPosition[],
   dragOffsets: Record<string, { dx: number; dy: number }>,
 ): number | null {
-  const isParent = services.some((s) => s.position?.parent_id === serviceId);
+  const isParent = services.some((s) => s.position?.parentId === serviceId);
 
   if (!isParent) return null;
 
@@ -225,8 +225,8 @@ export function childGridPosition(index: number, total: number): { x: number; y:
 
 export function sortSiblings(siblings: ServiceWithPosition[]): ServiceWithPosition[] {
   return [...siblings].sort((a, b) => {
-    const tA = a.created_at || "";
-    const tB = b.created_at || "";
+    const tA = a.createdAt || "";
+    const tB = b.createdAt || "";
 
     if (tA !== tB) return tA < tB ? -1 : 1;
 
@@ -246,10 +246,10 @@ export function getChildForcedSide(
 ): PortSide | null {
   const service = services.find((s) => s.id === serviceId);
 
-  if (!service?.position?.parent_id) return null;
+  if (!service?.position?.parentId) return null;
 
   const siblings = sortSiblings(
-    services.filter((s) => s.position?.parent_id === service.position!.parent_id),
+    services.filter((s) => s.position?.parentId === service.position!.parentId),
   );
 
   const cols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(siblings.length))));

@@ -1,4 +1,4 @@
-import { ServiceSource, ServiceStatus } from "./shared.js";
+import { ServiceSource, ServiceStatus, ServiceMetadata } from "./shared.js";
 
 export class Service {
   id?: string;
@@ -8,15 +8,15 @@ export class Service {
   checkPort?: number | null;
   source!: ServiceSource;
   status: ServiceStatus = ServiceStatus.UNKNOWN;
-  metadata?: Record<string, string | number | boolean | string[] | number[]>;
-  created_at: string;
-  updated_at: string;
+  metadata?: ServiceMetadata;
+  createdAt: string;
+  updatedAt: string;
 
   constructor() {
     const now = new Date().toISOString();
 
-    this.created_at = now;
-    this.updated_at = now;
+    this.createdAt = now;
+    this.updatedAt = now;
   }
 
   static equals(a: Service, b: Service): boolean {

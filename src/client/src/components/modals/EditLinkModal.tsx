@@ -106,9 +106,9 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span>{link.source_name || link.source_id}</span>
+            <span>{link.sourceName || link.sourceId}</span>
             <IconArrowRight size={14} style={{ color: getLinkColor(link.type), flexShrink: 0 }} />
-            <span>{link.target_name || link.target_id}</span>
+            <span>{link.targetName || link.targetId}</span>
           </div>
           {link.label && (
             <div style={{ marginTop: 4, fontSize: "0.8rem", color: colors.textMuted }}>

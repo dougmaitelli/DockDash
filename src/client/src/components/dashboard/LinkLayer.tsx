@@ -33,8 +33,8 @@ export function LinkLayer({
   const linkPaths = useMemo<LinkPath[]>(() => {
     return links
       .map((link) => {
-        const srcCenter = getNodeCenter(link.source_id, services, dragOffsets);
-        const tgtCenter = getNodeCenter(link.target_id, services, dragOffsets);
+        const srcCenter = getNodeCenter(link.sourceId, services, dragOffsets);
+        const tgtCenter = getNodeCenter(link.targetId, services, dragOffsets);
 
         if (!srcCenter || !tgtCenter) return null;
 
@@ -43,19 +43,19 @@ export function LinkLayer({
         const tx = tgtCenter.x * zoomLevel + panOffset.x;
         const ty = tgtCenter.y * zoomLevel + panOffset.y;
 
-        const srcParentId = services.find((s) => s.id === link.source_id)?.position?.parent_id;
-        const tgtParentId = services.find((s) => s.id === link.target_id)?.position?.parent_id;
+        const srcParentId = services.find((s) => s.id === link.sourceId)?.position?.parentId;
+        const tgtParentId = services.find((s) => s.id === link.targetId)?.position?.parentId;
         const areSiblings = srcParentId && tgtParentId && srcParentId === tgtParentId;
 
         const flipSide = (side: PortSide | null): PortSide | null =>
           side === "left" ? "right" : side === "right" ? "left" : side;
 
         const srcForced = areSiblings
-          ? flipSide(getChildForcedSide(link.source_id, services))
-          : getChildForcedSide(link.source_id, services);
+          ? flipSide(getChildForcedSide(link.sourceId, services))
+          : getChildForcedSide(link.sourceId, services);
         const tgtForced = areSiblings
-          ? flipSide(getChildForcedSide(link.target_id, services))
-          : getChildForcedSide(link.target_id, services);
+          ? flipSide(getChildForcedSide(link.targetId, services))
+          : getChildForcedSide(link.targetId, services);
 
         let exitSide: PortSide | null = srcForced;
         let entrySide: PortSide | null = tgtForced;
@@ -74,8 +74,8 @@ export function LinkLayer({
           }
         }
 
-        const srcPort = getPortPosition(link.source_id, exitSide!, services, dragOffsets);
-        const tgtPort = getPortPosition(link.target_id, entrySide!, services, dragOffsets);
+        const srcPort = getPortPosition(link.sourceId, exitSide!, services, dragOffsets);
+        const tgtPort = getPortPosition(link.targetId, entrySide!, services, dragOffsets);
 
         if (!srcPort || !tgtPort) return null;
 

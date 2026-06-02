@@ -1,6 +1,7 @@
 import { sqliteTable, text, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 import { services } from "./services.js";
+import type { ServiceStatus } from "@shared";
 
 export const serviceHealthHistory = sqliteTable(
   "service_health_history",
@@ -9,7 +10,7 @@ export const serviceHealthHistory = sqliteTable(
     serviceId: text("service_id")
       .notNull()
       .references(() => services.id, { onDelete: "cascade" }),
-    status: text("status").notNull(),
+    status: text("status").$type<ServiceStatus>().notNull(),
     checkedAt: text("checked_at")
       .notNull()
       .default(sql`(datetime('now'))`),

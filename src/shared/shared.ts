@@ -35,27 +35,29 @@ export enum ServiceLinkType {
 export interface ServiceStatusItem {
   id: string;
   status: ServiceStatus;
+  hasUpdate?: boolean;
+  latestVersion?: string;
 }
 
 export interface ServicePosition {
-  service_id: string;
+  serviceId: string;
   x: number;
   y: number;
-  parent_id?: string | null;
+  parentId?: string | null;
 }
 
 export interface ServiceLink {
   id: string;
-  source_id: string;
-  source_name?: string;
-  target_id: string;
-  target_name?: string;
-  label: string;
+  sourceId: string;
+  sourceName?: string | null;
+  targetId: string;
+  targetName?: string | null;
+  label: string | null;
   type: ServiceLinkType;
-  description: string;
+  description: string | null;
   targetPort?: number | null;
   protocol?: ServiceProtocol | null;
-  created_at: string;
+  createdAt: string;
 }
 
 export interface DashboardData {
@@ -68,11 +70,14 @@ export interface ServiceHealthHistoryItem {
   checked_at: string;
 }
 
-/** Stored inside service.metadata for Docker services once an update check has run. */
-export interface ServiceUpdateInfo {
-  hasUpdate: boolean;
-  /** Tag name (SemVer case) or short digest string ("latest" case) */
+export interface ServiceMetadata {
+  containerId?: string;
+  containerName?: string;
+  dockerHost?: string;
+  image?: string;
+  imageTag?: string;
+  hasUpdate?: boolean;
   latestVersion?: string;
-  /** ISO timestamp of the last update check */
   updateCheckedAt?: string;
+  [key: string]: string | number | boolean | string[] | number[] | undefined;
 }
