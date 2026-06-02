@@ -251,8 +251,11 @@ export class DatabaseService {
       .map((row) => ({
         id: row.id,
         status: row.status,
-        hasUpdate: row.metadata?.hasUpdate,
-        latestVersion: row.metadata?.latestVersion,
+        metadata: {
+          imageTag: row.metadata?.imageTag,
+          hasUpdate: row.metadata?.hasUpdate,
+          latestVersion: row.metadata?.latestVersion,
+        },
       }));
   }
 

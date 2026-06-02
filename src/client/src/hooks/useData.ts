@@ -220,15 +220,8 @@ export function useDashboard() {
 
     if (!item) return s;
 
-    return {
-      ...s,
-      status: item.status ?? s.status,
-      metadata: {
-        ...s.metadata,
-        ...(item.hasUpdate !== undefined && { hasUpdate: item.hasUpdate }),
-        ...(item.latestVersion !== undefined && { latestVersion: item.latestVersion }),
-      },
-    };
+    const { id: _id, ...updates } = item;
+    return { ...s, ...updates, metadata: { ...s.metadata, ...updates.metadata } };
   });
 
   return {

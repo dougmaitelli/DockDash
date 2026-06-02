@@ -35,8 +35,7 @@ export enum ServiceLinkType {
 export interface ServiceStatusItem {
   id: string;
   status: ServiceStatus;
-  hasUpdate?: boolean;
-  latestVersion?: string;
+  metadata?: Partial<ServiceMetadata>;
 }
 
 export interface ServicePosition {
