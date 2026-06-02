@@ -27,13 +27,29 @@ export class UpdateCheckerService {
       servicesByHost.get(host)!.push(service);
     }
 
+    const newUpdates: { name: string; latestVersion?: string }[] = [];
+
     for (const [host, hostServices] of servicesByHost) {
       const docker = dockerService.createDockerClientForHost(host);
 
       for (const service of hostServices) {
-        await this.checkServiceForUpdate(service, docker);
+        const update = await this.checkServiceForUpdate(service, docker);
+
+        if (update) newUpdates.push(update);
       }
     }
+
+    if (newUpdates.length === 0) return;
+
+    const title = newUpdates.length === 1 ? `⚠️ Update Available` : `⚠️ Updates Available`;
+
+    const body = newUpdates
+      .map(({ name, latestVersion }) =>
+        latestVersion ? `• ${name}: ${latestVersion}` : `• ${name}: newer digest available`,
+      )
+      .join("\n");
+
+    notificationService.notify(title, body, "warning").catch(() => {});
   }
 
   /**
@@ -56,12 +72,15 @@ export class UpdateCheckerService {
     }
   }
 
-  private async checkServiceForUpdate(service: Service, docker: Docker): Promise<void> {
+  private async checkServiceForUpdate(
+    service: Service,
+    docker: Docker,
+  ): Promise<{ name: string; latestVersion?: string } | null> {
     const containerId = service.metadata?.containerId as string | undefined;
     const image = service.metadata?.image as string | undefined;
     const imageTag = service.metadata?.imageTag as string | undefined;
 
-    if (!containerId || !image || !imageTag) return;
+    if (!containerId || !image || !imageTag) return null;
 
     const ref = registryClient.parseImageRef(`${image}:${imageTag}`);
 
@@ -75,7 +94,7 @@ export class UpdateCheckerService {
           registryClient.getManifestDigest(ref),
         ]);
 
-        if (!localDigest || !registryDigest) return;
+        if (!localDigest || !registryDigest) return null;
 
         hasUpdate = localDigest !== registryDigest;
 
@@ -86,11 +105,11 @@ export class UpdateCheckerService {
       } else {
         const parsed = TagParser.extractSemVer(imageTag);
 
-        if (!parsed) return; // Non-SemVer tag, nothing to compare
+        if (!parsed) return null; // Non-SemVer tag, nothing to compare
 
         const allTags = await registryClient.getRepositoryTags(ref, parsed.prefix);
 
-        if (allTags.length === 0) return; // Can't determine — preserve existing status
+        if (allTags.length === 0) return null; // Can't determine — preserve existing status
 
         let highestParts = parsed.parts;
         let highestTag: string | undefined;
@@ -122,7 +141,7 @@ export class UpdateCheckerService {
         err instanceof Error ? err.message : String(err),
       );
 
-      return;
+      return null;
     }
 
     const previousHasUpdate = service.metadata?.hasUpdate as boolean | undefined;
@@ -134,14 +153,10 @@ export class UpdateCheckerService {
     });
 
     if (hasUpdate && !previousHasUpdate) {
-      const msg = latestVersion
-        ? `A newer version is available: ${latestVersion}`
-        : "A newer image digest is available.";
-
-      notificationService
-        .notify(`Update Available: ${service.name}`, msg, "warning")
-        .catch(() => {});
+      return { name: service.name, latestVersion };
     }
+
+    return null;
   }
 }
 
