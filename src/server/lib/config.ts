@@ -96,6 +96,10 @@ class Config {
   get githubToken(): string | null {
     return process.env.GITHUB_TOKEN || null;
   }
+
+  get locale(): string {
+    return process.env.LOCALE || "en";
+  }
 }
 
 export const config = new Config();

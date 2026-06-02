@@ -11,6 +11,7 @@ import {
 } from "./dockerService.js";
 import { notificationService } from "./notificationService.js";
 import { TagParser } from "../lib/tagParser.js";
+import { t } from "../lib/i18n.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -252,11 +253,19 @@ export class HealthCheckService {
 
     if (newStatus === ServiceStatus.DOWN) {
       notificationService
-        .notify(`Service Down: ${name}`, `${name} is no longer reachable.`, "failure")
+        .notify(
+          t("notifications.serviceDown", { name }),
+          t("notifications.serviceDownBody", { name }),
+          "failure",
+        )
         .catch(() => {});
     } else if (newStatus === ServiceStatus.UP && oldStatus === ServiceStatus.DOWN) {
       notificationService
-        .notify(`Service Recovered: ${name}`, `${name} is back online.`, "success")
+        .notify(
+          t("notifications.serviceRecovered", { name }),
+          t("notifications.serviceRecoveredBody", { name }),
+          "success",
+        )
         .catch(() => {});
     }
   }

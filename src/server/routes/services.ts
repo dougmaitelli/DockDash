@@ -6,6 +6,8 @@ import { notificationService } from "../services/notificationService.js";
 import { changelogService } from "../services/changelogService.js";
 import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
 import { APP_NAME } from "../lib/constants.js";
+import { t } from "../lib/i18n.js";
+import { config } from "../lib/config.js";
 import type {
   ApiSuccess,
   SavePositionsRequest,
@@ -304,15 +306,17 @@ router.get("/services/:id/logs/stream", async (req, res) => {
   }
 });
 
-router.post("/notifications/test", async (_req, res) => {
+router.post("/notifications/test", async (req, res) => {
   if (!notificationService.configured) {
     return res.status(400).json({ error: "Apprise not configured" });
   }
 
   try {
+    const lang = req.acceptsLanguages([config.locale]) || config.locale;
+
     await notificationService.notify(
-      `${APP_NAME} Test Notification`,
-      "Apprise notifications are configured correctly.",
+      `${APP_NAME} ${t("notifications.testTitle", undefined, lang)}`,
+      t("notifications.testBody", undefined, lang),
       "info",
     );
   } catch (err) {

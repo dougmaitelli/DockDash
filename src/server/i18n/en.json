@@ -1,0 +1,14 @@
+{
+  "notifications": {
+    "serviceDown": "⚠️ Service Down: {{name}}",
+    "serviceDownBody": "{{name}} is no longer reachable.",
+    "serviceRecovered": "✅ Service Recovered: {{name}}",
+    "serviceRecoveredBody": "{{name}} is back online.",
+    "updateAvailable": "⚠️ Update Available",
+    "updatesAvailable": "⚠️ Updates Available",
+    "updateEntry": "{{name}}: {{version}}",
+    "updateEntryDigest": "{{name}}: newer digest available",
+    "testTitle": "Test Notification",
+    "testBody": "Apprise notifications are configured correctly."
+  }
+}

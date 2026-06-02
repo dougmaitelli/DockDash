@@ -6,6 +6,7 @@ import { registryClient } from "./registryClient.js";
 import { notificationService } from "./notificationService.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 import { TagParser } from "../lib/tagParser.js";
+import { t } from "../lib/i18n.js";
 
 type Service = ReturnType<typeof db.getServices>[number];
 
@@ -41,11 +42,14 @@ export class UpdateCheckerService {
 
     if (newUpdates.length === 0) return;
 
-    const title = newUpdates.length === 1 ? `⚠️ Update Available` : `⚠️ Updates Available`;
+    const titleKey =
+      newUpdates.length === 1 ? "notifications.updateAvailable" : "notifications.updatesAvailable";
+    const title = t(titleKey);
 
     const body = newUpdates
-      .map(({ name, latestVersion }) =>
-        latestVersion ? `• ${name}: ${latestVersion}` : `• ${name}: newer digest available`,
+      .map(
+        ({ name, latestVersion }) =>
+          `• ${latestVersion ? t("notifications.updateEntry", { name, version: latestVersion }) : t("notifications.updateEntryDigest", { name })}`,
       )
       .join("\n");
 

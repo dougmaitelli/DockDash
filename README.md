@@ -57,6 +57,7 @@ All configuration is done via environment variables. Changes require a container
 | `HEALTH_CHECK_INTERVAL` | `30000` | How often the server re-checks service health (ms) |
 | `UPDATE_CHECK_INTERVAL` | `3600000` | How often to check Docker images for updates (ms) |
 | `HEALTH_HISTORY_TTL_DAYS` | `30` | How many days of health check history to retain |
+| `LOCALE` | `en` | Language used for server-side notification messages |
 | `GITHUB_TOKEN` | — | Personal access token for the GitHub API — increases the rate limit when fetching changelogs (unauthenticated requests are limited to 60/hour per IP) |
 | `APPRISE_URL` | — | Full notify endpoint of the [Apprise REST API](https://github.com/caronc/apprise-api) server (e.g. `http://apprise:8000/notify/myconfig`) |
 | `APPRISE_TAGS` | — | Optional — comma-separated tags to filter which configured Apprise endpoints receive notifications (e.g. `admin`) |
