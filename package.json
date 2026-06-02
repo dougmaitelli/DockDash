@@ -29,6 +29,7 @@
     "react-i18next": "^17.0.8",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.15.1",
+    "remark-emoji": "^5.0.2",
     "styled-components": "^6.1.8",
     "uuid": "^14.0.0"
   },

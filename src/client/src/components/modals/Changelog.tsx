@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkEmoji from "remark-emoji";
 import styled from "styled-components";
 import { colors } from "../../styles/vars";
 import { serviceApi } from "../../services/api";
@@ -142,7 +143,9 @@ export function Changelog({ serviceId }: ChangelogProps) {
         </GithubLink>
       </Meta>
       <MarkdownBody>
-        <ReactMarkdown>{release.body || "_No release notes provided._"}</ReactMarkdown>
+        <ReactMarkdown remarkPlugins={[remarkEmoji]}>
+          {release.body || "_No release notes provided._"}
+        </ReactMarkdown>
       </MarkdownBody>
     </Wrap>
   );
