@@ -221,6 +221,7 @@ export function useDashboard() {
     if (!item) return s;
 
     const { id: _id, ...updates } = item;
+
     return { ...s, ...updates, metadata: { ...s.metadata, ...updates.metadata } };
   });
 

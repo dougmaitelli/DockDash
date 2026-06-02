@@ -5,20 +5,7 @@ import { dockerService } from "./dockerService.js";
 import { registryClient } from "./registryClient.js";
 import { notificationService } from "./notificationService.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
-
-// ---------------------------------------------------------------------------
-// SemVer helpers
-// ---------------------------------------------------------------------------
-
-// Matches the first X.Y.Z (or X.Y.Z.W) substring in a tag string.
-const SEMVER_RE = /(\d+\.\d+\.\d+(?:\.\d+)?)/;
-
-interface ParsedTag {
-  version: string;
-  prefix: string;
-  suffix: string;
-  parts: number[];
-}
+import { TagParser } from "../lib/tagParser.js";
 
 type Service = ReturnType<typeof db.getServices>[number];
 
@@ -47,40 +34,6 @@ export class UpdateCheckerService {
         await this.checkServiceForUpdate(service, docker);
       }
     }
-  }
-
-  static extractSemVer(tag: string): ParsedTag | null {
-    const match = SEMVER_RE.exec(tag);
-
-    if (!match) return null;
-
-    const version = match[1];
-    const prefix = tag.slice(0, match.index);
-    const suffix = tag.slice(match.index + version.length);
-    const parts = version.split(".").map(Number);
-
-    return { version, prefix, suffix, parts };
-  }
-
-  static compareSemVer(a: number[], b: number[]): number {
-    for (let i = 0; i < Math.max(a.length, b.length); i++) {
-      const diff = (a[i] ?? 0) - (b[i] ?? 0);
-
-      if (diff !== 0) return diff;
-    }
-
-    return 0;
-  }
-
-  static isUpdateApplied(newTag: string, latestVersion: string | undefined): boolean {
-    const newParsed = UpdateCheckerService.extractSemVer(newTag);
-    const latestParsed = latestVersion ? UpdateCheckerService.extractSemVer(latestVersion) : null;
-
-    return (
-      !newParsed ||
-      !latestParsed ||
-      UpdateCheckerService.compareSemVer(newParsed.parts, latestParsed.parts) >= 0
-    );
   }
 
   /**
@@ -131,7 +84,7 @@ export class UpdateCheckerService {
           latestVersion = `newer digest (${registryDigest.slice(7, 19)}…)`;
         }
       } else {
-        const parsed = UpdateCheckerService.extractSemVer(imageTag);
+        const parsed = TagParser.extractSemVer(imageTag);
 
         if (!parsed) return; // Non-SemVer tag, nothing to compare
 
@@ -145,14 +98,14 @@ export class UpdateCheckerService {
         for (const tag of allTags) {
           if (!tag.startsWith(parsed.prefix) || !tag.endsWith(parsed.suffix)) continue;
 
-          const candidate = UpdateCheckerService.extractSemVer(tag);
+          const candidate = TagParser.extractSemVer(tag);
 
           if (!candidate) continue;
 
           // Ensure prefix and suffix match exactly (not just startsWith/endsWith)
           if (candidate.prefix !== parsed.prefix || candidate.suffix !== parsed.suffix) continue;
 
-          if (UpdateCheckerService.compareSemVer(candidate.parts, highestParts) > 0) {
+          if (TagParser.compareSemVer(candidate.parts, highestParts) > 0) {
             highestParts = candidate.parts;
             highestTag = tag;
           }

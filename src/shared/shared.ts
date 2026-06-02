@@ -69,6 +69,17 @@ export interface ServiceHealthHistoryItem {
   checked_at: string;
 }
 
+export interface ChangelogRelease {
+  version: string;
+  publishedAt: string;
+  body: string;
+  htmlUrl: string;
+}
+
+export type ChangelogResponse =
+  | { available: true; release: ChangelogRelease }
+  | { available: false; reason: string };
+
 export interface ServiceMetadata {
   containerId?: string;
   containerName?: string;

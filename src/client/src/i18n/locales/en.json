@@ -114,6 +114,7 @@
     "healthHistoryNoChecks": "No checks",
     "tabDetails": "Details",
     "tabLogs": "Logs",
+    "tabChangelog": "Changelog",
     "logsConnecting": "Connecting...",
     "logsLive": "Live",
     "logsDisconnected": "Disconnected",

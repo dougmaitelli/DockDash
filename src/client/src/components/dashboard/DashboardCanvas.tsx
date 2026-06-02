@@ -393,6 +393,7 @@ export function DashboardCanvas({
 
       if (!hasMoved) {
         dragState.current.draggedId = null;
+
         return;
       }
 

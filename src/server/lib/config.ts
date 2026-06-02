@@ -92,6 +92,10 @@ class Config {
   get appriseConfigured(): boolean {
     return !!this.appriseUrl;
   }
+
+  get githubToken(): string | null {
+    return process.env.GITHUB_TOKEN || null;
+  }
 }
 
 export const config = new Config();

@@ -3,6 +3,7 @@ import { db } from "../db/databaseService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
 import { dockerService } from "../services/dockerService.js";
 import { notificationService } from "../services/notificationService.js";
+import { changelogService } from "../services/changelogService.js";
 import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
 import { APP_NAME } from "../lib/constants.js";
 import type {
@@ -328,6 +329,16 @@ router.get("/services/:id/health-history", (req, res) => {
   const history = db.getHealthHistory(req.params.id, days);
 
   res.json(history);
+});
+
+router.get("/services/:id/changelog", async (req, res) => {
+  const service = db.getService(req.params.id);
+
+  if (!service) return res.status(404).json({ error: "Service not found" });
+
+  const result = await changelogService.fetchChangelog(service);
+
+  res.json(result);
 });
 
 export default router;

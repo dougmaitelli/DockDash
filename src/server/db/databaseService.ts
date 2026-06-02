@@ -13,6 +13,7 @@ import type {
   DashboardData,
   ServiceStatusItem,
   ServiceStatus,
+  ServiceMetadata,
   ServiceHealthHistoryItem,
 } from "@shared";
 

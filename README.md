@@ -9,7 +9,8 @@ A self-hosted dashboard for visualizing Docker containers and network services. 
 - **Health monitoring** — periodically checks every service and shows live status
 - **Health history** — visualizes uptime over the last 1, 7, or 30 days as a color-coded timeline per service
 - **Docker logs** — streams live container logs directly in the UI with timestamp parsing and ANSI stripping
-- **Update monitoring** — checks Docker images against registries and flags outdated containers
+- **Update monitoring** — checks Docker images against registries and flags outdated containers; update badges refresh automatically without a full page reload
+- **Changelog** — fetches GitHub release notes for the running (or available) version of a Docker image and displays them in the service drawer; resolves the GitHub repository via OCI image labels, GHCR URLs, or Docker Hub owner/image heuristics
 - **Interactive canvas** — drag nodes, draw connections between services, zoom and pan
 
 ## Running with Docker Compose
@@ -56,6 +57,7 @@ All configuration is done via environment variables. Changes require a container
 | `HEALTH_CHECK_INTERVAL` | `30000` | How often the server re-checks service health (ms) |
 | `UPDATE_CHECK_INTERVAL` | `3600000` | How often to check Docker images for updates (ms) |
 | `HEALTH_HISTORY_TTL_DAYS` | `30` | How many days of health check history to retain |
+| `GITHUB_TOKEN` | — | Personal access token for the GitHub API — increases the rate limit when fetching changelogs (unauthenticated requests are limited to 60/hour per IP) |
 | `APPRISE_URL` | — | Full notify endpoint of the [Apprise REST API](https://github.com/caronc/apprise-api) server (e.g. `http://apprise:8000/notify/myconfig`) |
 | `APPRISE_TAGS` | — | Optional — comma-separated tags to filter which configured Apprise endpoints receive notifications (e.g. `admin`) |
 | `APPRISE_URLS` | — | Optional — comma-separated Apprise notification URLs sent inline (e.g. `slack://token/channel`) |

@@ -12,6 +12,7 @@ import type {
   SavePositionsRequest,
   SavePositionsResponse,
   CheckAllServicesResponse,
+  ChangelogResponse,
 } from "@shared";
 
 const api = axios.create({
@@ -38,6 +39,7 @@ export const serviceApi = {
   delete: (id: string) => api.delete<ApiSuccess>(`/services/${id}`),
   getHealthHistory: (id: string, days: number) =>
     api.get<ServiceHealthHistoryItem[]>(`/services/${id}/health-history`, { params: { days } }),
+  getChangelog: (id: string) => api.get<ChangelogResponse>(`/services/${id}/changelog`),
 };
 
 // Link management APIs

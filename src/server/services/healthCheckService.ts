@@ -10,7 +10,7 @@ import {
   type ContainerStateMap,
 } from "./dockerService.js";
 import { notificationService } from "./notificationService.js";
-import { UpdateCheckerService } from "./updateCheckerService.js";
+import { TagParser } from "../lib/tagParser.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
@@ -60,11 +60,7 @@ export class HealthCheckService {
             imageTag: newTag,
           };
 
-          if (
-            hasUpdate &&
-            newTag !== prevTag &&
-            UpdateCheckerService.isUpdateApplied(newTag, latestVersion)
-          ) {
+          if (hasUpdate && newTag !== prevTag && this.isUpdateApplied(newTag, latestVersion)) {
             patch.hasUpdate = false;
             patch.latestVersion = "";
           }
@@ -173,6 +169,17 @@ export class HealthCheckService {
     }
 
     return { updated, errors };
+  }
+
+  private isUpdateApplied(newTag: string, latestVersion: string | undefined): boolean {
+    const newParsed = TagParser.extractSemVer(newTag);
+    const latestParsed = latestVersion ? TagParser.extractSemVer(latestVersion) : null;
+
+    return (
+      !newParsed ||
+      !latestParsed ||
+      TagParser.compareSemVer(newParsed.parts, latestParsed.parts) >= 0
+    );
   }
 
   private async checkTcp(host: string, port: number): Promise<boolean> {

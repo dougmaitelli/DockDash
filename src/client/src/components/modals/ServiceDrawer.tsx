@@ -17,10 +17,11 @@ import { FormGroup, Label } from "./BaseModal";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
 import { DockerLogs } from "./DockerLogs";
+import { Changelog } from "./Changelog";
 
 const ANIM_MS = 220;
 
-type Tab = "details" | "logs";
+type Tab = "details" | "logs" | "changelog";
 
 const slideIn = keyframes`
   from { transform: translateX(-100%); }
@@ -252,7 +253,7 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
           onCancel={() => setConfirmingDelete(false)}
         />
       )}
-      <Drawer $closing={closing} $wide={tab === "logs"}>
+      <Drawer $closing={closing} $wide={tab !== "details"}>
         <Header>
           {isDocker ? (
             <IconDocker
@@ -275,6 +276,11 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
           <TabButton $active={tab === "details"} onClick={() => setTab("details")}>
             {t("modals.tabDetails")}
           </TabButton>
+          {isDocker && (
+            <TabButton $active={tab === "changelog"} onClick={() => setTab("changelog")}>
+              {t("modals.tabChangelog")}
+            </TabButton>
+          )}
           {isDocker && (
             <TabButton $active={tab === "logs"} onClick={() => setTab("logs")}>
               {t("modals.tabLogs")}
@@ -342,9 +348,13 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
               </>
             )}
           </Body>
-        ) : (
+        ) : tab === "logs" ? (
           <Body>
             <DockerLogs serviceId={service.id!} />
+          </Body>
+        ) : (
+          <Body>
+            <Changelog serviceId={service.id!} />
           </Body>
         )}
 
