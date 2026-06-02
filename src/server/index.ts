@@ -8,6 +8,7 @@ import { healthCheckService } from "./services/healthCheckService.js";
 import { updateCheckerService } from "./services/updateCheckerService.js";
 import { db } from "./db/databaseService.js";
 import { config } from "./lib/config.js";
+import { APP_NAME } from "./lib/constants.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -46,7 +47,7 @@ app.use(
 );
 
 app.listen(PORT, () => {
-  console.log(`DockDash server running on http://localhost:${PORT}`);
+  console.log(`${APP_NAME} server running on http://localhost:${PORT}`);
   console.log(`Docker hosts: ${config.dockerHosts.join(", ")}`);
   console.log(`Network CIDRs: ${config.networkCidrs.join(",")}`);
   console.log(`Health check interval: ${HEALTH_CHECK_INTERVAL}ms`);

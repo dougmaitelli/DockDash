@@ -1,5 +1,6 @@
 import axios from "axios";
 import { config } from "../lib/config.js";
+import { APP_NAME } from "../lib/constants.js";
 
 export type NotificationType = "info" | "success" | "warning" | "failure";
 
@@ -12,7 +13,7 @@ class NotificationService {
     const urls = config.appriseUrls;
     const tags = config.appriseTags;
     const payload = {
-      title: `DockDash — ${title}`,
+      title: `${APP_NAME} — ${title}`,
       body,
       type,
       ...(urls.length > 0 ? { urls } : {}),

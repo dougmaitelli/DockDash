@@ -4,6 +4,7 @@ import { healthCheckService } from "../services/healthCheckService.js";
 import { dockerService } from "../services/dockerService.js";
 import { notificationService } from "../services/notificationService.js";
 import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
+import { APP_NAME } from "../lib/constants.js";
 import type {
   ApiSuccess,
   SavePositionsRequest,
@@ -308,7 +309,7 @@ router.post("/notifications/test", async (_req, res) => {
 
   try {
     await notificationService.notify(
-      "DockDash Test Notification",
+      `${APP_NAME} Test Notification`,
       "Apprise notifications are configured correctly.",
       "info",
     );

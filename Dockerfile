@@ -25,6 +25,8 @@ COPY --from=builder /app/drizzle ./drizzle
 
 RUN mkdir -p /app/data
 
+VOLUME ["/app/data"]
+
 EXPOSE 3001
 
 ENV PORT=3001
