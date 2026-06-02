@@ -6,8 +6,8 @@
     "serviceRecoveredBody": "{{name}} está de volta online.",
     "updateAvailable": "⚠️ Atualização Disponível",
     "updatesAvailable": "⚠️ Atualizações Disponíveis",
-    "updateEntry": "{{name}}: {{version}}",
-    "updateEntryDigest": "{{name}}: novo digest disponível",
+    "updateEntry": "{{name}}: {{currentVersion}} → {{latestVersion}}",
+    "updateEntryDigest": "{{name}}: {{currentVersion}} → {{latestVersion}}",
     "testTitle": "Notificação de Teste",
     "testBody": "As notificações do Apprise estão configuradas corretamente."
   }

@@ -6,8 +6,8 @@
     "serviceRecoveredBody": "{{name}} is back online.",
     "updateAvailable": "⚠️ Update Available",
     "updatesAvailable": "⚠️ Updates Available",
-    "updateEntry": "{{name}}: {{version}}",
-    "updateEntryDigest": "{{name}}: newer digest available",
+    "updateEntry": "{{name}}: {{currentVersion}} → {{latestVersion}}",
+    "updateEntryDigest": "{{name}}: {{currentVersion}} → {{latestVersion}}",
     "testTitle": "Test Notification",
     "testBody": "Apprise notifications are configured correctly."
   }

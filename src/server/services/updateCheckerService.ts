@@ -28,7 +28,7 @@ export class UpdateCheckerService {
       servicesByHost.get(host)!.push(service);
     }
 
-    const newUpdates: { name: string; latestVersion?: string }[] = [];
+    const newUpdates: { name: string; currentVersion: string; latestVersion: string }[] = [];
 
     for (const [host, hostServices] of servicesByHost) {
       const docker = dockerService.createDockerClientForHost(host);
@@ -48,8 +48,8 @@ export class UpdateCheckerService {
 
     const body = newUpdates
       .map(
-        ({ name, latestVersion }) =>
-          `• ${latestVersion ? t("notifications.updateEntry", { name, version: latestVersion }) : t("notifications.updateEntryDigest", { name })}`,
+        ({ name, currentVersion, latestVersion }) =>
+          `• ${t("notifications.updateEntry", { name, currentVersion, latestVersion })}`,
       )
       .join("\n");
 
@@ -79,7 +79,7 @@ export class UpdateCheckerService {
   private async checkServiceForUpdate(
     service: Service,
     docker: Docker,
-  ): Promise<{ name: string; latestVersion?: string } | null> {
+  ): Promise<{ name: string; currentVersion: string; latestVersion: string } | null> {
     const containerId = service.metadata?.containerId as string | undefined;
     const image = service.metadata?.image as string | undefined;
     const imageTag = service.metadata?.imageTag as string | undefined;
@@ -89,6 +89,7 @@ export class UpdateCheckerService {
     const ref = registryClient.parseImageRef(`${image}:${imageTag}`);
 
     let hasUpdate = false;
+    let currentVersion: string | undefined;
     let latestVersion: string | undefined;
 
     try {
@@ -103,8 +104,8 @@ export class UpdateCheckerService {
         hasUpdate = localDigest !== registryDigest;
 
         if (hasUpdate) {
-          // Show just the short digest for display
-          latestVersion = `newer digest (${registryDigest.slice(7, 19)}…)`;
+          currentVersion = `${localDigest.slice(7, 19)}…`;
+          latestVersion = `${registryDigest.slice(7, 19)}…`;
         }
       } else {
         const parsed = TagParser.extractSemVer(imageTag);
@@ -136,6 +137,7 @@ export class UpdateCheckerService {
 
         if (highestTag) {
           hasUpdate = true;
+          currentVersion = imageTag;
           latestVersion = highestTag;
         }
       }
@@ -156,8 +158,8 @@ export class UpdateCheckerService {
       updateCheckedAt: new Date().toISOString(),
     });
 
-    if (hasUpdate && !previousHasUpdate) {
-      return { name: service.name, latestVersion };
+    if (hasUpdate && !previousHasUpdate && currentVersion && latestVersion) {
+      return { name: service.name, currentVersion, latestVersion };
     }
 
     return null;
