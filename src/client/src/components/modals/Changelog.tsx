@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import remarkEmoji from "remark-emoji";
 import styled from "styled-components";
 import { colors } from "../../styles/vars";
@@ -143,7 +145,7 @@ export function Changelog({ serviceId }: ChangelogProps) {
         </GithubLink>
       </Meta>
       <MarkdownBody>
-        <ReactMarkdown remarkPlugins={[remarkEmoji]}>
+        <ReactMarkdown remarkPlugins={[remarkEmoji]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>
           {release.body || "_No release notes provided._"}
         </ReactMarkdown>
       </MarkdownBody>
