@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { colors } from "../../styles/vars";
@@ -41,6 +42,11 @@ interface ConfirmDialogProps {
 
 export function ConfirmDialog({ message, confirmLabel, onConfirm, onCancel }: ConfirmDialogProps) {
   const { t } = useTranslation();
+  const confirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    confirmRef.current?.focus();
+  }, []);
 
   return (
     <Overlay onClick={onCancel}>
@@ -48,7 +54,9 @@ export function ConfirmDialog({ message, confirmLabel, onConfirm, onCancel }: Co
         <Message>{message}</Message>
         <Actions>
           <SecondaryButton onClick={onCancel}>{t("modals.cancel")}</SecondaryButton>
-          <DangerButton onClick={onConfirm}>{confirmLabel ?? t("modals.delete")}</DangerButton>
+          <DangerButton ref={confirmRef} onClick={onConfirm}>
+            {confirmLabel ?? t("modals.delete")}
+          </DangerButton>
         </Actions>
       </Panel>
     </Overlay>
