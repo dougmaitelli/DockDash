@@ -1,13 +1,23 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import en from "./locales/en.json";
+
+const modules = import.meta.glob("./locales/*.json", { eager: true }) as Record<
+  string,
+  { default: Record<string, unknown> }
+>;
+
+const resources: Record<string, { translation: Record<string, unknown> }> = {};
+
+for (const [path, mod] of Object.entries(modules)) {
+  const lang = path.match(/\/([^/]+)\.json$/)?.[1];
+
+  if (lang) resources[lang] = { translation: mod.default };
+}
 
 i18n.use(initReactI18next).init({
-  resources: {
-    en: { translation: en },
-  },
-  lng: navigator.language.split("-")[0],
+  lng: navigator.language,
   fallbackLng: "en",
+  resources,
   interpolation: {
     escapeValue: false,
   },

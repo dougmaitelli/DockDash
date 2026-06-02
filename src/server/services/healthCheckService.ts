@@ -11,7 +11,7 @@ import {
 } from "./dockerService.js";
 import { notificationService } from "./notificationService.js";
 import { TagParser } from "../lib/tagParser.js";
-import { t } from "../lib/i18n.js";
+import { t } from "../i18n/index.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;

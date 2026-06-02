@@ -18,6 +18,8 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
+      - run: yarn typecheck
+
       - run: yarn lint
 
   docker:

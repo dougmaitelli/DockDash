@@ -1,0 +1,14 @@
+{
+  "notifications": {
+    "serviceDown": "⚠️ Serviço Fora do Ar: {{name}}",
+    "serviceDownBody": "{{name}} não está mais acessível.",
+    "serviceRecovered": "✅ Serviço Recuperado: {{name}}",
+    "serviceRecoveredBody": "{{name}} está de volta online.",
+    "updateAvailable": "⚠️ Atualização Disponível",
+    "updatesAvailable": "⚠️ Atualizações Disponíveis",
+    "updateEntry": "{{name}}: {{version}}",
+    "updateEntryDigest": "{{name}}: novo digest disponível",
+    "testTitle": "Notificação de Teste",
+    "testBody": "As notificações do Apprise estão configuradas corretamente."
+  }
+}

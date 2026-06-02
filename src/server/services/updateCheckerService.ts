@@ -6,7 +6,7 @@ import { registryClient } from "./registryClient.js";
 import { notificationService } from "./notificationService.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 import { TagParser } from "../lib/tagParser.js";
-import { t } from "../lib/i18n.js";
+import { t } from "../i18n/index.js";
 
 type Service = ReturnType<typeof db.getServices>[number];
 

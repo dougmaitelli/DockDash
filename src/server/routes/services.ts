@@ -6,7 +6,7 @@ import { notificationService } from "../services/notificationService.js";
 import { changelogService } from "../services/changelogService.js";
 import { ServiceSource, ServiceStatus, ServiceLinkType } from "@shared";
 import { APP_NAME } from "../lib/constants.js";
-import { t } from "../lib/i18n.js";
+import { t } from "../i18n/index.js";
 import { config } from "../lib/config.js";
 import type {
   ApiSuccess,
