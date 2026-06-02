@@ -297,7 +297,8 @@ export function DashboardCanvas({
     nodeY: number;
     grabOffsetX: number;
     grabOffsetY: number;
-  }>({ draggedId: null, nodeX: 0, nodeY: 0, grabOffsetX: 0, grabOffsetY: 0 });
+    hasMoved: boolean;
+  }>({ draggedId: null, nodeX: 0, nodeY: 0, grabOffsetX: 0, grabOffsetY: 0, hasMoved: false });
 
   // On mouse down on node, start dragging
   const handleMouseDown = useCallback(
@@ -338,6 +339,7 @@ export function DashboardCanvas({
         nodeY,
         grabOffsetX,
         grabOffsetY,
+        hasMoved: false,
       };
       setDragOffsets((prev) => {
         const copy = { ...prev };
@@ -357,6 +359,8 @@ export function DashboardCanvas({
       const { draggedId, nodeX, nodeY, grabOffsetX, grabOffsetY } = dragState.current;
 
       if (!draggedId || !canvasRef.current) return;
+
+      dragState.current.hasMoved = true;
 
       const rect = canvasRef.current.getBoundingClientRect();
       const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
@@ -383,9 +387,14 @@ export function DashboardCanvas({
 
     // On mouse up, update position based on where it was dropped
     const handleMouseUp = async (e: MouseEvent) => {
-      const { draggedId, grabOffsetX, grabOffsetY } = dragState.current;
+      const { draggedId, grabOffsetX, grabOffsetY, hasMoved } = dragState.current;
 
       if (!draggedId || !canvasRef.current) return;
+
+      if (!hasMoved) {
+        dragState.current.draggedId = null;
+        return;
+      }
 
       const rect = canvasRef.current.getBoundingClientRect();
       const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
