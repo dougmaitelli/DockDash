@@ -15,18 +15,20 @@ export class UpdateCheckerService {
     const services = db.getServices();
     const dockerServices = services.filter((s) => s.source === ServiceSource.DOCKER);
 
-    // Group by Docker host to reuse one client per host
-    const servicesByHost = new Map<string, typeof dockerServices>();
+    // Group by resolved Docker host to reuse one client per host;
+    // services whose host is no longer configured are skipped.
+    const servicesByHost = dockerServices.reduce((map, service) => {
+      const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+      const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
 
-    for (const service of dockerServices) {
-      const host = service.metadata?.dockerHost as string | undefined;
+      if (!resolvedHost) return map;
 
-      if (!host) continue;
+      if (!map.has(resolvedHost)) map.set(resolvedHost, []);
 
-      if (!servicesByHost.has(host)) servicesByHost.set(host, []);
+      map.get(resolvedHost)!.push(service);
 
-      servicesByHost.get(host)!.push(service);
-    }
+      return map;
+    }, new Map<string, typeof dockerServices>());
 
     const newUpdates: { name: string; currentVersion: string; latestVersion: string }[] = [];
 

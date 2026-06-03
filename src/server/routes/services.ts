@@ -220,13 +220,14 @@ router.post("/services/:id/container/:action", async (req, res) => {
   }
 
   const containerId = service.metadata?.containerId as string | undefined;
-  const dockerHost = service.metadata?.dockerHost as string | undefined;
+  const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+  const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
 
-  if (!containerId || !dockerHost) {
+  if (!resolvedHost || !containerId) {
     return res.status(400).json({ error: "Container metadata not available" });
   }
 
-  const docker = dockerService.createDockerClientForHost(dockerHost);
+  const docker = dockerService.createDockerClientForHost(resolvedHost);
   const container = docker.getContainer(containerId);
 
   if (action === "stop") await container.stop();
@@ -259,10 +260,11 @@ router.get("/services/:id/logs/stream", async (req, res) => {
     return;
   }
 
+  const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+  const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
   const containerName = service.metadata?.containerName as string | undefined;
-  const dockerHost = service.metadata?.dockerHost as string | undefined;
 
-  if (!containerName || !dockerHost) {
+  if (!resolvedHost || !containerName) {
     sendError("Container metadata not available");
 
     return;
@@ -277,7 +279,7 @@ router.get("/services/:id/logs/stream", async (req, res) => {
   });
 
   try {
-    const docker = dockerService.createDockerClientForHost(dockerHost);
+    const docker = dockerService.createDockerClientForHost(resolvedHost);
     const containers = await docker.listContainers({ all: true });
     const containerInfo = containers.find((c) =>
       c.Names?.some((n) => n.replace(/^\//, "") === containerName),

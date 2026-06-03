@@ -19,12 +19,13 @@ export class ChangelogService {
 
   private async resolveGithubRepo(service: Service): Promise<string | null> {
     // 1. Try OCI label from running container
+    const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+    const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
     const containerId = service.metadata?.containerId;
-    const dockerHost = service.metadata?.dockerHost;
 
-    if (containerId && dockerHost) {
+    if (resolvedHost && containerId) {
       try {
-        const docker: Docker = dockerService.createDockerClientForHost(dockerHost);
+        const docker: Docker = dockerService.createDockerClientForHost(resolvedHost);
         const info = await docker.getContainer(containerId).inspect();
         const imageInfo = await docker.getImage(info.Image).inspect();
         const labels: Record<string, string> = imageInfo.Config?.Labels ?? {};

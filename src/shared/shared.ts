@@ -89,9 +89,9 @@ export type ChangelogResponse =
   | { available: false; reason: string };
 
 export interface ServiceMetadata {
+  dockerHostId?: string;
   containerId?: string;
   containerName?: string;
-  dockerHost?: string;
   image?: string;
   imageTag?: string;
   hasUpdate?: boolean;

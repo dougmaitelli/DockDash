@@ -9,8 +9,20 @@ import { APP_NAME } from "./lib/constants.js";
 import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
 import { UpdateCheckJob } from "./jobs/UpdateCheckJob.js";
 import { HistoryCleanupJob } from "./jobs/HistoryCleanupJob.js";
+import { db } from "./db/databaseService.js";
+import { DockerService } from "./services/dockerService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// TODO: remove once all persisted services have been re-scanned with dockerHostId
+for (const service of db.getServices()) {
+  const legacyHost = service.metadata?.["dockerHost"] as string | undefined;
+
+  if (legacyHost && !service.metadata?.dockerHostId) {
+    db.updateServiceMetadata(service.id!, { dockerHostId: DockerService.hostId(legacyHost) });
+  }
+}
+
 const app = express();
 const PORT = config.port;
 

@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import Docker from "dockerode";
 import { v4 as uuidv4 } from "uuid";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
@@ -29,6 +30,14 @@ export class DockerService {
     this.clients = new Map(config.dockerHosts.map((host) => [host, this.buildClient(host)]));
   }
 
+  static hostId(host: string): string {
+    return createHash("sha256").update(host).digest("hex").slice(0, 16);
+  }
+
+  resolveHost(dockerHostId: string): string | undefined {
+    return config.dockerHosts.find((host) => DockerService.hostId(host) === dockerHostId);
+  }
+
   private buildClient(host: string): Docker {
     if (host.startsWith("unix://")) {
       return new Docker({ socketPath: host.replace("unix://", "") });
@@ -40,7 +49,11 @@ export class DockerService {
   }
 
   createDockerClientForHost(host: string): Docker {
-    return this.clients.get(host) ?? this.buildClient(host);
+    const client = this.clients.get(host);
+
+    if (!client) throw new Error(`Docker host not configured: ${host}`);
+
+    return client;
   }
 
   createDockerClients(): { host: string; docker: Docker }[] {
@@ -91,7 +104,7 @@ export class DockerService {
               ? ServiceStatus.DOWN
               : ServiceStatus.UNKNOWN,
         metadata: {
-          dockerHost,
+          dockerHostId: DockerService.hostId(dockerHost),
           containerId: container.Id,
           containerName: name,
           image,

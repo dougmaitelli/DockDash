@@ -25,19 +25,20 @@ export class HealthCheckService {
 
     if (!service) return null;
 
+    const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+    const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
     const containerName = service.metadata?.containerName as string | undefined;
-    const dockerHost = service.metadata?.dockerHost as string | undefined;
 
     try {
       let status: ServiceStatus;
 
-      if (!containerName || !dockerHost) {
+      if (!resolvedHost || !containerName) {
         status = ServiceStatus.UNKNOWN;
       } else {
         const map =
           stateMap ??
           (await dockerService.getContainersStateMap(
-            dockerService.createDockerClientForHost(dockerHost),
+            dockerService.createDockerClientForHost(resolvedHost),
           ));
         const containerInfo = map.get(containerName);
 
@@ -128,24 +129,29 @@ export class HealthCheckService {
 
     // Pre-fetch one stateMap per Docker host so checkSingleDockerService
     // doesn't call listContainers once per container.
-    const stateMapByHost = new Map<string, ContainerStateMap>();
+    const hostById = services
+      .filter((s) => s.source === ServiceSource.DOCKER)
+      .reduce((map, service) => {
+        const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+        const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
 
-    for (const service of services) {
-      if (service.source !== ServiceSource.DOCKER) continue;
+        if (resolvedHost && dockerHostId) map.set(dockerHostId, resolvedHost);
 
-      const host = service.metadata?.dockerHost as string | undefined;
+        return map;
+      }, new Map<string, string>());
 
-      if (host && !stateMapByHost.has(host)) {
-        try {
-          stateMapByHost.set(
-            host,
-            await dockerService.getContainersStateMap(
-              dockerService.createDockerClientForHost(host),
-            ),
-          );
-        } catch (err) {
-          console.error(`Failed to fetch container states for Docker host ${host}:`, err);
-        }
+    const stateMapByHostId = new Map<string, ContainerStateMap>();
+
+    for (const [dockerHostId, resolvedHost] of hostById) {
+      try {
+        stateMapByHostId.set(
+          dockerHostId,
+          await dockerService.getContainersStateMap(
+            dockerService.createDockerClientForHost(resolvedHost),
+          ),
+        );
+      } catch (err) {
+        console.error(`Failed to fetch container states for Docker host ${resolvedHost}:`, err);
       }
     }
 
@@ -153,11 +159,11 @@ export class HealthCheckService {
       let status: ServiceStatus | null;
 
       if (service.source === ServiceSource.DOCKER) {
-        const host = service.metadata?.dockerHost as string | undefined;
+        const dockerHostId = service.metadata?.dockerHostId as string | undefined;
 
         status = await this.checkSingleDockerService(
           service.id!,
-          host ? stateMapByHost.get(host) : undefined,
+          dockerHostId ? stateMapByHostId.get(dockerHostId) : undefined,
         );
       } else {
         status = await this.checkSingleNetworkService(service.id!);
