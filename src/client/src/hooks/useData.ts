@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { serviceApi, linkApi, positionApi, discoveryApi, dashboardApi } from "../services/api";
-import { DashboardData, Service, ServiceLink, ServiceStatusItem, DockerHostHealth } from "@shared";
+import {
+  DashboardData,
+  Service,
+  ServiceStatusItem,
+  DockerHostHealth,
+  CreateServiceRequest,
+  UpdateServiceRequest,
+  CreateLinkRequest,
+  UpdateLinkRequest,
+} from "@shared";
 
 export function useDiscovery() {
   const [services, setServices] = useState<Service[]>([]);
@@ -30,7 +39,7 @@ export function useDiscovery() {
     setServices((prev) => prev.filter((s) => s.id !== id));
   };
 
-  const importService = async (data: Partial<Service> & { name: string; host: string }) => {
+  const importService = async (data: CreateServiceRequest) => {
     const res = await serviceApi.importService(data);
 
     setServices((prev) => [...prev, res.data]);
@@ -123,36 +132,30 @@ export function useDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const addService = useCallback(
-    async (data: Partial<Service> & { name: string; host: string }) => {
-      const res = await serviceApi.importService(data);
+  const addService = useCallback(async (data: CreateServiceRequest) => {
+    const res = await serviceApi.importService(data);
 
-      setData((prev) => {
-        if (!prev) return prev;
+    setData((prev) => {
+      if (!prev) return prev;
 
-        return { ...prev, services: [...prev.services, { ...res.data, position: null }] };
-      });
+      return { ...prev, services: [...prev.services, { ...res.data, position: null }] };
+    });
 
-      return res.data;
-    },
-    [],
-  );
+    return res.data;
+  }, []);
 
-  const updateService = useCallback(
-    async (id: string, data: Pick<Service, "name" | "host" | "ports" | "checkPort">) => {
-      const res = await serviceApi.update(id, data);
+  const updateService = useCallback(async (id: string, data: UpdateServiceRequest) => {
+    const res = await serviceApi.update(id, data);
 
-      setData((prev) => {
-        if (!prev) return prev;
+    setData((prev) => {
+      if (!prev) return prev;
 
-        return {
-          ...prev,
-          services: prev.services.map((s) => (s.id === id ? { ...s, ...res.data } : s)),
-        };
-      });
-    },
-    [],
-  );
+      return {
+        ...prev,
+        services: prev.services.map((s) => (s.id === id ? { ...s, ...res.data } : s)),
+      };
+    });
+  }, []);
 
   const updatePosition = useCallback(
     async (
@@ -187,7 +190,7 @@ export function useDashboard() {
     });
   }, []);
 
-  const addLink = useCallback(async (data: Omit<ServiceLink, "id" | "createdAt">) => {
+  const addLink = useCallback(async (data: CreateLinkRequest) => {
     const res = await linkApi.create(data);
 
     setData((prev) => {
@@ -197,21 +200,15 @@ export function useDashboard() {
     });
   }, []);
 
-  const updateLink = useCallback(
-    async (
-      id: string,
-      data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
-    ) => {
-      const res = await linkApi.update(id, data);
+  const updateLink = useCallback(async (id: string, data: UpdateLinkRequest) => {
+    const res = await linkApi.update(id, data);
 
-      setData((prev) => {
-        if (!prev) return prev;
+    setData((prev) => {
+      if (!prev) return prev;
 
-        return { ...prev, links: prev.links.map((l) => (l.id === id ? res.data : l)) };
-      });
-    },
-    [],
-  );
+      return { ...prev, links: prev.links.map((l) => (l.id === id ? res.data : l)) };
+    });
+  }, []);
 
   const removeLink = useCallback(async (id: string) => {
     await linkApi.delete(id);

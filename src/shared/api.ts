@@ -1,4 +1,11 @@
-import type { ServicePosition } from "./shared.js";
+import type {
+  ServicePosition,
+  ServiceSource,
+  ServiceStatus,
+  ServiceMetadata,
+  ServiceLinkType,
+  ServiceProtocol,
+} from "./shared.js";
 
 // ---------------------------------------------------------------------------
 // SSE event names — used by both the server (emitter) and client (listener)
@@ -68,6 +75,58 @@ export interface SseScanDonePayload {
 
 export interface SseScanErrorPayload {
   message: string;
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/services
+// ---------------------------------------------------------------------------
+
+export interface CreateServiceRequest {
+  name: string;
+  host: string;
+  id?: string;
+  ports?: number[];
+  checkPort?: number | null;
+  source?: ServiceSource;
+  status?: ServiceStatus;
+  metadata?: ServiceMetadata;
+}
+
+// ---------------------------------------------------------------------------
+// PUT /api/services/:id
+// ---------------------------------------------------------------------------
+
+export interface UpdateServiceRequest {
+  name: string;
+  host: string;
+  ports?: number[];
+  checkPort?: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/links
+// ---------------------------------------------------------------------------
+
+export interface CreateLinkRequest {
+  sourceId: string;
+  targetId: string;
+  label: string | null;
+  type: ServiceLinkType;
+  description: string | null;
+  targetPort?: number | null;
+  protocol?: ServiceProtocol | null;
+}
+
+// ---------------------------------------------------------------------------
+// PUT /api/links/:id
+// ---------------------------------------------------------------------------
+
+export interface UpdateLinkRequest {
+  label: string | null;
+  type: ServiceLinkType;
+  description: string | null;
+  targetPort?: number | null;
+  protocol?: ServiceProtocol | null;
 }
 
 // ---------------------------------------------------------------------------

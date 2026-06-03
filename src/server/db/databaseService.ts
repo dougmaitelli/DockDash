@@ -77,7 +77,7 @@ export class DatabaseService {
 
   updateService(
     id: string,
-    data: { name?: string; host?: string; ports?: number[]; checkPort?: number },
+    data: { name?: string; host?: string; ports?: number[]; checkPort?: number | null },
   ): Service {
     const existing = this.getService(id);
 
@@ -139,9 +139,9 @@ export class DatabaseService {
 
   saveServicePosition(
     serviceId: string,
+    parentId: string | null,
     x: number,
     y: number,
-    parentId?: string | null,
     w?: number | null,
     h?: number | null,
   ): void {

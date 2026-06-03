@@ -10,6 +10,10 @@ import { t } from "../i18n/index.js";
 import { config } from "../lib/config.js";
 import type {
   ApiSuccess,
+  CreateServiceRequest,
+  UpdateServiceRequest,
+  CreateLinkRequest,
+  UpdateLinkRequest,
   SavePositionsRequest,
   SavePositionsResponse,
   CheckAllServicesResponse,
@@ -36,7 +40,8 @@ router.get("/services/:id", (req, res) => {
 
 // Import / upsert service manually
 router.post("/services", (req, res) => {
-  const { name, host, ports, checkPort, source, status, metadata } = req.body;
+  const { name, host, ports, checkPort, source, status, metadata } =
+    req.body as CreateServiceRequest;
 
   if (!name || !host) {
     return res.status(400).json({ error: "name and host are required" });
@@ -62,7 +67,7 @@ router.post("/services", (req, res) => {
 
 // Update service
 router.put("/services/:id", (req, res) => {
-  const { name, host, ports, checkPort } = req.body;
+  const { name, host, ports, checkPort } = req.body as UpdateServiceRequest;
 
   if (!name || !host) {
     return res.status(400).json({ error: "name and host are required" });
@@ -95,7 +100,8 @@ router.delete("/services/:id", (req, res) => {
 
 // Create link
 router.post("/links", (req, res) => {
-  const { sourceId, targetId, label, type, description, targetPort, protocol } = req.body;
+  const { sourceId, targetId, label, type, description, targetPort, protocol } =
+    req.body as CreateLinkRequest;
 
   if (!sourceId || !targetId) {
     return res.status(400).json({ error: "source and target are required" });
@@ -124,7 +130,7 @@ router.post("/links", (req, res) => {
 
 // Update link
 router.put("/links/:id", (req, res) => {
-  const { label, type, description, targetPort, protocol } = req.body;
+  const { label, type, description, targetPort, protocol } = req.body as UpdateLinkRequest;
 
   try {
     const link = db.updateLink(req.params.id, {
@@ -155,7 +161,7 @@ router.post("/positions", (req, res) => {
   const { positions } = req.body as SavePositionsRequest;
 
   for (const p of positions) {
-    db.saveServicePosition(p.serviceId, p.x, p.y, p.parentId, p.w, p.h);
+    db.saveServicePosition(p.serviceId, p.parentId ?? null, p.x, p.y, p.w, p.h);
   }
 
   const response: SavePositionsResponse = { positions: db.getServicePositions() };

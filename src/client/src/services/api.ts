@@ -9,6 +9,10 @@ import type {
   DockerHostHealth,
   ApiSuccess,
   ContainerAction,
+  CreateServiceRequest,
+  UpdateServiceRequest,
+  CreateLinkRequest,
+  UpdateLinkRequest,
   SavePositionsRequest,
   SavePositionsResponse,
   CheckAllServicesResponse,
@@ -29,12 +33,8 @@ export const discoveryApi = {
 export const serviceApi = {
   getAll: () => api.get<Service[]>("/services"),
   getById: (id: string) => api.get<Service>(`/services/${id}`),
-  importService: (data: Partial<Service> & { name: string; host: string; id?: string }) =>
-    api.post<Service>("/services", data),
-  update: (
-    id: string,
-    data: { name: string; host: string; ports?: number[]; checkPort?: number | null },
-  ) => api.put<Service>(`/services/${id}`, data),
+  importService: (data: CreateServiceRequest) => api.post<Service>("/services", data),
+  update: (id: string, data: UpdateServiceRequest) => api.put<Service>(`/services/${id}`, data),
   delete: (id: string) => api.delete<ApiSuccess>(`/services/${id}`),
   getHealthHistory: (id: string, days: number) =>
     api.get<ServiceHealthHistoryItem[]>(`/services/${id}/health-history`, { params: { days } }),
@@ -45,11 +45,8 @@ export const serviceApi = {
 
 // Link management APIs
 export const linkApi = {
-  create: (data: Omit<ServiceLink, "id" | "createdAt">) => api.post<ServiceLink>("/links", data),
-  update: (
-    id: string,
-    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
-  ) => api.put<ServiceLink>(`/links/${id}`, data),
+  create: (data: CreateLinkRequest) => api.post<ServiceLink>("/links", data),
+  update: (id: string, data: UpdateLinkRequest) => api.put<ServiceLink>(`/links/${id}`, data),
   delete: (id: string) => api.delete<ApiSuccess>(`/links/${id}`),
 };
 
