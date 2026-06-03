@@ -2,7 +2,7 @@ import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { colors } from "../../styles/vars";
-import { IconServer, IconScan } from "../../utils/Icons";
+import { Icons } from "../../utils/Icons";
 import { PrimaryButton } from "../../utils/ui";
 
 const Overlay = styled.div`
@@ -26,10 +26,10 @@ export function EmptyOverlay() {
 
   return (
     <Overlay>
-      <IconServer size={48} style={{ opacity: 0.3 }} />
+      <Icons.Server size={48} style={{ opacity: 0.3 }} />
       <span>{t("dashboard.emptyMessage")}</span>
       <PrimaryButton onClick={() => navigate("/discover")}>
-        <IconScan size={14} />
+        <Icons.Scan size={14} />
         {t("dashboard.goToDiscovery")}
       </PrimaryButton>
     </Overlay>

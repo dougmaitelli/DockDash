@@ -29,7 +29,7 @@ import type { ResizeDirection } from "./ServiceNode";
 import { LinkLayer } from "./LinkLayer";
 import { NodeLayer } from "./NodeLayer";
 import { ZoomControls } from "./ZoomControls";
-import { IconPlus, IconTrash, IconRefresh, IconCheckCircle } from "../../utils/Icons";
+import { Icons } from "../../utils/Icons";
 import { SecondaryButton, DangerButton } from "../../utils/ui";
 
 interface DashboardCanvasProps {
@@ -876,23 +876,23 @@ export function DashboardCanvas({
         </ToolbarGroup>
         <ToolbarGroup>
           <SecondaryButton onClick={() => setAddingService(true)}>
-            <IconPlus size={14} />
+            <Icons.Plus size={14} />
             {t("dashboard.addService")}
           </SecondaryButton>
           {selectedService && (
             <DangerButton onClick={() => setPendingDeleteId(selectedService.id!)}>
-              <IconTrash size={14} />
+              <Icons.Trash size={14} />
               {t("dashboard.remove")}
             </DangerButton>
           )}
           <ToolButton title={t("dashboard.refresh")} onClick={() => refresh()}>
-            <IconRefresh size={14} />
+            <Icons.Refresh size={14} />
           </ToolButton>
           <ToolButton
             title={t("dashboard.triggerStatusChecks")}
             onClick={() => dashboardApi.checkAllServices()}
           >
-            <IconCheckCircle size={14} />
+            <Icons.CheckCircle size={14} />
           </ToolButton>
         </ToolbarGroup>
       </ToolbarInner>

@@ -12,7 +12,7 @@ import {
   NumberInput,
 } from "../../utils/ui";
 import { NumberTagArrayInput } from "../../utils/TagArrayInput";
-import { IconDocker, IconGlobe, IconX } from "../../utils/Icons";
+import { Icons } from "../../utils/Icons";
 import { FormGroup, Label } from "./BaseModal";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { HealthHistoryGraph } from "../reusable/HealthHistoryGraph";
@@ -271,12 +271,15 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
       <Drawer $closing={closing} $wide={tab !== "details"}>
         <Header>
           {isDocker ? (
-            <IconDocker
+            <Icons.Docker
               size={18}
               style={{ color: colors.textMuted, flexShrink: 0, marginTop: 2 }}
             />
           ) : (
-            <IconGlobe size={18} style={{ color: colors.textMuted, flexShrink: 0, marginTop: 2 }} />
+            <Icons.Globe
+              size={18}
+              style={{ color: colors.textMuted, flexShrink: 0, marginTop: 2 }}
+            />
           )}
           <HeaderInfo>
             <HeaderName>{service.name}</HeaderName>
@@ -291,7 +294,7 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
             </HeaderActions>
           )}
           <CloseButton onClick={dismiss}>
-            <IconX size={16} />
+            <Icons.X size={16} />
           </CloseButton>
         </Header>
 

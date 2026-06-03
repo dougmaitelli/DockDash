@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { colors } from "../../styles/vars";
-import { IconPlus, IconMinus, IconFitView } from "../../utils/Icons";
+import { Icons } from "../../utils/Icons";
 
 const Wrapper = styled.div`
   position: absolute;
@@ -71,14 +71,14 @@ export function ZoomControls({
   return (
     <Wrapper>
       <ZoomButton onClick={onZoomIn} disabled={zoom >= maxZoom} title={t("dashboard.zoom.in")}>
-        <IconPlus size={16} />
+        <Icons.Plus size={16} />
       </ZoomButton>
       <ZoomLabel>{Math.round(zoom * 100)}%</ZoomLabel>
       <ZoomButton onClick={onZoomOut} disabled={zoom <= minZoom} title={t("dashboard.zoom.out")}>
-        <IconMinus size={16} />
+        <Icons.Minus size={16} />
       </ZoomButton>
       <ResetButton onClick={onFit} title={t("dashboard.zoom.fit")}>
-        <IconFitView size={16} />
+        <Icons.FitView size={16} />
       </ResetButton>
     </Wrapper>
   );

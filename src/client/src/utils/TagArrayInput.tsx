@@ -2,7 +2,7 @@ import { useState, type KeyboardEvent } from "react";
 import styled from "styled-components";
 import { colors } from "../styles/vars";
 import { SecondaryButton, isNonDigitKey } from "./ui";
-import { IconPlus, IconX } from "./Icons";
+import { Icons } from "./Icons";
 
 const Container = styled.div`
   display: flex;
@@ -130,7 +130,7 @@ export function TagArrayInput({
             <Tag key={i}>
               {formatTag(v)}
               <RemoveButton onClick={() => handleRemove(i)}>
-                <IconX size={12} />
+                <Icons.X size={12} />
               </RemoveButton>
             </Tag>
           ))}
@@ -149,7 +149,7 @@ export function TagArrayInput({
           style={error ? { borderColor: colors.accentRed } : undefined}
         />
         <SecondaryButton onClick={handleAdd}>
-          <IconPlus size={14} />
+          <Icons.Plus size={14} />
         </SecondaryButton>
       </InputRow>
       {error && <ErrorText>{error}</ErrorText>}

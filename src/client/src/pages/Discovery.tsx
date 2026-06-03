@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import { colors } from "../styles/vars";
-import { IconPlus, IconX, IconScan, IconCheck, IconDocker, IconGlobe } from "../utils/Icons";
+import { Icons } from "../utils/Icons";
 import { PrimaryButton, SecondaryButton, PortTag, Section, StyledInput } from "../utils/ui";
 import { TagArrayInput } from "../utils/TagArrayInput";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
@@ -280,7 +280,7 @@ export default function Discovery() {
 
       <Section>
         <SectionTitle>
-          <IconDocker size={18} /> {t("discovery.dockerTitle")}
+          <Icons.Docker size={18} /> {t("discovery.dockerTitle")}
         </SectionTitle>
         <SectionDesc>{t("discovery.dockerDesc")}</SectionDesc>
         <div
@@ -296,7 +296,7 @@ export default function Discovery() {
             health.map((h) =>
               h.connected ? (
                 <StatusBadge key={h.host} ok={true}>
-                  <IconCheck size={12} />
+                  <Icons.Check size={12} />
                   {h.host} —{" "}
                   {t("discovery.connected", {
                     version: h.serverVersion,
@@ -306,7 +306,7 @@ export default function Discovery() {
                 </StatusBadge>
               ) : (
                 <StatusBadge key={h.host} ok={false}>
-                  <IconX size={12} />
+                  <Icons.X size={12} />
                   {h.host} — {t("discovery.notConnected", { error: h.error })}
                 </StatusBadge>
               ),
@@ -320,7 +320,7 @@ export default function Discovery() {
             onClick={handleDockerScan}
             disabled={scanningDocker || !health?.some((h) => h.connected)}
           >
-            <IconScan size={14} />
+            <Icons.Scan size={14} />
             {scanningDocker ? t("discovery.scanning") : t("discovery.scanDocker")}
           </PrimaryButton>
           {availableDocker.length > 0 && !scanningDocker && (
@@ -365,7 +365,7 @@ export default function Discovery() {
                   </ResultInfo>
                   {imported ? (
                     <Tag bg={colors.accentGreenAlpha15} color={colors.accentGreen}>
-                      <IconCheck size={11} /> {t("discovery.onDashboard")}
+                      <Icons.Check size={11} /> {t("discovery.onDashboard")}
                     </Tag>
                   ) : (
                     <SecondaryButton
@@ -381,7 +381,7 @@ export default function Discovery() {
                         });
                       }}
                     >
-                      <IconPlus size={14} /> {t("discovery.importOne")}
+                      <Icons.Plus size={14} /> {t("discovery.importOne")}
                     </SecondaryButton>
                   )}
                 </ResultItem>
@@ -393,7 +393,7 @@ export default function Discovery() {
 
       <Section>
         <SectionTitle>
-          <IconGlobe size={18} /> {t("discovery.networkTitle")}
+          <Icons.Globe size={18} /> {t("discovery.networkTitle")}
         </SectionTitle>
         <SectionDesc>{t("discovery.networkDesc")}</SectionDesc>
         <div style={{ marginBottom: 16 }}>
@@ -423,7 +423,7 @@ export default function Discovery() {
         </div>
         <ButtonRow>
           <PrimaryButton onClick={handleNetworkScan} disabled={scanningNetwork}>
-            <IconScan size={14} />
+            <Icons.Scan size={14} />
             {scanningNetwork ? t("discovery.scanning") : t("discovery.scanNetwork")}
           </PrimaryButton>
           {availableNetwork.length > 0 && !scanningNetwork && (
@@ -468,7 +468,7 @@ export default function Discovery() {
                   </ResultInfo>
                   {imported ? (
                     <Tag bg={colors.accentGreenAlpha15} color={colors.accentGreen}>
-                      <IconCheck size={11} /> {t("discovery.onDashboard")}
+                      <Icons.Check size={11} /> {t("discovery.onDashboard")}
                     </Tag>
                   ) : (
                     <SecondaryButton
@@ -484,7 +484,7 @@ export default function Discovery() {
                         });
                       }}
                     >
-                      <IconPlus size={14} /> {t("discovery.importOne")}
+                      <Icons.Plus size={14} /> {t("discovery.importOne")}
                     </SecondaryButton>
                   )}
                 </ResultItem>

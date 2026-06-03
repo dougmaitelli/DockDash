@@ -3,7 +3,7 @@ import styled from "styled-components";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { colors } from "../../styles/vars";
 import { CONTAINER_PADDING, PortSide } from "./nodeGeometry";
-import { IconArrowRight, IconDocker, IconGlobe } from "../../utils/Icons";
+import { Icons } from "../../utils/Icons";
 import { PortTag } from "../../utils/ui";
 
 export type ResizeDirection = "se";
@@ -438,9 +438,9 @@ export function ServiceNode({
         <NodeBody>
           <ServiceName>
             {service.source === ServiceSource.DOCKER ? (
-              <IconDocker size={14} style={{ flexShrink: 0, color: colors.textMuted }} />
+              <Icons.Docker size={14} style={{ flexShrink: 0, color: colors.textMuted }} />
             ) : (
-              <IconGlobe size={14} style={{ flexShrink: 0, color: colors.textMuted }} />
+              <Icons.Globe size={14} style={{ flexShrink: 0, color: colors.textMuted }} />
             )}
             <span className="name" title={service.name}>
               {service.name}
@@ -451,7 +451,7 @@ export function ServiceNode({
               <ImageTag>{service.metadata.imageTag as string}</ImageTag>
               {service.metadata.hasUpdate && (
                 <>
-                  <IconArrowRight size={10} style={{ color: colors.textMuted, flexShrink: 0 }} />
+                  <Icons.ArrowRight size={10} style={{ color: colors.textMuted, flexShrink: 0 }} />
                   <UpdateTag>
                     {(service.metadata.latestVersion as string | undefined) ?? "update available"}
                   </UpdateTag>

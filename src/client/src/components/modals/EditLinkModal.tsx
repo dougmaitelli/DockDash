@@ -15,7 +15,7 @@ import {
   NumberInput,
   StyledSelect,
 } from "../../utils/ui";
-import { IconArrowRight } from "../../utils/Icons";
+import { Icons } from "../../utils/Icons";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
 
 const TextArea = styled.textarea`
@@ -107,7 +107,7 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span>{link.sourceName || link.sourceId}</span>
-            <IconArrowRight size={14} style={{ color: getLinkColor(link.type), flexShrink: 0 }} />
+            <Icons.ArrowRight size={14} style={{ color: getLinkColor(link.type), flexShrink: 0 }} />
             <span>{link.targetName || link.targetId}</span>
           </div>
           {link.label && (

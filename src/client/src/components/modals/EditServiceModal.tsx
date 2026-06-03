@@ -13,7 +13,7 @@ import {
 } from "../../utils/ui";
 import { NumberTagArrayInput } from "../../utils/TagArrayInput";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
-import { IconDocker, IconGlobe } from "../../utils/Icons";
+import { Icons } from "../../utils/Icons";
 
 const NodeInfo = styled.div`
   font-size: 0.85rem;
@@ -141,9 +141,9 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
         <NodeInfo>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {service.source === ServiceSource.DOCKER ? (
-              <IconDocker size={20} style={{ color: colors.textMuted }} />
+              <Icons.Docker size={20} style={{ color: colors.textMuted }} />
             ) : (
-              <IconGlobe size={20} style={{ color: colors.textMuted }} />
+              <Icons.Globe size={20} style={{ color: colors.textMuted }} />
             )}
             <div>
               <div style={{ fontWeight: 600, color: colors.textPrimary }}>{service.name}</div>

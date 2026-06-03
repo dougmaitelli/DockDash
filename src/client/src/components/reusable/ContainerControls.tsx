@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { Service } from "@shared";
 import { ServiceStatus, ContainerAction } from "@shared";
 import { colors } from "../../styles/vars";
-import { IconStop, IconPlay, IconRefresh } from "../../utils/Icons";
+import { Icons } from "../../utils/Icons";
 import { serviceApi } from "../../services/api";
 
 const ButtonRow = styled.div`
@@ -100,21 +100,21 @@ export function ContainerControls({ service, onActionComplete }: ContainerContro
           disabled={activeAction !== null || service.status !== ServiceStatus.UP}
           title={t("modals.containerStop")}
         >
-          <IconStop size={13} />
+          <Icons.Stop size={13} />
         </StopBtn>
         <StartBtn
           onClick={() => handleAction(ContainerAction.START)}
           disabled={activeAction !== null || service.status !== ServiceStatus.DOWN}
           title={t("modals.containerStart")}
         >
-          <IconPlay size={13} />
+          <Icons.Play size={13} />
         </StartBtn>
         <RestartBtn
           onClick={() => handleAction(ContainerAction.RESTART)}
           disabled={activeAction !== null || service.status !== ServiceStatus.UP}
           title={t("modals.containerRestart")}
         >
-          <IconRefresh size={13} />
+          <Icons.Refresh size={13} />
         </RestartBtn>
       </ButtonRow>
       {error && <ErrorText title={error}>{t("modals.containerActionFailed", { error })}</ErrorText>}
