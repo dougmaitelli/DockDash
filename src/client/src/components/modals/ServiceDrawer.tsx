@@ -15,10 +15,10 @@ import { NumberTagArrayInput } from "../../utils/TagArrayInput";
 import { IconDocker, IconGlobe, IconX } from "../../utils/Icons";
 import { FormGroup, Label } from "./BaseModal";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { HealthHistoryGraph } from "./HealthHistoryGraph";
-import { DockerLogs } from "./DockerLogs";
-import { Changelog } from "./Changelog";
-import { ContainerControls } from "./ContainerControls";
+import { HealthHistoryGraph } from "../reusable/HealthHistoryGraph";
+import { DockerLogs } from "../reusable/DockerLogs";
+import { Changelog } from "../reusable/Changelog";
+import { ContainerControls } from "../reusable/ContainerControls";
 import { useConfig } from "../../context/ConfigContext";
 
 const ANIM_MS = 220;
