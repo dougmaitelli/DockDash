@@ -43,7 +43,7 @@ app.use(
   },
 );
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`${APP_NAME} server running on http://localhost:${PORT}`);
   console.log(`Docker hosts: ${config.dockerHosts.join(", ")}`);
   console.log(`Network CIDRs: ${config.networkCidrs.join(",")}`);
@@ -53,6 +53,15 @@ app.listen(PORT, () => {
   new HealthCheckJob().start();
   new UpdateCheckJob().start();
   new HistoryCleanupJob().start();
+});
+
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`[${APP_NAME}] Port ${PORT} is already in use. Run: fuser -k ${PORT}/tcp`);
+    process.exit(1);
+  }
+
+  throw err;
 });
 
 export default app;
