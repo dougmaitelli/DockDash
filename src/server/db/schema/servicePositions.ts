@@ -8,4 +8,6 @@ export const servicePositions = sqliteTable("service_positions", {
   x: real("x").notNull(),
   y: real("y").notNull(),
   parentId: text("parent_id").references(() => services.id, { onDelete: "set null" }),
+  w: real("w"),
+  h: real("h"),
 });

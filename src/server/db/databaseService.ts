@@ -137,13 +137,20 @@ export class DatabaseService {
     this.orm.delete(services).where(eq(services.id, id)).run();
   }
 
-  saveServicePosition(serviceId: string, x: number, y: number, parentId?: string | null): void {
+  saveServicePosition(
+    serviceId: string,
+    x: number,
+    y: number,
+    parentId?: string | null,
+    w?: number | null,
+    h?: number | null,
+  ): void {
     this.orm
       .insert(servicePositions)
-      .values({ serviceId, x, y, parentId: parentId ?? null })
+      .values({ serviceId, x, y, parentId: parentId ?? null, w: w ?? null, h: h ?? null })
       .onConflictDoUpdate({
         target: servicePositions.serviceId,
-        set: { x, y, parentId: parentId ?? null },
+        set: { x, y, parentId: parentId ?? null, w: w ?? null, h: h ?? null },
       })
       .run();
   }

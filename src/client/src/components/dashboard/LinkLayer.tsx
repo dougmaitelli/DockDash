@@ -1,14 +1,18 @@
 import { useMemo, useState } from "react";
 import type { ServiceLink, ServiceWithPosition } from "@shared";
-import { orthogonalPath, getLinkColor } from "./linkUtils";
+import { orthogonalPath, getLinkColor, SIDE_VEC } from "./linkUtils";
 import type { LinkPath } from "./linkUtils";
-import { getNodeCenter, getPortPosition, getChildForcedSide, type PortSide } from "./nodeGeometry";
+import { getNodeCenter, getPortPosition, PortSide } from "./nodeGeometry";
 import { colors } from "../../styles/vars";
+
+const PORT_LABEL_W = 34; // port badge width (px, unscaled)
+const PORT_LABEL_H = 17; // port badge height (px, unscaled)
 
 interface LinkLayerProps {
   links: ServiceLink[];
   services: ServiceWithPosition[];
   dragOffsets: Record<string, { dx: number; dy: number }>;
+  resizeDimensions: Record<string, { w: number; h: number }>;
   panOffset: { x: number; y: number };
   zoomLevel: number;
   connectingSource: { serviceId: string; side: PortSide } | null;
@@ -22,6 +26,7 @@ export function LinkLayer({
   links,
   services,
   dragOffsets,
+  resizeDimensions,
   panOffset,
   zoomLevel,
   connectingSource,
@@ -43,35 +48,48 @@ export function LinkLayer({
         const tx = tgtCenter.x * zoomLevel + panOffset.x;
         const ty = tgtCenter.y * zoomLevel + panOffset.y;
 
+        const srcIsParent = services.some((s) => s.position?.parentId === link.sourceId);
+        const tgtIsParent = services.some((s) => s.position?.parentId === link.targetId);
         const srcParentId = services.find((s) => s.id === link.sourceId)?.position?.parentId;
         const tgtParentId = services.find((s) => s.id === link.targetId)?.position?.parentId;
-        const areSiblings = srcParentId && tgtParentId && srcParentId === tgtParentId;
+        const srcIsParentOfTgt = tgtParentId === link.sourceId;
+        const tgtIsParentOfSrc = srcParentId === link.targetId;
 
-        const flipSide = (side: PortSide | null): PortSide | null =>
-          side === "left" ? "right" : side === "right" ? "left" : side;
+        let exitSide: PortSide;
+        let entrySide: PortSide;
 
-        const srcForced = areSiblings
-          ? flipSide(getChildForcedSide(link.sourceId, services))
-          : getChildForcedSide(link.sourceId, services);
-        const tgtForced = areSiblings
-          ? flipSide(getChildForcedSide(link.targetId, services))
-          : getChildForcedSide(link.targetId, services);
-
-        let exitSide: PortSide | null = srcForced;
-        let entrySide: PortSide | null = tgtForced;
-
-        if (!exitSide || !tgtForced) {
+        if (srcIsParentOfTgt) {
+          // Parent → its own child: exit from header bottom, enter child from top
+          exitSide = PortSide.BOTTOM;
+          entrySide = PortSide.TOP;
+        } else if (tgtIsParentOfSrc) {
+          // Child → its own parent: exit child from top, enter parent header bottom
+          exitSide = PortSide.TOP;
+          entrySide = PortSide.BOTTOM;
+        } else {
           const ddx = tx - sx;
           const ddy = ty - sy;
           const useHorizontal = Math.abs(ddx) >= Math.abs(ddy);
 
-          if (!srcForced) {
-            exitSide = useHorizontal ? (ddx >= 0 ? "right" : "left") : ddy >= 0 ? "bottom" : "top";
-          }
+          exitSide = useHorizontal
+            ? ddx >= 0
+              ? PortSide.RIGHT
+              : PortSide.LEFT
+            : ddy >= 0
+              ? PortSide.BOTTOM
+              : PortSide.TOP;
+          entrySide = useHorizontal
+            ? ddx >= 0
+              ? PortSide.LEFT
+              : PortSide.RIGHT
+            : ddy >= 0
+              ? PortSide.TOP
+              : PortSide.BOTTOM;
 
-          if (!tgtForced) {
-            entrySide = useHorizontal ? (ddx >= 0 ? "left" : "right") : ddy >= 0 ? "top" : "bottom";
-          }
+          // Upgrade BOTTOM to CONTAINER_BOTTOM for parent nodes on external links
+          if (srcIsParent && exitSide === PortSide.BOTTOM) exitSide = PortSide.CONTAINER_BOTTOM;
+
+          if (tgtIsParent && entrySide === PortSide.BOTTOM) entrySide = PortSide.CONTAINER_BOTTOM;
         }
 
         const srcPort = getPortPosition(link.sourceId, exitSide!, services, dragOffsets);
@@ -97,7 +115,8 @@ export function LinkLayer({
         };
       })
       .filter((p): p is LinkPath => p !== null);
-  }, [links, services, dragOffsets, panOffset, zoomLevel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- resizeDimensions invalidates DOM-based getNodeSize reads
+  }, [links, services, dragOffsets, resizeDimensions, panOffset, zoomLevel]);
 
   const previewPath = useMemo(() => {
     if (!connectingSource || !mouseCanvasPos) return null;
@@ -121,9 +140,9 @@ export function LinkLayer({
     let entrySide: PortSide;
 
     if (Math.abs(pdx) >= Math.abs(pdy)) {
-      entrySide = pdx >= 0 ? "left" : "right";
+      entrySide = pdx >= 0 ? PortSide.LEFT : PortSide.RIGHT;
     } else {
-      entrySide = pdy >= 0 ? "top" : "bottom";
+      entrySide = pdy >= 0 ? PortSide.TOP : PortSide.BOTTOM;
     }
 
     return orthogonalPath(sx, sy, connectingSource.side, tx, ty, entrySide, zoomLevel);
@@ -147,20 +166,14 @@ export function LinkLayer({
       {[...linkPaths]
         .sort((a, b) => (a.id === hoveredId ? 1 : b.id === hoveredId ? -1 : 0))
         .map((p) => {
-          const boxW = 34 * zoomLevel;
-          const boxH = 17 * zoomLevel;
+          const boxW = PORT_LABEL_W * zoomLevel;
+          const boxH = PORT_LABEL_H * zoomLevel;
           const hasPort = p.link.targetPort != null;
           const hovered = hoveredId === p.id;
 
-          const portBoxOffset = {
-            left: { cx: -boxW / 2, cy: 0 },
-            right: { cx: boxW / 2, cy: 0 },
-            top: { cx: 0, cy: -boxH / 2 },
-            bottom: { cx: 0, cy: boxH / 2 },
-          }[p.entrySide];
-
-          const bx = p.endX + portBoxOffset.cx;
-          const by = p.endY + portBoxOffset.cy;
+          const [dx, dy] = SIDE_VEC[p.entrySide];
+          const bx = p.endX + (dx * boxW) / 2;
+          const by = p.endY + (dy * boxH) / 2;
 
           return (
             <g key={p.id}>

@@ -1,18 +1,19 @@
 import { useMemo } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { ServiceWithPosition } from "@shared";
-import { ServiceNodeInner } from "./ServiceNode";
+import { ServiceNode, type ResizeDirection } from "./ServiceNode";
 import {
   NODE_WIDTH,
   NODE_HEIGHT,
-  CHILD_ROW_GAP,
-  computeGroupDimensions,
-  type PortSide,
+  DEFAULT_CONTAINER_WIDTH,
+  DEFAULT_CONTAINER_HEIGHT,
+  PortSide,
 } from "./nodeGeometry";
 
 interface NodeLayerProps {
   services: ServiceWithPosition[];
   dragOffsets: Record<string, { dx: number; dy: number }>;
+  resizeDimensions: Record<string, { w: number; h: number }>;
   selectedId: string | null;
   hoveredNode: string | null;
   nestingTarget: string | null;
@@ -21,6 +22,7 @@ interface NodeLayerProps {
   onHover: (id: string | null) => void;
   onDoubleClick: (service: ServiceWithPosition) => void;
   onDragStart: (e: ReactMouseEvent, serviceId: string) => void;
+  onResizeStart: (e: ReactMouseEvent, serviceId: string, direction: ResizeDirection) => void;
   onPortMouseDown: (e: ReactMouseEvent, serviceId: string, side: PortSide) => void;
   onPortMouseEnter: (serviceId: string) => void;
   onPortMouseLeave: () => void;
@@ -31,6 +33,7 @@ interface NodeLayerProps {
 export function NodeLayer({
   services,
   dragOffsets,
+  resizeDimensions,
   selectedId,
   hoveredNode,
   nestingTarget,
@@ -39,6 +42,7 @@ export function NodeLayer({
   onHover,
   onDoubleClick,
   onDragStart,
+  onResizeStart,
   onPortMouseDown,
   onPortMouseEnter,
   onPortMouseLeave,
@@ -58,17 +62,6 @@ export function NodeLayer({
 
         map[pid].push(s);
       }
-    }
-
-    for (const pid of Object.keys(map)) {
-      map[pid].sort((a, b) => {
-        const tA = a.createdAt || "";
-        const tB = b.createdAt || "";
-
-        if (tA !== tB) return tA < tB ? -1 : 1;
-
-        return a.id! < b.id! ? -1 : 1;
-      });
     }
 
     return map;
@@ -117,59 +110,49 @@ export function NodeLayer({
         const anyChildActive = children.some((c) => selectedId === c.id || hoveredNode === c.id);
         const zIndex = isSelected || isHovered || anyChildActive ? 10 : 1;
 
+        // Live resize dimensions take precedence over stored ones.
+        const rz = resizeDimensions[service.id!];
+        const containerWidth =
+          children.length > 0
+            ? (rz?.w ?? service.position?.w ?? DEFAULT_CONTAINER_WIDTH)
+            : undefined;
+        const containerHeight =
+          children.length > 0
+            ? (rz?.h ?? service.position?.h ?? DEFAULT_CONTAINER_HEIGHT)
+            : undefined;
+
+        // Build free-form children — each absolutely positioned inside ContainerBody.
         let childrenSection: React.ReactNode = null;
-        let expandedWidth: number | undefined;
-        let childrenGridCols: number | undefined;
 
         if (children.length > 0) {
-          const { w: groupW } = computeGroupDimensions(children.length);
-
-          expandedWidth = groupW;
-          childrenGridCols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(children.length))));
-
-          const cols = childrenGridCols;
-          const columnArrays: React.ReactNode[][] = Array.from({ length: cols }, () => []);
-
-          children.forEach((child, idx) => {
-            const col = idx % cols;
-            const childDragX = dragOffsets[child.id!]?.dx || 0;
-            const childDragY = dragOffsets[child.id!]?.dy || 0;
+          childrenSection = children.map((child) => {
+            const cx = child.position?.x ?? 0;
+            const cy = child.position?.y ?? 0;
+            const cdx = dragOffsets[child.id!]?.dx ?? 0;
+            const cdy = dragOffsets[child.id!]?.dy ?? 0;
             const isChildSelected = selectedId === child.id;
             const isChildHovered = hoveredNode === child.id;
 
-            columnArrays[col].push(
+            return (
               <div
                 key={child.id}
                 style={{
-                  position: "relative",
-                  transform: `translate(${childDragX}px, ${childDragY}px)`,
+                  position: "absolute",
+                  left: cx + cdx,
+                  top: cy + cdy,
                   zIndex: isChildSelected ? 5 : isChildHovered ? 4 : 2,
                 }}
               >
-                <ServiceNodeInner
+                <ServiceNode
                   service={child}
                   isSelected={isChildSelected}
                   isHovered={isChildHovered}
                   onDoubleClick={() => onDoubleClick(child)}
                   {...sharedNodeProps}
                 />
-              </div>,
+              </div>
             );
           });
-
-          childrenSection = columnArrays.map((colChildren, colIdx) => (
-            <div
-              key={colIdx}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: `${CHILD_ROW_GAP}px`,
-                width: `${NODE_WIDTH}px`,
-              }}
-            >
-              {colChildren}
-            </div>
-          ));
         }
 
         return (
@@ -183,14 +166,16 @@ export function NodeLayer({
               pointerEvents: "auto",
             }}
           >
-            <ServiceNodeInner
+            <ServiceNode
               service={service}
               isSelected={isSelected}
               isHovered={isHovered}
               isNestTarget={isNestTarget}
-              expandedWidth={expandedWidth}
+              containerWidth={containerWidth}
+              containerHeight={containerHeight}
               childrenSection={childrenSection}
               onDoubleClick={() => onDoubleClick(service)}
+              onResizeStart={onResizeStart}
               {...sharedNodeProps}
             />
           </div>

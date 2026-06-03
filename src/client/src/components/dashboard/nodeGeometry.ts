@@ -2,17 +2,35 @@ import type { ServiceWithPosition } from "@shared";
 
 export const NODE_WIDTH = 220;
 export const NODE_HEIGHT = 120;
-export const CHILD_ROW_GAP = 20;
-export const CHILD_COLUMN_GAP = 60;
 export const CARD_BORDER_WIDTH = 3;
 
-// Height of the parent service card's own info section (name/host/status/badges).
-// Used to offset children below it in the expanded card.
-export const GROUP_PARENT_INFO_HEIGHT = 110;
-// Inner padding on the children section (left/right and top/bottom of children area).
-export const GROUP_CARD_INNER_PADDING = 10;
+// Default dimensions for a container node (parent with children).
+export const DEFAULT_CONTAINER_WIDTH = 400;
+export const DEFAULT_CONTAINER_HEIGHT = 280;
+// Padding inside the container body where children are placed.
+export const CONTAINER_PADDING = 12;
 
-export type PortSide = "left" | "right" | "top" | "bottom";
+export enum PortSide {
+  LEFT = "left",
+  RIGHT = "right",
+  TOP = "top",
+  BOTTOM = "bottom",
+  CONTAINER_BOTTOM = "container-bottom",
+}
+
+// --- DOM helpers -----------------------------------------------------------
+
+export function getNodeEl(serviceId: string): HTMLElement | null {
+  return document.querySelector(`[data-service-id="${serviceId}"]`);
+}
+
+export function getInfoSectionHeight(serviceId: string): number {
+  const el = getNodeEl(serviceId)?.querySelector("[data-info-section]") as HTMLElement | null;
+
+  return el?.offsetHeight ?? NODE_HEIGHT;
+}
+
+// ---------------------------------------------------------------------------
 
 export function getAbsoluteNodePosition(
   service: ServiceWithPosition,
@@ -38,6 +56,7 @@ export function getAbsoluteNodePosition(
     return { x: 100 + col * 280 + offset.dx, y: 120 + row * 200 + offset.dy };
   }
 
+  // Child node: position.x/y is relative to the parent's container body.
   const parent = allServices.find((s) => s.id === pos.parentId);
 
   if (!parent) {
@@ -45,62 +64,20 @@ export function getAbsoluteNodePosition(
   }
 
   const parentAbs = getAbsoluteNodePosition(parent, allServices, dragOffsets);
-
-  // Read the child's actual DOM position relative to the parent's absolute wrapper.
-  // This avoids relying on the GROUP_PARENT_INFO_HEIGHT approximation — the real InfoSection
-  // height depends on font rendering and content and can't be known statically.
-  // The child wrapper uses `transform: translate` for drag (not offsetLeft/Top), so the
-  // DOM offsets are drag-free and we add offset.dx/dy explicitly.
-  const childEl = document.querySelector(`[data-service-id="${service.id}"]`) as HTMLElement | null;
-  const parentEl = document.querySelector(
-    `[data-service-id="${pos.parentId}"]`,
-  ) as HTMLElement | null;
-
-  if (childEl && parentEl?.offsetParent) {
-    const parentWrapper = parentEl.offsetParent as HTMLElement;
-    let relX = 0;
-    let relY = 0;
-    let el: HTMLElement | null = childEl;
-
-    while (el && el !== parentWrapper) {
-      relX += el.offsetLeft;
-      relY += el.offsetTop;
-      el = el.offsetParent as HTMLElement | null;
-    }
-
-    // offsetLeft/offsetTop measure to the offsetParent's *padding* edge, but parentAbs
-    // is at the NodeCard's *border* edge. Add CARD_BORDER_WIDTH to correct the gap.
-    return {
-      x: parentAbs.x + relX + CARD_BORDER_WIDTH + offset.dx,
-      y: parentAbs.y + relY + CARD_BORDER_WIDTH + offset.dy,
-    };
-  }
-
-  // Fallback when DOM isn't available yet (e.g. first render before mount)
-  const siblings = sortSiblings(allServices.filter((s) => s.position?.parentId === pos.parentId));
-  const idx = siblings.findIndex((s) => s.id === service.id);
-
-  if (idx === -1) {
-    return {
-      x: parentAbs.x + GROUP_CARD_INNER_PADDING + offset.dx,
-      y: parentAbs.y + GROUP_PARENT_INFO_HEIGHT + GROUP_CARD_INNER_PADDING + offset.dy,
-    };
-  }
-
-  const grid = childGridPosition(idx, siblings.length);
+  const headerH = getInfoSectionHeight(pos.parentId);
 
   return {
-    x: parentAbs.x + grid.x + offset.dx,
-    y: parentAbs.y + GROUP_PARENT_INFO_HEIGHT + grid.y + offset.dy,
+    x: parentAbs.x + CARD_BORDER_WIDTH + pos.x + offset.dx,
+    y: parentAbs.y + CARD_BORDER_WIDTH + headerH + pos.y + offset.dy,
   };
 }
 
 export function getNodeSize(serviceId: string): { w: number; h: number } | null {
-  const el = document.querySelector(`[data-service-id="${serviceId}"]`) as HTMLElement | null;
+  const el = getNodeEl(serviceId);
 
   if (!el) return null;
 
-  return { w: el.offsetWidth ?? NODE_WIDTH, h: el.offsetHeight ?? NODE_HEIGHT };
+  return { w: el.offsetWidth, h: el.offsetHeight };
 }
 
 export function getNodeCenter(
@@ -135,10 +112,7 @@ function getParentInfoSectionCenterY(
   if (!service) return null;
 
   const absPos = getAbsoluteNodePosition(service, services, dragOffsets);
-  const infoEl = document.querySelector(
-    `[data-service-id="${serviceId}"] [data-info-section]`,
-  ) as HTMLElement | null;
-  const infoH = infoEl?.offsetHeight ?? GROUP_PARENT_INFO_HEIGHT;
+  const infoH = getInfoSectionHeight(serviceId);
 
   return absPos.y + CARD_BORDER_WIDTH + infoH / 2;
 }
@@ -156,11 +130,30 @@ export function getPortPosition(
   const absPos = getAbsoluteNodePosition(service, services, dragOffsets);
   const size = getNodeSize(serviceId);
 
-  if (side === "left" || side === "right") {
+  const isParent = services.some((s) => s.position?.parentId === serviceId);
+
+  // Container-bottom: bottom-centre of the full container card.
+  if (side === PortSide.CONTAINER_BOTTOM) {
+    return {
+      x: absPos.x + (size?.w ?? NODE_WIDTH) / 2,
+      y: absPos.y + (size?.h ?? NODE_HEIGHT),
+    };
+  }
+
+  // For parent nodes, "bottom" means the header bottom, not the container bottom.
+  // This keeps the port-bottom dot (inside DragHandle) and link endpoints consistent.
+  if (side === PortSide.BOTTOM && isParent) {
+    return {
+      x: absPos.x + (size?.w ?? NODE_WIDTH) / 2,
+      y: absPos.y + CARD_BORDER_WIDTH + getInfoSectionHeight(serviceId),
+    };
+  }
+
+  if ((side === PortSide.LEFT || side === PortSide.RIGHT) && isParent) {
     const headerCenterY = getParentInfoSectionCenterY(serviceId, services, dragOffsets);
 
     if (headerCenterY !== null) {
-      const x = side === "left" ? absPos.x : absPos.x + (size?.w ?? NODE_WIDTH);
+      const x = side === PortSide.LEFT ? absPos.x : absPos.x + (size?.w ?? NODE_WIDTH);
 
       return { x, y: headerCenterY };
     }
@@ -182,89 +175,39 @@ export function portCoords(
   halfW: number,
   halfH: number,
 ): { x: number; y: number } {
-  if (side === "left") return { x: cx - halfW, y: cy };
+  if (side === PortSide.LEFT) return { x: cx - halfW, y: cy };
 
-  if (side === "right") return { x: cx + halfW, y: cy };
+  if (side === PortSide.RIGHT) return { x: cx + halfW, y: cy };
 
-  if (side === "top") return { x: cx, y: cy - halfH };
+  if (side === PortSide.TOP) return { x: cx, y: cy - halfH };
 
   return { x: cx, y: cy + halfH };
 }
 
-/**
- * Width/height of the parent card when expanded to hold `childCount` children.
- */
-export function computeGroupDimensions(childCount: number): { w: number; h: number } {
-  const cols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(childCount))));
-  const rows = Math.max(1, Math.ceil(childCount / cols));
-
-  const childrenW = cols * NODE_WIDTH + (cols - 1) * CHILD_COLUMN_GAP;
-  const childrenH = rows * NODE_HEIGHT + (rows - 1) * CHILD_ROW_GAP;
-
-  // Width includes borders (border-box sizing) so content area = w - 2*CARD_BORDER_WIDTH
-  return {
-    w: Math.max(NODE_WIDTH, 2 * CARD_BORDER_WIDTH + 2 * GROUP_CARD_INNER_PADDING + childrenW),
-    h: GROUP_PARENT_INFO_HEIGHT + GROUP_CARD_INNER_PADDING + childrenH + GROUP_CARD_INNER_PADDING,
-  };
-}
-
-/**
- * Position of child index `i` (out of `total`) within the children section,
- * i.e. relative to the top-left of the children area (below the info section).
- */
-export function childGridPosition(index: number, total: number): { x: number; y: number } {
-  const cols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(total))));
-  const col = index % cols;
-  const row = Math.floor(index / cols);
-
-  return {
-    x: GROUP_CARD_INNER_PADDING + col * (NODE_WIDTH + CHILD_COLUMN_GAP),
-    y: GROUP_CARD_INNER_PADDING + row * (NODE_HEIGHT + CHILD_ROW_GAP),
-  };
-}
-
-export function sortSiblings(siblings: ServiceWithPosition[]): ServiceWithPosition[] {
-  return [...siblings].sort((a, b) => {
-    const tA = a.createdAt || "";
-    const tB = b.createdAt || "";
-
-    if (tA !== tB) return tA < tB ? -1 : 1;
-
-    return a.id! < b.id! ? -1 : 1;
-  });
-}
-
-/**
- * For child nodes inside a group, returns the port side that links should use so
- * connections always exit/enter from the outer edges of the group rather than
- * crossing through the parent card body.
- * Returns null for root nodes, parents, or middle columns (automatic routing).
- */
-export function getChildForcedSide(
-  serviceId: string,
+export function getMinContainerDimensions(
+  nodeId: string,
   services: ServiceWithPosition[],
-): PortSide | null {
-  const service = services.find((s) => s.id === serviceId);
+): { minW: number; minH: number } {
+  const children = services.filter((s) => s.position?.parentId === nodeId);
 
-  if (!service?.position?.parentId) return null;
+  let minBodyW = NODE_WIDTH;
+  let minBodyH = NODE_HEIGHT;
 
-  const siblings = sortSiblings(
-    services.filter((s) => s.position?.parentId === service.position!.parentId),
-  );
+  for (const child of children) {
+    const cx = child.position?.x ?? 0;
+    const cy = child.position?.y ?? 0;
+    const size = getNodeSize(child.id!);
+    const childW = size?.w ?? NODE_WIDTH;
+    const childH = size?.h ?? NODE_HEIGHT;
 
-  const cols = Math.min(2, Math.max(1, Math.ceil(Math.sqrt(siblings.length))));
+    minBodyW = Math.max(minBodyW, cx + childW + CONTAINER_PADDING);
+    minBodyH = Math.max(minBodyH, cy + childH + CONTAINER_PADDING);
+  }
 
-  if (cols === 1) return null;
+  const headerH = getInfoSectionHeight(nodeId);
 
-  const idx = siblings.findIndex((s) => s.id === serviceId);
-
-  if (idx === -1) return null;
-
-  const col = idx % cols;
-
-  if (col === 0) return "left";
-
-  if (col === cols - 1) return "right";
-
-  return null;
+  return {
+    minW: minBodyW + 2 * CARD_BORDER_WIDTH,
+    minH: minBodyH + headerH + 2 * CARD_BORDER_WIDTH,
+  };
 }

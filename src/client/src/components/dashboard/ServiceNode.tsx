@@ -2,72 +2,99 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import styled from "styled-components";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { colors } from "../../styles/vars";
-import { CHILD_COLUMN_GAP, GROUP_CARD_INNER_PADDING, PortSide } from "./nodeGeometry";
+import { CONTAINER_PADDING, PortSide } from "./nodeGeometry";
 import { IconArrowRight, IconDocker, IconGlobe } from "../../utils/Icons";
 import { PortTag } from "../../utils/ui";
 
+export type ResizeDirection = "se";
+
 interface NodeCardProps {
-  service: Service;
-  isSelected: boolean;
-  isHovered: boolean;
-  isNestTarget?: boolean;
-  $expandedWidth?: number;
+  $isNestTarget?: boolean;
+  $isSelected?: boolean;
+  $isHovered?: boolean;
+  $status?: string;
   $isParent?: boolean;
+  $containerWidth?: number;
+  $containerHeight?: number;
 }
 
-const NodeCard = styled.div.withConfig({
-  shouldForwardProp: (prop) =>
-    !["isSelected", "isHovered", "isNestTarget", "$expandedWidth", "$isParent", "service"].includes(
-      prop,
-    ),
-})<NodeCardProps>`
+const NodeCard = styled.div<NodeCardProps>`
   position: relative;
-  width: ${(props) => (props.$expandedWidth ? `${props.$expandedWidth}px` : "220px")};
-  background: ${(props) =>
-    props.$isParent
-      ? `color-mix(in srgb, transparent 40%, color-mix(in srgb, white 3%, ${colors.bgCard}))`
-      : colors.bgCard};
+  width: ${(p) => (p.$containerWidth ? `${p.$containerWidth}px` : "220px")};
+  ${(p) => (p.$isParent && p.$containerHeight ? `height: ${p.$containerHeight}px;` : "")}
+  ${(p) => (p.$isParent ? "display: flex; flex-direction: column;" : "")}
+  background: color-mix(in srgb, transparent 40%, color-mix(in srgb, white 3%, ${colors.bgCard}));
   border: 3px solid
-    ${(props) =>
-      props.isNestTarget
+    ${(p) =>
+      p.$isNestTarget
         ? colors.accentGreen
-        : props.isSelected
+        : p.$isSelected
           ? colors.accentBlue
-          : props.isHovered
+          : p.$isHovered
             ? colors.borderHover
-            : props.service.status === ServiceStatus.UP
+            : p.$status === ServiceStatus.UP
               ? `color-mix(in srgb, ${colors.accentGreen} 50%, transparent)`
-              : props.service.status === ServiceStatus.DOWN
+              : p.$status === ServiceStatus.DOWN
                 ? `color-mix(in srgb, ${colors.accentRed} 50%, transparent)`
                 : colors.border};
-  border-style: ${(props) => (props.isNestTarget ? "dashed" : "solid")};
+  border-style: ${(p) => (p.$isNestTarget ? "dashed" : "solid")};
   border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: ${(props) =>
-    props.isNestTarget
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  box-shadow: ${(p) =>
+    p.$isNestTarget
       ? `0 0 0 3px ${colors.accentGreenAlpha15}, 0 4px 16px ${colors.blackAlpha30}`
-      : props.isSelected
+      : p.$isSelected
         ? `0 0 0 2px ${colors.accentBlueAlpha20}, 0 4px 12px ${colors.blackAlpha30}`
-        : props.isHovered
+        : p.$isHovered
           ? `0 4px 16px ${colors.blackAlpha40}`
           : `0 2px 8px ${colors.blackAlpha20}`};
+  overflow: visible;
 `;
 
-const InfoSection = styled.div`
+// The header area is the drag handle — cursor communicates this.
+const DragHandle = styled.div`
+  cursor: grab;
+  flex-shrink: 0;
   position: relative;
+
+  &:active {
+    cursor: grabbing;
+  }
 `;
 
 const NodeBody = styled.div`
+  background: ${colors.bgCard};
+  border-radius: 10px;
   padding: 10px 12px;
 `;
 
-const ChildrenSection = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: ${CHILD_COLUMN_GAP}px;
-  padding: ${GROUP_CARD_INNER_PADDING}px;
+// Free-form container for children — position:relative so children use absolute coords.
+const ContainerBody = styled.div`
+  flex: 1;
+  position: relative;
+  overflow: visible;
   border-top: 1px solid color-mix(in srgb, ${colors.accentBlue} 20%, ${colors.border});
+`;
+
+const ResizeHandle = styled.div`
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  cursor: se-resize;
+  border-radius: 3px;
+  background: ${colors.accentBlue};
+  opacity: 0.7;
+  transition: opacity 0.15s;
+  z-index: 20;
+
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 const ServiceName = styled.div`
@@ -97,7 +124,7 @@ const ServiceHost = styled.div`
   gap: 4px;
 `;
 
-const StatusBadge = styled.div<{ status: string }>`
+const StatusBadge = styled.div<{ $status: string }>`
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -108,16 +135,16 @@ const StatusBadge = styled.div<{ status: string }>`
   margin-top: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: ${(props) =>
-    props.status === ServiceStatus.UP
+  background: ${(p) =>
+    p.$status === ServiceStatus.UP
       ? colors.accentGreenAlpha15
-      : props.status === ServiceStatus.DOWN
+      : p.$status === ServiceStatus.DOWN
         ? colors.accentRedAlpha15
         : colors.textMutedAlpha15};
-  color: ${(props) =>
-    props.status === ServiceStatus.UP
+  color: ${(p) =>
+    p.$status === ServiceStatus.UP
       ? colors.accentGreen
-      : props.status === ServiceStatus.DOWN
+      : p.$status === ServiceStatus.DOWN
         ? colors.accentRed
         : colors.textMuted};
 `;
@@ -206,8 +233,18 @@ const PortDot = styled.div<{ $isSource?: boolean; $isTarget?: boolean }>`
     }
   }
 
-  ${(props) =>
-    props.$isSource &&
+  /* Positioned relative to NodeCard (the full container), not DragHandle */
+  &.port-container-bottom {
+    bottom: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    &:hover {
+      transform: translateX(-50%) scale(1.4);
+    }
+  }
+
+  ${(p) =>
+    p.$isSource &&
     `
     opacity: 1;
     background: ${colors.accentBlueLighter};
@@ -215,8 +252,8 @@ const PortDot = styled.div<{ $isSource?: boolean; $isTarget?: boolean }>`
     animation: pulse-port 1.5s infinite;
   `}
 
-  ${(props) =>
-    props.$isTarget &&
+  ${(p) =>
+    p.$isTarget &&
     `
     opacity: 1;
     background: ${colors.accentGreenLighter};
@@ -234,17 +271,19 @@ const PortDot = styled.div<{ $isSource?: boolean; $isTarget?: boolean }>`
   }
 `;
 
-interface ServiceNodeInnerProps {
+interface ServiceNodeProps {
   service: Service;
   isSelected: boolean;
   isHovered: boolean;
   isNestTarget?: boolean;
-  expandedWidth?: number;
+  containerWidth?: number;
+  containerHeight?: number;
   childrenSection?: React.ReactNode;
   onSelect: (id: string) => void;
   onDoubleClick: () => void;
   onHover: (id: string | null) => void;
   onDragStart: (e: React.MouseEvent, serviceId: string) => void;
+  onResizeStart?: (e: React.MouseEvent, serviceId: string, direction: ResizeDirection) => void;
   onPortMouseDown?: (e: React.MouseEvent, serviceId: string, side: PortSide) => void;
   onPortMouseEnter?: (serviceId: string) => void;
   onPortMouseLeave?: () => void;
@@ -253,32 +292,39 @@ interface ServiceNodeInnerProps {
   connectingSource?: { serviceId: string; side: PortSide };
 }
 
-export function ServiceNodeInner({
+export function ServiceNode({
   service,
   isSelected,
   isHovered,
   isNestTarget,
-  expandedWidth,
+  containerWidth,
+  containerHeight,
   childrenSection,
   onSelect,
   onDoubleClick,
   onHover,
   onDragStart,
+  onResizeStart,
   onPortMouseDown,
   onPortMouseEnter,
   onPortMouseLeave,
   onNodeMouseEnter,
   onNodeMouseLeave,
   connectingSource,
-}: ServiceNodeInnerProps) {
+}: ServiceNodeProps) {
+  const isParent = !!childrenSection;
+  const showPorts = onPortMouseDown && isHovered;
+  const showResizeHandle = isParent && onResizeStart && (isHovered || isSelected);
+
   return (
     <NodeCard
-      service={service}
-      isSelected={isSelected}
-      isHovered={isHovered}
-      isNestTarget={isNestTarget}
-      $expandedWidth={expandedWidth}
-      $isParent={!!childrenSection}
+      $isNestTarget={isNestTarget}
+      $isSelected={isSelected}
+      $isHovered={isHovered}
+      $status={service.status}
+      $isParent={isParent}
+      $containerWidth={containerWidth}
+      $containerHeight={containerHeight}
       className="draggable-node"
       data-service-id={service.id}
       onClick={(e: ReactMouseEvent) => {
@@ -289,17 +335,11 @@ export function ServiceNodeInner({
         e.stopPropagation();
         onDoubleClick();
       }}
-      onMouseDown={(e: ReactMouseEvent) => onDragStart(e, service.id!)}
       onMouseEnter={(_e: ReactMouseEvent) => {
         onHover(service.id!);
         onNodeMouseEnter?.(service.id!);
       }}
       onMouseLeave={(e: ReactMouseEvent) => {
-        // When moving from a child node back to its parent, the parent's
-        // onMouseEnter won't fire (the mouse was already "inside" the parent's
-        // DOM subtree). Detect this via relatedTarget: if the mouse is heading
-        // to another [data-service-id] element, hand the hover to that node
-        // instead of clearing it.
         const relatedTarget = e.relatedTarget as HTMLElement | null;
         const targetNode = relatedTarget?.closest?.("[data-service-id]") as HTMLElement | null;
 
@@ -318,54 +358,60 @@ export function ServiceNodeInner({
         onNodeMouseLeave?.();
       }}
     >
-      {onPortMouseDown && isHovered && (
-        <>
-          <PortDot
-            className="port-top"
-            $isSource={
-              connectingSource?.serviceId === service.id && connectingSource?.side === "top"
-            }
-            $isTarget={
-              connectingSource?.serviceId === service.id && connectingSource?.side === "bottom"
-            }
-            onMouseDown={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              onPortMouseDown(e, service.id!, "top");
-            }}
-            onMouseEnter={() => onPortMouseEnter?.(service.id!)}
-            onMouseLeave={() => onPortMouseLeave?.()}
-          />
-          <PortDot
-            className="port-bottom"
-            $isSource={
-              connectingSource?.serviceId === service.id && connectingSource?.side === "bottom"
-            }
-            $isTarget={
-              connectingSource?.serviceId === service.id && connectingSource?.side === "top"
-            }
-            onMouseDown={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              onPortMouseDown(e, service.id!, "bottom");
-            }}
-            onMouseEnter={() => onPortMouseEnter?.(service.id!)}
-            onMouseLeave={() => onPortMouseLeave?.()}
-          />
-        </>
-      )}
-      <InfoSection data-info-section>
-        {onPortMouseDown && isHovered && (
+      {/* Drag handle wraps the info section — only this area initiates a drag */}
+      <DragHandle
+        data-info-section
+        onMouseDown={(e: ReactMouseEvent) => onDragStart(e, service.id!)}
+      >
+        {showPorts && (
           <>
             <PortDot
-              className="port-left"
+              className="port-top"
               $isSource={
-                connectingSource?.serviceId === service.id && connectingSource?.side === "left"
+                connectingSource?.serviceId === service.id &&
+                connectingSource?.side === PortSide.TOP
               }
               $isTarget={
-                connectingSource?.serviceId === service.id && connectingSource?.side === "right"
+                connectingSource?.serviceId === service.id &&
+                connectingSource?.side === PortSide.BOTTOM
               }
               onMouseDown={(e: React.MouseEvent) => {
                 e.stopPropagation();
-                onPortMouseDown(e, service.id!, "left");
+                onPortMouseDown(e, service.id!, PortSide.TOP);
+              }}
+              onMouseEnter={() => onPortMouseEnter?.(service.id!)}
+              onMouseLeave={() => onPortMouseLeave?.()}
+            />
+            <PortDot
+              className="port-bottom"
+              $isSource={
+                connectingSource?.serviceId === service.id &&
+                connectingSource?.side === PortSide.BOTTOM
+              }
+              $isTarget={
+                connectingSource?.serviceId === service.id &&
+                connectingSource?.side === PortSide.TOP
+              }
+              onMouseDown={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onPortMouseDown(e, service.id!, PortSide.BOTTOM);
+              }}
+              onMouseEnter={() => onPortMouseEnter?.(service.id!)}
+              onMouseLeave={() => onPortMouseLeave?.()}
+            />
+            <PortDot
+              className="port-left"
+              $isSource={
+                connectingSource?.serviceId === service.id &&
+                connectingSource?.side === PortSide.LEFT
+              }
+              $isTarget={
+                connectingSource?.serviceId === service.id &&
+                connectingSource?.side === PortSide.RIGHT
+              }
+              onMouseDown={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                onPortMouseDown(e, service.id!, PortSide.LEFT);
               }}
               onMouseEnter={() => onPortMouseEnter?.(service.id!)}
               onMouseLeave={() => onPortMouseLeave?.()}
@@ -373,14 +419,16 @@ export function ServiceNodeInner({
             <PortDot
               className="port-right"
               $isSource={
-                connectingSource?.serviceId === service.id && connectingSource?.side === "right"
+                connectingSource?.serviceId === service.id &&
+                connectingSource?.side === PortSide.RIGHT
               }
               $isTarget={
-                connectingSource?.serviceId === service.id && connectingSource?.side === "left"
+                connectingSource?.serviceId === service.id &&
+                connectingSource?.side === PortSide.LEFT
               }
               onMouseDown={(e: React.MouseEvent) => {
                 e.stopPropagation();
-                onPortMouseDown(e, service.id!, "right");
+                onPortMouseDown(e, service.id!, PortSide.RIGHT);
               }}
               onMouseEnter={() => onPortMouseEnter?.(service.id!)}
               onMouseLeave={() => onPortMouseLeave?.()}
@@ -417,7 +465,7 @@ export function ServiceNodeInner({
               <PortTag key={p}>:{p}</PortTag>
             ))}
           </ServiceHost>
-          <StatusBadge status={service.status}>
+          <StatusBadge $status={service.status}>
             <span
               style={{
                 width: 6,
@@ -454,8 +502,42 @@ export function ServiceNodeInner({
             </span>
           </div>
         </NodeBody>
-      </InfoSection>
-      {childrenSection && <ChildrenSection>{childrenSection}</ChildrenSection>}
+      </DragHandle>
+
+      {/* Free-form container body for child nodes */}
+      {isParent && (
+        <ContainerBody style={{ minHeight: CONTAINER_PADDING }}>{childrenSection}</ContainerBody>
+      )}
+
+      {/* Container-bottom port — on the full NodeCard, only for parent nodes */}
+      {isParent && showPorts && (
+        <PortDot
+          className="port-container-bottom"
+          $isSource={
+            connectingSource?.serviceId === service.id &&
+            connectingSource?.side === PortSide.CONTAINER_BOTTOM
+          }
+          $isTarget={
+            connectingSource?.serviceId === service.id && connectingSource?.side === PortSide.TOP
+          }
+          onMouseDown={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            onPortMouseDown!(e, service.id!, PortSide.CONTAINER_BOTTOM);
+          }}
+          onMouseEnter={() => onPortMouseEnter?.(service.id!)}
+          onMouseLeave={() => onPortMouseLeave?.()}
+        />
+      )}
+
+      {/* SE resize handle — only shown for parent container nodes */}
+      {showResizeHandle && (
+        <ResizeHandle
+          onMouseDown={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            onResizeStart!(e, service.id!, "se");
+          }}
+        />
+      )}
     </NodeCard>
   );
 }

@@ -49,6 +49,8 @@ export interface ServicePosition {
   x: number;
   y: number;
   parentId?: string | null;
+  w?: number | null;
+  h?: number | null;
 }
 
 export interface ServiceLink {

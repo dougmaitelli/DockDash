@@ -15,11 +15,17 @@ import {
   getNodeSize,
   getPortPosition,
   getAbsoluteNodePosition,
-  computeGroupDimensions,
+  getInfoSectionHeight,
+  getMinContainerDimensions,
   NODE_WIDTH,
   NODE_HEIGHT,
-  type PortSide,
+  CARD_BORDER_WIDTH,
+  DEFAULT_CONTAINER_WIDTH,
+  DEFAULT_CONTAINER_HEIGHT,
+  CONTAINER_PADDING,
+  PortSide,
 } from "./nodeGeometry";
+import type { ResizeDirection } from "./ServiceNode";
 import { LinkLayer } from "./LinkLayer";
 import { NodeLayer } from "./NodeLayer";
 import { ZoomControls } from "./ZoomControls";
@@ -37,6 +43,8 @@ interface DashboardCanvasProps {
     x: number,
     y: number,
     parentId?: string | null,
+    w?: number | null,
+    h?: number | null,
   ) => Promise<void>;
   addService: (data: Partial<Service> & { name: string; host: string }) => Promise<Service>;
   updateService: (
@@ -48,8 +56,8 @@ interface DashboardCanvasProps {
     id: string,
     data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
   ) => Promise<void>;
-  removeLink: (id: string) => Promise<void>;
   removeService: (id: string) => Promise<void>;
+  removeLink: (id: string) => Promise<void>;
 }
 
 const CanvasWrapper = styled.div`
@@ -114,13 +122,14 @@ const ToolbarGroup = styled.div`
 `;
 
 function findNestTarget(
+  services: ServiceWithPosition[],
   draggedId: string,
   draggedAbsX: number,
   draggedAbsY: number,
-  services: ServiceWithPosition[],
 ): string | null {
-  const cx = draggedAbsX + NODE_WIDTH / 2;
-  const cy = draggedAbsY + NODE_HEIGHT / 2;
+  const draggedSize = getNodeSize(draggedId);
+  const cx = draggedAbsX + (draggedSize?.w ?? NODE_WIDTH) / 2;
+  const cy = draggedAbsY + (draggedSize?.h ?? NODE_HEIGHT) / 2;
 
   for (const svc of services) {
     if (svc.id === draggedId || !svc.id) continue;
@@ -129,21 +138,21 @@ function findNestTarget(
 
     const { x: svcX, y: svcY } = getAbsoluteNodePosition(svc, services, {});
 
-    // Existing children (excluding the dragged node itself in case it's re-nesting)
-    const currentChildren = services.filter(
-      (s) => s.position?.parentId === svc.id && s.id !== draggedId,
-    );
+    const hasChildren = services.some((s) => s.position?.parentId === svc.id && s.id !== draggedId);
 
-    if (currentChildren.length > 0) {
-      // Hit the full group container bounds so the user can drop anywhere inside
-      const { w: groupW, h: groupH } = computeGroupDimensions(currentChildren.length);
+    if (hasChildren) {
+      const containerW = svc.position?.w ?? DEFAULT_CONTAINER_WIDTH;
+      const containerH = svc.position?.h ?? DEFAULT_CONTAINER_HEIGHT;
 
-      if (cx >= svcX && cx <= svcX + groupW && cy >= svcY && cy <= svcY + groupH) {
+      if (cx >= svcX && cx <= svcX + containerW && cy >= svcY && cy <= svcY + containerH) {
         return svc.id;
       }
     } else {
-      // No children yet: hit only the service card to create a new group
-      if (cx >= svcX && cx <= svcX + NODE_WIDTH && cy >= svcY && cy <= svcY + NODE_HEIGHT) {
+      const size = getNodeSize(svc.id);
+      const nodeW = size?.w ?? NODE_WIDTH;
+      const nodeH = size?.h ?? NODE_HEIGHT;
+
+      if (cx >= svcX && cx <= svcX + nodeW && cy >= svcY && cy <= svcY + nodeH) {
         return svc.id;
       }
     }
@@ -170,15 +179,45 @@ export function DashboardCanvas({
   const MAX_ZOOM = 3;
 
   const { t } = useTranslation();
+
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [canvasDimensions, setCanvasDimensions] = useState({ w: 0, h: 0 });
+  const canvasW = canvasDimensions.w;
+  const canvasH = canvasDimensions.h;
+
   const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
   const servicesWithUpdates = services.filter((s) => s.metadata?.hasUpdate === true).length;
 
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+  const initialFitDone = useRef(false);
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedService = services.find((s) => s.id === selectedId);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [addingService, setAddingService] = useState(false);
   const [editingLink, setEditingLink] = useState<ServiceLink | null>(null);
   const [editingNode, setEditingNode] = useState<Service | null>(null);
-  const [addingService, setAddingService] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const [dragOffsets, setDragOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
+  const [nestingTarget, setNestingTarget] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const resizeState = useRef<{
+    nodeId: string | null;
+    startMouseX: number;
+    startMouseY: number;
+    startW: number;
+    startH: number;
+  }>({ nodeId: null, startMouseX: 0, startMouseY: 0, startW: 0, startH: 0 });
+  const [resizeDimensions, setResizeDimensions] = useState<
+    Record<string, { w: number; h: number }>
+  >({});
+  const [isResizing, setIsResizing] = useState(false);
 
   // Connection dragging state
   const [connectingSource, setConnectingSource] = useState<{
@@ -187,22 +226,6 @@ export function DashboardCanvas({
   } | null>(null);
   const [connectingTarget, setConnectingTarget] = useState<string | null>(null);
   const [mouseCanvasPos, setMouseCanvasPos] = useState<{ x: number; y: number } | null>(null);
-
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [isPanning, setIsPanning] = useState(false);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [dragOffsets, setDragOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
-
-  const [nestingTarget, setNestingTarget] = useState<string | null>(null);
-
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [canvasDimensions, setCanvasDimensions] = useState({ w: 0, h: 0 });
-  const initialFitDone = useRef(false);
-  const canvasW = canvasDimensions.w;
-  const canvasH = canvasDimensions.h;
-
-  const selectedService = services.find((s) => s.id === selectedId);
 
   const fitToContent = useCallback((): boolean => {
     if (services.length === 0) return false;
@@ -301,7 +324,7 @@ export function DashboardCanvas({
   }>({ draggedId: null, nodeX: 0, nodeY: 0, grabOffsetX: 0, grabOffsetY: 0, hasMoved: false });
 
   // On mouse down on node, start dragging
-  const handleMouseDown = useCallback(
+  const handleDragStart = useCallback(
     (e: React.MouseEvent, serviceId: string) => {
       if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a"))
         return;
@@ -341,6 +364,7 @@ export function DashboardCanvas({
         grabOffsetY,
         hasMoved: false,
       };
+      setIsDragging(true);
       setDragOffsets((prev) => {
         const copy = { ...prev };
 
@@ -353,39 +377,39 @@ export function DashboardCanvas({
     [panOffset, zoomLevel, services],
   );
 
-  // On mouse move, update drag offsets for the dragged node
+  // Drag: live offset on mousemove, commit position on mouseup
   useEffect(() => {
+    if (!isDragging) return;
+
     const handleMouseMove = (e: MouseEvent) => {
-      const { draggedId, nodeX, nodeY, grabOffsetX, grabOffsetY } = dragState.current;
-
-      if (!draggedId || !canvasRef.current) return;
-
-      dragState.current.hasMoved = true;
+      if (!canvasRef.current) return;
 
       const rect = canvasRef.current.getBoundingClientRect();
       const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
       const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+      const { draggedId, nodeX, nodeY, grabOffsetX, grabOffsetY } = dragState.current;
+
+      if (!draggedId) return;
+
+      dragState.current.hasMoved = true;
+
       const dx = mouseX - nodeX - grabOffsetX;
       const dy = mouseY - nodeY - grabOffsetY;
 
       setDragOffsets((prev) => ({ ...prev, [draggedId]: { dx, dy } }));
 
-      // Show nesting indicator: only for root nodes without children
+      // Nesting indicator: only for root nodes without children
       const draggedHasChildren = services.some((s) => s.position?.parentId === draggedId);
       const draggedService = services.find((s) => s.id === draggedId);
       const isChild = draggedService?.position?.parentId != null;
 
       if (!draggedHasChildren && !isChild) {
-        const currentAbsX = nodeX + dx;
-        const currentAbsY = nodeY + dy;
-
-        setNestingTarget(findNestTarget(draggedId, currentAbsX, currentAbsY, services));
+        setNestingTarget(findNestTarget(services, draggedId, nodeX + dx, nodeY + dy));
       } else {
         setNestingTarget(null);
       }
     };
 
-    // On mouse up, update position based on where it was dropped
     const handleMouseUp = async (e: MouseEvent) => {
       const { draggedId, grabOffsetX, grabOffsetY, hasMoved } = dragState.current;
 
@@ -393,6 +417,7 @@ export function DashboardCanvas({
 
       if (!hasMoved) {
         dragState.current.draggedId = null;
+        setIsDragging(false);
 
         return;
       }
@@ -412,44 +437,70 @@ export function DashboardCanvas({
       let newX = finalAbsX;
       let newY = finalAbsY;
       let newParentId: string | null = null;
-      let shouldUpdate = true;
 
       if (currentParentId) {
-        // Nested child: snap back to grid if dropped inside group, un-nest if outside
+        // Nested child: compute relative position within container body, or un-nest if dropped outside
         const parent = services.find((s) => s.id === currentParentId);
 
         if (parent) {
           const { x: parentX, y: parentY } = getAbsoluteNodePosition(parent, services, {});
-          const childCount = services.filter(
-            (s) => s.position?.parentId === currentParentId,
-          ).length;
-          const { w: groupW, h: groupH } = computeGroupDimensions(childCount);
-          const cx = finalAbsX + NODE_WIDTH / 2;
-          const cy = finalAbsY + NODE_HEIGHT / 2;
-          const insideGroup =
-            cx >= parentX && cx <= parentX + groupW && cy >= parentY && cy <= parentY + groupH;
+          const containerW = parent.position?.w ?? DEFAULT_CONTAINER_WIDTH;
+          const containerH = parent.position?.h ?? DEFAULT_CONTAINER_HEIGHT;
+          const draggedSize = getNodeSize(draggedId);
+          const cx = finalAbsX + (draggedSize?.w ?? NODE_WIDTH) / 2;
+          const cy = finalAbsY + (draggedSize?.h ?? NODE_HEIGHT) / 2;
+          const insideContainer =
+            cx >= parentX &&
+            cx <= parentX + containerW &&
+            cy >= parentY &&
+            cy <= parentY + containerH;
 
-          if (insideGroup) {
-            shouldUpdate = false; // snap back to grid position
+          if (insideContainer) {
+            const headerH = getInfoSectionHeight(currentParentId);
+
+            newX = Math.max(0, finalAbsX - parentX - CARD_BORDER_WIDTH);
+            newY = Math.max(0, finalAbsY - parentY - CARD_BORDER_WIDTH - headerH);
+            newParentId = currentParentId;
           } else {
-            newParentId = null; // un-nest
+            // Un-nest: place at absolute canvas position
+            newParentId = null;
           }
         }
       } else if (!draggedHasChildren) {
-        // Root node without children: nest onto another node/group if applicable
-        const target = findNestTarget(draggedId, finalAbsX, finalAbsY, services);
+        // Root node without children: nest onto another node if applicable
+        const target = findNestTarget(services, draggedId, finalAbsX, finalAbsY);
 
         if (target) {
-          newX = 0;
-          newY = 0;
+          const targetSvc = services.find((s) => s.id === target);
+
+          // Ensure the target has container dimensions saved (position may be null if never dragged)
+          const { x: targetX, y: targetY } = getAbsoluteNodePosition(targetSvc!, services, {});
+
+          if (!targetSvc?.position?.w) {
+            await updatePosition(
+              target,
+              targetSvc?.position?.x ?? targetX,
+              targetSvc?.position?.y ?? targetY,
+              null,
+              DEFAULT_CONTAINER_WIDTH,
+              DEFAULT_CONTAINER_HEIGHT,
+            );
+          }
+
+          const headerH = getInfoSectionHeight(target);
+
+          newX = Math.max(CONTAINER_PADDING, finalAbsX - targetX - CARD_BORDER_WIDTH);
+          newY = Math.max(CONTAINER_PADDING, finalAbsY - targetY - CARD_BORDER_WIDTH - headerH);
           newParentId = target;
         }
       }
-      // Parent nodes (draggedHasChildren) move freely; newParentId stays null
+      // Parent nodes (draggedHasChildren) move freely — preserve their w/h
 
-      if (shouldUpdate) {
-        await updatePosition(draggedId, newX, newY, newParentId);
-      }
+      const existingPos = draggedService?.position;
+      const wToSave = draggedHasChildren ? (existingPos?.w ?? null) : null;
+      const hToSave = draggedHasChildren ? (existingPos?.h ?? null) : null;
+
+      await updatePosition(draggedId, newX, newY, newParentId, wToSave, hToSave);
 
       setDragOffsets((prev) => {
         const copy = { ...prev };
@@ -459,6 +510,7 @@ export function DashboardCanvas({
         return copy;
       });
       dragState.current.draggedId = null;
+      setIsDragging(false);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -468,7 +520,106 @@ export function DashboardCanvas({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [panOffset, zoomLevel, services, updatePosition]);
+  }, [isDragging, panOffset, zoomLevel, services, updatePosition]);
+
+  // Resize start — records mouse + current container dimensions
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent, serviceId: string, _direction: ResizeDirection) => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      const canvas = canvasRef.current;
+
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const service = services.find((s) => s.id === serviceId);
+
+      resizeState.current = {
+        nodeId: serviceId,
+        startMouseX: (e.clientX - rect.left - panOffset.x) / zoomLevel,
+        startMouseY: (e.clientY - rect.top - panOffset.y) / zoomLevel,
+        startW: service?.position?.w ?? DEFAULT_CONTAINER_WIDTH,
+        startH: service?.position?.h ?? DEFAULT_CONTAINER_HEIGHT,
+      };
+      setIsResizing(true);
+    },
+    [services, panOffset, zoomLevel],
+  );
+
+  // Resize: live preview on mousemove, commit on mouseup
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!canvasRef.current) return;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+      const {
+        nodeId: resizeNodeId,
+        startMouseX,
+        startMouseY,
+        startW,
+        startH,
+      } = resizeState.current;
+
+      if (!resizeNodeId) return;
+
+      const { minW, minH } = getMinContainerDimensions(resizeNodeId, services);
+      const newW = Math.max(minW, startW + (mouseX - startMouseX));
+      const newH = Math.max(minH, startH + (mouseY - startMouseY));
+
+      setResizeDimensions((prev) => ({ ...prev, [resizeNodeId]: { w: newW, h: newH } }));
+    };
+
+    const handleMouseUp = async (e: MouseEvent) => {
+      const { nodeId: resizeNodeId, startW, startH } = resizeState.current;
+
+      if (!resizeNodeId || !canvasRef.current) return;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+      const { minW, minH } = getMinContainerDimensions(resizeNodeId, services);
+      const newW = Math.max(minW, startW + (mouseX - resizeState.current.startMouseX));
+      const newH = Math.max(minH, startH + (mouseY - resizeState.current.startMouseY));
+      const service = services.find((s) => s.id === resizeNodeId);
+
+      if (service) {
+        const pos = service.position;
+        const absPos = getAbsoluteNodePosition(service, services, {});
+
+        await updatePosition(
+          resizeNodeId,
+          pos?.x ?? absPos.x,
+          pos?.y ?? absPos.y,
+          pos?.parentId ?? null,
+          newW,
+          newH,
+        );
+      }
+
+      resizeState.current.nodeId = null;
+      setResizeDimensions((prev) => {
+        const copy = { ...prev };
+
+        delete copy[resizeNodeId];
+
+        return copy;
+      });
+      setIsResizing(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizing, panOffset, zoomLevel, services, updatePosition]);
 
   // Port mouse down — start connecting
   const handlePortMouseDown = useCallback(
@@ -765,13 +916,15 @@ export function DashboardCanvas({
             services={services}
             selectedId={selectedId}
             dragOffsets={dragOffsets}
+            resizeDimensions={resizeDimensions}
             hoveredNode={hoveredNode}
             nestingTarget={nestingTarget}
             connectingSource={connectingSource}
             onSelect={handleNodeClick}
             onHover={setHoveredNode}
             onDoubleClick={openEditNodeModal}
-            onDragStart={handleMouseDown}
+            onDragStart={handleDragStart}
+            onResizeStart={handleResizeStart}
             onPortMouseDown={handlePortMouseDown}
             onPortMouseEnter={handlePortMouseEnter}
             onPortMouseLeave={handlePortMouseLeave}
@@ -784,6 +937,7 @@ export function DashboardCanvas({
           links={links}
           services={services}
           dragOffsets={dragOffsets}
+          resizeDimensions={resizeDimensions}
           panOffset={panOffset}
           zoomLevel={zoomLevel}
           connectingSource={connectingSource}

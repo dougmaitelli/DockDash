@@ -1,7 +1,7 @@
 import { LINK_TYPES } from "../../types";
 import { rawColors } from "../../styles/themes/dark.theme";
 import type { ServiceLink } from "@shared";
-import type { PortSide } from "./nodeGeometry";
+import { PortSide } from "./nodeGeometry";
 
 export interface LinkPath {
   id: string;
@@ -24,11 +24,12 @@ export function getLinkColor(type: string): string {
   return linkType?.color || rawColors.accentGray;
 }
 
-const SIDE_VEC: Record<PortSide, [number, number]> = {
-  right: [1, 0],
-  left: [-1, 0],
-  bottom: [0, 1],
-  top: [0, -1],
+export const SIDE_VEC: Record<PortSide, [number, number]> = {
+  [PortSide.RIGHT]: [1, 0],
+  [PortSide.LEFT]: [-1, 0],
+  [PortSide.BOTTOM]: [0, 1],
+  [PortSide.TOP]: [0, -1],
+  [PortSide.CONTAINER_BOTTOM]: [0, 1],
 };
 
 export function orthogonalPath(
@@ -51,22 +52,22 @@ export function orthogonalPath(
   const enx = x2 + ev2x * minSeg;
   const eny = y2 + ev2y * minSeg;
 
-  const isHorizExit = exitSide === "left" || exitSide === "right";
-  const isHorizEntry = entrySide === "left" || entrySide === "right";
+  const isHorizExit = exitSide === PortSide.LEFT || exitSide === PortSide.RIGHT;
+  const isHorizEntry = entrySide === PortSide.LEFT || entrySide === PortSide.RIGHT;
 
   let midPoints: [number, number][] = [];
 
   if (exitSide === entrySide) {
     // Same side — U-shape that goes around the outside
     if (isHorizExit) {
-      const outerX = exitSide === "right" ? Math.max(ex, enx) : Math.min(ex, enx);
+      const outerX = exitSide === PortSide.RIGHT ? Math.max(ex, enx) : Math.min(ex, enx);
 
       midPoints = [
         [outerX, ey],
         [outerX, eny],
       ];
     } else {
-      const outerY = exitSide === "bottom" ? Math.max(ey, eny) : Math.min(ey, eny);
+      const outerY = exitSide === PortSide.BOTTOM ? Math.max(ey, eny) : Math.min(ey, eny);
 
       midPoints = [
         [ex, outerY],
@@ -75,7 +76,8 @@ export function orthogonalPath(
     }
   } else if (isHorizExit && isHorizEntry) {
     // Both horizontal (right→left or left→right)
-    const stubsCross = (exitSide === "right" && ex > enx) || (exitSide === "left" && ex < enx);
+    const stubsCross =
+      (exitSide === PortSide.RIGHT && ex > enx) || (exitSide === PortSide.LEFT && ex < enx);
 
     if (stubsCross) {
       // Nodes too close — route around via horizontal midY to avoid 180° turn
@@ -95,7 +97,9 @@ export function orthogonalPath(
     }
   } else if (!isHorizExit && !isHorizEntry) {
     // Both vertical (top→bottom or bottom→top)
-    const stubsCross = (exitSide === "bottom" && ey > eny) || (exitSide === "top" && ey < eny);
+    const stubsCross =
+      ((exitSide === PortSide.BOTTOM || exitSide === PortSide.CONTAINER_BOTTOM) && ey > eny) ||
+      (exitSide === PortSide.TOP && ey < eny);
 
     if (stubsCross) {
       // Nodes too close — route around via vertical midX

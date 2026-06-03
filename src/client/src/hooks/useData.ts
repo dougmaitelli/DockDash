@@ -155,15 +155,22 @@ export function useDashboard() {
   );
 
   const updatePosition = useCallback(
-    async (serviceId: string, x: number, y: number, parentId: string | null = null) => {
-      await positionApi.save([{ serviceId, x, y, parentId }]);
+    async (
+      serviceId: string,
+      x: number,
+      y: number,
+      parentId: string | null = null,
+      w?: number | null,
+      h?: number | null,
+    ) => {
+      await positionApi.save([{ serviceId, x, y, parentId, w, h }]);
       setData((prev) => {
         if (!prev) return prev;
 
         return {
           ...prev,
           services: prev.services.map((s) =>
-            s.id === serviceId ? { ...s, position: { serviceId, x, y, parentId } } : s,
+            s.id === serviceId ? { ...s, position: { serviceId, x, y, parentId, w, h } } : s,
           ),
         };
       });
