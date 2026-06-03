@@ -94,6 +94,7 @@ export interface ServiceMetadata {
   containerName?: string;
   image?: string;
   imageTag?: string;
+  imageDigest?: string;
   hasUpdate?: boolean;
   latestVersion?: string;
   updateCheckedAt?: string;

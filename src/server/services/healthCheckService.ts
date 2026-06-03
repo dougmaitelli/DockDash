@@ -58,10 +58,12 @@ export class HealthCheckService {
           const hasUpdate = service.metadata?.hasUpdate as boolean | undefined;
           const latestVersion = service.metadata?.latestVersion as string | undefined;
 
-          const patch: Record<string, string | number | boolean | string[] | number[]> = {
-            containerId: containerInfo.containerId,
-            imageTag: newTag,
-          };
+          const patch: Record<string, string | number | boolean | string[] | number[] | undefined> =
+            {
+              containerId: containerInfo.containerId,
+              imageTag: newTag,
+              imageDigest: containerInfo.imageDigest,
+            };
 
           if (hasUpdate && newTag !== prevTag && this.isUpdateApplied(newTag, latestVersion)) {
             patch.hasUpdate = false;

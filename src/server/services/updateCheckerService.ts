@@ -1,7 +1,5 @@
-import type Docker from "dockerode";
 import { db } from "../db/databaseService.js";
 import { ServiceSource } from "@shared";
-import { dockerService } from "./dockerService.js";
 import { registryClient } from "./registryClient.js";
 import { notificationService } from "./notificationService.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
@@ -15,31 +13,12 @@ export class UpdateCheckerService {
     const services = db.getServices();
     const dockerServices = services.filter((s) => s.source === ServiceSource.DOCKER);
 
-    // Group by resolved Docker host to reuse one client per host;
-    // services whose host is no longer configured are skipped.
-    const servicesByHost = dockerServices.reduce((map, service) => {
-      const dockerHostId = service.metadata?.dockerHostId as string | undefined;
-      const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
-
-      if (!resolvedHost) return map;
-
-      if (!map.has(resolvedHost)) map.set(resolvedHost, []);
-
-      map.get(resolvedHost)!.push(service);
-
-      return map;
-    }, new Map<string, typeof dockerServices>());
-
     const newUpdates: { name: string; currentVersion: string; latestVersion: string }[] = [];
 
-    for (const [host, hostServices] of servicesByHost) {
-      const docker = dockerService.createDockerClientForHost(host);
+    for (const service of dockerServices) {
+      const update = await this.checkServiceForUpdate(service);
 
-      for (const service of hostServices) {
-        const update = await this.checkServiceForUpdate(service, docker);
-
-        if (update) newUpdates.push(update);
-      }
+      if (update) newUpdates.push(update);
     }
 
     if (newUpdates.length === 0) return;
@@ -58,35 +37,13 @@ export class UpdateCheckerService {
     notificationService.notify(title, body, "warning").catch(() => {});
   }
 
-  /**
-   * Returns the registry-push digest (sha256:...) for the image currently
-   * running in the given container, or null if it cannot be determined (e.g.
-   * locally built images that were never pushed).
-   */
-  private async getLocalImageDigest(docker: Docker, containerId: string): Promise<string | null> {
-    try {
-      const info = await docker.getContainer(containerId).inspect();
-      const imageInfo = await docker.getImage(info.Image).inspect();
-      const repoDigests: string[] = imageInfo.RepoDigests ?? [];
-
-      if (repoDigests.length === 0) return null;
-
-      // Format: "nginx@sha256:abc123" → "sha256:abc123"
-      return repoDigests[0].split("@")[1] ?? null;
-    } catch {
-      return null;
-    }
-  }
-
   private async checkServiceForUpdate(
     service: Service,
-    docker: Docker,
   ): Promise<{ name: string; currentVersion: string; latestVersion: string } | null> {
-    const containerId = service.metadata?.containerId as string | undefined;
     const image = service.metadata?.image as string | undefined;
     const imageTag = service.metadata?.imageTag as string | undefined;
 
-    if (!containerId || !image || !imageTag) return null;
+    if (!image || !imageTag) return null;
 
     const ref = registryClient.parseImageRef(`${image}:${imageTag}`);
 
@@ -96,10 +53,8 @@ export class UpdateCheckerService {
 
     try {
       if (imageTag === DOCKER_LATEST_TAG) {
-        const [localDigest, registryDigest] = await Promise.all([
-          this.getLocalImageDigest(docker, containerId),
-          registryClient.getManifestDigest(ref),
-        ]);
+        const localDigest = service.metadata?.imageDigest as string | undefined;
+        const registryDigest = await registryClient.getManifestDigest(ref);
 
         if (!localDigest || !registryDigest) return null;
 

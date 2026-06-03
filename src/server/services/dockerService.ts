@@ -7,7 +7,7 @@ import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 
 export type ContainerStateMap = Map<
   string,
-  { containerId: string; state: string; imageTag: string }
+  { containerId: string; state: string; imageTag: string; imageDigest: string | undefined }
 >;
 
 export const DOCKER_CONTAINER_STATE = {
@@ -89,6 +89,7 @@ export class DockerService {
       const networks = inspect.NetworkSettings?.Networks || {};
       const networkNames = Object.keys(networks);
       const { image, tag: imageTag } = this.parseImage(container.Image);
+      const imageDigest = await this.fetchImageDigest(docker, inspect.Image);
 
       yield {
         id: `docker-${uuidv4()}`,
@@ -109,6 +110,7 @@ export class DockerService {
           containerName: name,
           image,
           imageTag,
+          imageDigest,
           networkNames: networkNames,
         },
         createdAt: now,
@@ -119,11 +121,25 @@ export class DockerService {
 
   async getContainersStateMap(docker: Docker): Promise<ContainerStateMap> {
     const containers = await docker.listContainers({ all: true });
+
+    const digestByImageId = new Map<string, string | undefined>();
+
+    for (const c of containers) {
+      if (!digestByImageId.has(c.ImageID)) {
+        digestByImageId.set(c.ImageID, await this.fetchImageDigest(docker, c.ImageID));
+      }
+    }
+
     const map: ContainerStateMap = new Map();
 
     for (const c of containers) {
       const { tag: imageTag } = this.parseImage(c.Image);
-      const entry = { containerId: c.Id, state: c.State, imageTag };
+      const entry = {
+        containerId: c.Id,
+        state: c.State,
+        imageTag,
+        imageDigest: digestByImageId.get(c.ImageID),
+      };
 
       for (const name of c.Names ?? []) {
         map.set(this.normalizeContainerName(name), entry);
@@ -131,6 +147,17 @@ export class DockerService {
     }
 
     return map;
+  }
+
+  private async fetchImageDigest(docker: Docker, imageId: string): Promise<string | undefined> {
+    try {
+      const imageInfo = await docker.getImage(imageId).inspect();
+      const repoDigests: string[] = imageInfo.RepoDigests ?? [];
+
+      return repoDigests[0]?.split("@")[1] ?? undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   private normalizeContainerName(name: string): string {
