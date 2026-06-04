@@ -239,6 +239,10 @@ export function DashboardCanvas({
       maxY = -Infinity;
 
     services.forEach((service, idx) => {
+      // Child services have parent-relative positions, not canvas coordinates.
+      // Their bounds are already covered by the parent container's DOM size.
+      if (service.position?.parentId) return;
+
       let x: number, y: number;
 
       if (service.position) {
@@ -253,15 +257,18 @@ export function DashboardCanvas({
         y = 120 + row * (NODE_HEIGHT + 80);
       }
 
-      const size = service.id ? getNodeSize(service.id) : null;
-      const nodeW = size?.w ?? NODE_WIDTH;
-      const nodeH = size?.h ?? NODE_HEIGHT;
+      const domSize = service.id ? getNodeSize(service.id) : null;
+      const isContainer = services.some((s) => s.position?.parentId === service.id);
+      const nodeW = domSize?.w ?? (isContainer ? (service.position?.w ?? DEFAULT_CONTAINER_WIDTH) : NODE_WIDTH);
+      const nodeH = domSize?.h ?? (isContainer ? (service.position?.h ?? DEFAULT_CONTAINER_HEIGHT) : NODE_HEIGHT);
 
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       maxX = Math.max(maxX, x + nodeW);
       maxY = Math.max(maxY, y + nodeH);
     });
+
+    if (minX === Infinity) return false;
 
     const fitZoom = Math.min(
       (canvasDimensions.w - PADDING * 2) / (maxX - minX),
