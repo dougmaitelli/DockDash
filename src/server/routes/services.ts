@@ -4,13 +4,7 @@ import { healthCheckService } from "../services/healthCheckService.js";
 import { dockerService } from "../services/dockerService.js";
 import { notificationService } from "../services/notificationService.js";
 import { changelogService } from "../services/changelogService.js";
-import {
-  ServiceSource,
-  ServiceStatus,
-  ServiceLinkType,
-  ServiceProtocol,
-  ContainerAction,
-} from "@shared";
+import { ServiceSource, ServiceLinkType, ServiceProtocol, ContainerAction } from "@shared";
 import { APP_NAME } from "../lib/constants.js";
 import { t } from "../i18n/index.js";
 import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
@@ -45,10 +39,9 @@ router.get("/services/:id", (req, res) => {
   res.json(service);
 });
 
-// Import / upsert service manually
+// Add service
 router.post("/services", (req, res) => {
-  const { name, host, ports, checkPort, source, status, metadata } =
-    req.body as CreateServiceRequest;
+  const { name, host, ports, checkPort, source, metadata } = req.body as CreateServiceRequest;
 
   if (!isNonEmptyString(name)) {
     return res.status(400).json({ error: "name is required" });
@@ -62,21 +55,13 @@ router.post("/services", (req, res) => {
     return res.status(400).json({ error: "invalid source" });
   }
 
-  if (status !== undefined && !isValidEnumValue(ServiceStatus, status)) {
-    return res.status(400).json({ error: "invalid status" });
-  }
-
-  const now = new Date().toISOString();
-  const service = db.upsertService({
+  const service = db.saveService({
     name,
     host,
     ports: Array.isArray(ports) ? ports : [],
     checkPort,
     source: source || ServiceSource.NETWORK,
-    status: status || ServiceStatus.UNKNOWN,
     metadata: metadata || {},
-    createdAt: now,
-    updatedAt: now,
   });
 
   healthCheckService.checkSingleService(service.id!);
@@ -149,8 +134,8 @@ router.post("/links", (req, res) => {
       label: label || "",
       type: type || ServiceLinkType.COMMUNICATION,
       description: description || "",
-      targetPort: targetPort != null ? Number(targetPort) : null,
-      protocol: protocol || null,
+      targetPort: targetPort != null ? Number(targetPort) : undefined,
+      protocol: protocol || undefined,
     });
 
     res.json(link);

@@ -10,7 +10,7 @@ import { dashboardApi } from "../../services/api";
 import { ErrorOverlay } from "./ErrorOverlay";
 import { EmptyOverlay } from "./EmptyOverlay";
 import type { Service, ServiceLink, ServiceWithPosition } from "@shared";
-import { ServiceLinkType, ServiceStatus } from "@shared";
+import { ServiceLinkType, ServiceSource, ServiceStatus } from "@shared";
 import type {
   CreateServiceRequest,
   UpdateServiceRequest,
@@ -956,7 +956,7 @@ export function DashboardCanvas({
       {addingService && (
         <EditServiceModal
           onSave={async (data) => {
-            await addService(data);
+            await addService({ ...data, source: ServiceSource.NETWORK, checkPort: data.checkPort ?? undefined });
             setAddingService(false);
           }}
           onCancel={() => setAddingService(false)}

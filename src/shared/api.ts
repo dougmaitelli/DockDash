@@ -1,11 +1,10 @@
 import type {
   ServicePosition,
   ServiceSource,
-  ServiceStatus,
   ServiceMetadata,
   ServiceLinkType,
   ServiceProtocol,
-} from "./shared.js";
+} from "./types.js";
 
 // ---------------------------------------------------------------------------
 // SSE event names — used by both the server (emitter) and client (listener)
@@ -84,12 +83,10 @@ export interface SseScanErrorPayload {
 export interface CreateServiceRequest {
   name: string;
   host: string;
-  id?: string;
   ports?: number[];
-  checkPort?: number | null;
-  source?: ServiceSource;
-  status?: ServiceStatus;
-  metadata?: ServiceMetadata;
+  checkPort?: number;
+  source: ServiceSource;
+  metadata?: ServiceMetadata; //TODO: this should be populated by server based on source, not provided by client
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +96,7 @@ export interface CreateServiceRequest {
 export interface UpdateServiceRequest {
   name?: string;
   host?: string;
-  ports?: number[];
+  ports?: number[] | null;
   checkPort?: number | null;
 }
 
@@ -110,11 +107,11 @@ export interface UpdateServiceRequest {
 export interface CreateLinkRequest {
   sourceId: string;
   targetId: string;
-  label: string | null;
-  type: ServiceLinkType;
-  description: string | null;
-  targetPort?: number | null;
-  protocol?: ServiceProtocol | null;
+  type?: ServiceLinkType;
+  label?: string;
+  description?: string;
+  targetPort?: number;
+  protocol?: ServiceProtocol;
 }
 
 // ---------------------------------------------------------------------------
@@ -122,9 +119,9 @@ export interface CreateLinkRequest {
 // ---------------------------------------------------------------------------
 
 export interface UpdateLinkRequest {
-  label: string | null;
-  type: ServiceLinkType;
-  description: string | null;
+  type?: ServiceLinkType;
+  label?: string | null;
+  description?: string | null;
   targetPort?: number | null;
   protocol?: ServiceProtocol | null;
 }
@@ -137,9 +134,9 @@ export interface PositionUpdate {
   serviceId: string;
   x?: number;
   y?: number;
+  parentId?: string | null;
   w?: number | null;
   h?: number | null;
-  parentId?: string | null;
 }
 
 export interface SavePositionsRequest {

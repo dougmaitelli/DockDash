@@ -229,9 +229,7 @@ export default function Discovery() {
           name: svc.name,
           host: svc.host,
           ports: svc.ports,
-
           source: ServiceSource.DOCKER,
-          status: svc.status,
           metadata: svc.metadata,
         }),
       ),
@@ -246,9 +244,7 @@ export default function Discovery() {
           name: svc.name,
           host: svc.host,
           ports: svc.ports,
-
           source: ServiceSource.NETWORK,
-          status: svc.status,
           metadata: svc.metadata,
         }),
       ),
@@ -374,9 +370,7 @@ export default function Discovery() {
                           name: svc.name,
                           host: svc.host,
                           ports: svc.ports,
-
                           source: ServiceSource.DOCKER,
-                          status: svc.status,
                           metadata: svc.metadata,
                         });
                       }}
@@ -477,9 +471,7 @@ export default function Discovery() {
                           name: svc.name,
                           host: svc.host,
                           ports: svc.ports,
-
                           source: ServiceSource.NETWORK,
-                          status: svc.status,
                           metadata: svc.metadata,
                         });
                       }}

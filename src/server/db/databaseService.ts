@@ -12,11 +12,12 @@ import type {
   ServiceLink,
   DashboardData,
   ServiceStatusItem,
-  ServiceStatus,
   ServiceMetadata,
   ServiceHealthHistoryItem,
 } from "@shared";
+import { ServiceStatus, ServiceLinkType } from "@shared";
 import type {
+  CreateServiceRequest,
   CreateLinkRequest,
   UpdateLinkRequest,
   UpdateServiceRequest,
@@ -46,39 +47,25 @@ export class DatabaseService {
     DatabaseService.instance = this;
   }
 
-  upsertService(service: Service): Service {
-    const id = service.id || uuidv4();
+  saveService(data: CreateServiceRequest): Service {
     const now = new Date().toISOString();
 
-    this.orm
-      .insert(services)
-      .values({
-        id,
-        name: service.name,
-        host: service.host,
-        ports: service.ports ?? [],
-        checkPort: service.checkPort ?? null,
-        source: service.source,
-        status: service.status,
-        metadata: service.metadata,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: services.id,
-        set: {
-          name: service.name,
-          host: service.host,
-          ports: service.ports ?? [],
-          checkPort: service.checkPort ?? null,
-          status: service.status,
-          metadata: service.metadata,
-          updatedAt: now,
-        },
-      })
-      .run();
+    const service: Service = {
+      id: uuidv4(),
+      name: data.name,
+      host: data.host,
+      ports: data.ports ?? [],
+      checkPort: data.checkPort,
+      source: data.source,
+      status: ServiceStatus.UNKNOWN,
+      metadata: data.metadata,
+      createdAt: now,
+      updatedAt: now,
+    };
 
-    return { ...service, id, createdAt: now, updatedAt: now };
+    this.orm.insert(services).values(service).run();
+
+    return service;
   }
 
   updateService(id: string, data: UpdateServiceRequest): Service {
@@ -89,7 +76,7 @@ export class DatabaseService {
       .set({
         name: data.name,
         host: data.host,
-        ports: data.ports,
+        ports: data.ports === null ? [] : data.ports,
         checkPort: data.checkPort,
         updatedAt: new Date().toISOString(),
       })
@@ -161,7 +148,16 @@ export class DatabaseService {
   }
 
   getServicePositions(): ServicePosition[] {
-    return this.orm.select().from(servicePositions).all();
+    return this.orm
+      .select()
+      .from(servicePositions)
+      .all()
+      .map((p) => ({
+        ...p,
+        parentId: p.parentId ?? undefined,
+        w: p.w ?? undefined,
+        h: p.h ?? undefined,
+      }));
   }
 
   getLinks(): ServiceLink[] {
@@ -178,34 +174,34 @@ export class DatabaseService {
       .innerJoin(source, eq(serviceLinks.sourceId, source.id))
       .innerJoin(target, eq(serviceLinks.targetId, target.id))
       .orderBy(desc(serviceLinks.createdAt))
-      .all();
+      .all()
+      .map((row) => ({
+        ...row,
+        label: row.label ?? undefined,
+        description: row.description ?? undefined,
+        targetPort: row.targetPort ?? undefined,
+      }));
   }
 
-  saveLink(link: CreateLinkRequest): ServiceLink {
-    const id = uuidv4();
-    const now = new Date().toISOString();
+  saveLink(data: CreateLinkRequest): ServiceLink {
+    const link = {
+      id: uuidv4(),
+      sourceId: data.sourceId,
+      targetId: data.targetId,
+      type: data.type ?? ServiceLinkType.COMMUNICATION,
+      label: data.label,
+      description: data.description,
+      targetPort: data.targetPort,
+      protocol: data.protocol,
+    };
 
-    const result = this.orm
-      .insert(serviceLinks)
-      .values({
-        id,
-        sourceId: link.sourceId,
-        targetId: link.targetId,
-        label: link.label,
-        type: link.type,
-        description: link.description,
-        targetPort: link.targetPort ?? null,
-        protocol: link.protocol ?? null,
-        createdAt: now,
-      })
-      .onConflictDoNothing()
-      .run();
+    const result = this.orm.insert(serviceLinks).values(link).onConflictDoNothing().run();
 
     if (result.changes === 0) {
       throw new Error("A link between these two services already exists");
     }
 
-    return { ...link, id, createdAt: now };
+    return link;
   }
 
   updateLink(id: string, data: UpdateLinkRequest): ServiceLink {
@@ -223,7 +219,14 @@ export class DatabaseService {
 
     if (result.changes === 0) throw new Error("Link not found");
 
-    return this.orm.select().from(serviceLinks).where(eq(serviceLinks.id, id)).get()!;
+    const row = this.orm.select().from(serviceLinks).where(eq(serviceLinks.id, id)).get()!;
+
+    return {
+      ...row,
+      label: row.label ?? undefined,
+      description: row.description ?? undefined,
+      targetPort: row.targetPort ?? undefined,
+    };
   }
 
   deleteLink(id: string): void {
@@ -236,7 +239,13 @@ export class DatabaseService {
       .from(serviceLinks)
       .where(or(eq(serviceLinks.sourceId, serviceId), eq(serviceLinks.targetId, serviceId)))
       .orderBy(desc(serviceLinks.createdAt))
-      .all();
+      .all()
+      .map((row) => ({
+        ...row,
+        label: row.label ?? undefined,
+        description: row.description ?? undefined,
+        targetPort: row.targetPort ?? undefined,
+      }));
   }
 
   getDashboardData(): DashboardData {

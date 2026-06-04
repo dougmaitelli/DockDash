@@ -4,6 +4,7 @@ import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import type { ServiceLink } from "@shared";
 import { ServiceProtocol } from "@shared";
+import type { UpdateLinkRequest } from "@shared/api";
 import { LINK_TYPES, ServiceLinkType, SERVICE_PROTOCOLS } from "../../types";
 import { colors } from "../../styles/vars";
 import { rawColors } from "../../styles/themes/dark.theme";
@@ -43,9 +44,7 @@ function getLinkColor(type: string): string {
 
 interface EditLinkModalProps {
   link: ServiceLink;
-  onSave: (
-    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
-  ) => void;
+  onSave: (data: UpdateLinkRequest) => void;
   onDelete: () => void;
   onCancel: () => void;
 }

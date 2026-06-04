@@ -1,7 +1,8 @@
-import { ServiceSource, ServiceStatus, ServiceMetadata } from "./shared.js";
+import { v4 as uuidv4 } from "uuid";
+import { ServiceSource, ServiceStatus, ServiceMetadata } from "./types.js";
 
 export class Service {
-  id?: string;
+  id!: string;
   name!: string;
   host!: string;
   ports: number[] = [];
@@ -15,6 +16,7 @@ export class Service {
   constructor() {
     const now = new Date().toISOString();
 
+    this.id = uuidv4();
     this.createdAt = now;
     this.updatedAt = now;
   }

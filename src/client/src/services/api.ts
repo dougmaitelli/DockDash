@@ -13,6 +13,7 @@ import type {
   UpdateServiceRequest,
   CreateLinkRequest,
   UpdateLinkRequest,
+  PositionUpdate,
   SavePositionsRequest,
   SavePositionsResponse,
   CheckAllServicesResponse,
@@ -52,7 +53,7 @@ export const linkApi = {
 
 // Position management APIs
 export const positionApi = {
-  save: (positions: ServicePosition[]) =>
+  save: (positions: PositionUpdate[]) =>
     api.post<SavePositionsResponse>("/positions", { positions } satisfies SavePositionsRequest),
 };
 

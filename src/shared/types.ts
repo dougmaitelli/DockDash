@@ -44,27 +44,39 @@ export interface ServiceStatusItem {
   metadata?: Partial<ServiceMetadata>;
 }
 
+export interface ServiceMetadata {
+  dockerHostId?: string;
+  containerId?: string;
+  containerName?: string;
+  image?: string;
+  imageTag?: string;
+  imageDigest?: string;
+  hasUpdate?: boolean;
+  latestVersion?: string;
+  updateCheckedAt?: string;
+  [key: string]: string | number | boolean | string[] | number[] | undefined;
+}
+
 export interface ServicePosition {
   serviceId: string;
   x: number;
   y: number;
-  parentId?: string | null;
-  w?: number | null;
-  h?: number | null;
+  parentId?: string;
+  w?: number;
+  h?: number;
 }
 
 export interface ServiceLink {
   id: string;
   sourceId: string;
-  sourceName?: string | null;
+  sourceName?: string;
   targetId: string;
-  targetName?: string | null;
-  label: string | null;
+  targetName?: string;
   type: ServiceLinkType;
-  description: string | null;
-  targetPort?: number | null;
+  label?: string;
+  description?: string;
+  targetPort?: number;
   protocol?: ServiceProtocol | null;
-  createdAt: string;
 }
 
 export interface DashboardData {
@@ -87,16 +99,3 @@ export interface ChangelogRelease {
 export type ChangelogResponse =
   | { available: true; release: ChangelogRelease }
   | { available: false; reason: string };
-
-export interface ServiceMetadata {
-  dockerHostId?: string;
-  containerId?: string;
-  containerName?: string;
-  image?: string;
-  imageTag?: string;
-  imageDigest?: string;
-  hasUpdate?: boolean;
-  latestVersion?: string;
-  updateCheckedAt?: string;
-  [key: string]: string | number | boolean | string[] | number[] | undefined;
-}
