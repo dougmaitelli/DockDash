@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { ServiceLink, ServiceWithPosition } from "@shared";
 import { orthogonalPath, getLinkColor, SIDE_VEC } from "./linkUtils";
 import type { LinkPath } from "./linkUtils";
-import { getNodeCenter, getPortPosition, PortSide } from "./nodeGeometry";
+import { getNodeCenter, getPortPosition, getNodeSize, NODE_HEIGHT, PortSide } from "./nodeGeometry";
 import { colors } from "../../styles/vars";
 
 const PORT_LABEL_W = 34; // port badge width (px)
@@ -61,22 +61,19 @@ export function LinkLayer({
         } else {
           const ddx = tx - sx;
           const ddy = ty - sy;
-          const useHorizontal = Math.abs(ddx) >= Math.abs(ddy);
 
-          exitSide = useHorizontal
-            ? ddx >= 0
-              ? PortSide.RIGHT
-              : PortSide.LEFT
-            : ddy >= 0
-              ? PortSide.BOTTOM
-              : PortSide.TOP;
-          entrySide = useHorizontal
-            ? ddx >= 0
-              ? PortSide.LEFT
-              : PortSide.RIGHT
-            : ddy >= 0
-              ? PortSide.TOP
-              : PortSide.BOTTOM;
+          // Prefer top/bottom ports when nodes don't overlap on the Y axis.
+          const srcH = (getNodeSize(link.sourceId)?.h ?? NODE_HEIGHT) / 2;
+          const tgtH = (getNodeSize(link.targetId)?.h ?? NODE_HEIGHT) / 2;
+          const yOverlap = sy - srcH <= ty + tgtH && ty - tgtH <= sy + srcH;
+
+          if (!yOverlap) {
+            exitSide = ddy >= 0 ? PortSide.BOTTOM : PortSide.TOP;
+            entrySide = ddy >= 0 ? PortSide.TOP : PortSide.BOTTOM;
+          } else {
+            exitSide = ddx >= 0 ? PortSide.RIGHT : PortSide.LEFT;
+            entrySide = ddx >= 0 ? PortSide.LEFT : PortSide.RIGHT;
+          }
 
           // Upgrade BOTTOM to CONTAINER_BOTTOM for parent nodes on external links
           if (srcIsParent && exitSide === PortSide.BOTTOM) exitSide = PortSide.CONTAINER_BOTTOM;
