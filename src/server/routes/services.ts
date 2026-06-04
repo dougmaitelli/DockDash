@@ -161,7 +161,7 @@ router.post("/positions", (req, res) => {
   const { positions } = req.body as SavePositionsRequest;
 
   for (const p of positions) {
-    db.saveServicePosition(p.serviceId, p.parentId ?? null, p.x, p.y, p.w, p.h);
+    db.saveServicePosition(p);
   }
 
   const response: SavePositionsResponse = { positions: db.getServicePositions() };

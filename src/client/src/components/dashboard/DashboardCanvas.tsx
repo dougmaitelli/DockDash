@@ -11,6 +11,12 @@ import { ErrorOverlay } from "./ErrorOverlay";
 import { EmptyOverlay } from "./EmptyOverlay";
 import type { Service, ServiceLink, ServiceWithPosition } from "@shared";
 import { ServiceLinkType, ServiceStatus } from "@shared";
+import type {
+  CreateServiceRequest,
+  UpdateServiceRequest,
+  CreateLinkRequest,
+  UpdateLinkRequest,
+} from "@shared/api";
 import {
   getNodeSize,
   getPortPosition,
@@ -46,16 +52,10 @@ interface DashboardCanvasProps {
     w?: number | null,
     h?: number | null,
   ) => Promise<void>;
-  addService: (data: Partial<Service> & { name: string; host: string }) => Promise<Service>;
-  updateService: (
-    id: string,
-    data: Pick<Service, "name" | "host" | "ports" | "checkPort">,
-  ) => Promise<void>;
-  addLink: (data: Omit<ServiceLink, "id" | "createdAt">) => Promise<void>;
-  updateLink: (
-    id: string,
-    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
-  ) => Promise<void>;
+  addService: (data: CreateServiceRequest) => Promise<Service>;
+  updateService: (id: string, data: UpdateServiceRequest) => Promise<void>;
+  addLink: (data: CreateLinkRequest) => Promise<void>;
+  updateLink: (id: string, data: UpdateLinkRequest) => Promise<void>;
   removeService: (id: string) => Promise<void>;
   removeLink: (id: string) => Promise<void>;
 }
@@ -811,9 +811,7 @@ export function DashboardCanvas({
     setEditingLink(link);
   }, []);
 
-  const handleEditLinkSave = async (
-    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
-  ) => {
+  const handleEditLinkSave = async (data: UpdateLinkRequest) => {
     if (!editingLink) return;
 
     await updateLink(editingLink.id, data);
@@ -834,9 +832,7 @@ export function DashboardCanvas({
     setEditingNode(service);
   }, []);
 
-  const handleEditNodeConfirm = async (
-    data: Pick<Service, "name" | "host" | "ports" | "checkPort">,
-  ) => {
+  const handleEditNodeConfirm = async (data: UpdateServiceRequest) => {
     if (!editingNode) return;
 
     await updateService(editingNode.id!, data);

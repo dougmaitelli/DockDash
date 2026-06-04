@@ -16,6 +16,7 @@ import type {
   ServiceMetadata,
   ServiceHealthHistoryItem,
 } from "@shared";
+import type { CreateLinkRequest, UpdateLinkRequest, UpdateServiceRequest } from "@shared/api";
 
 const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 
@@ -75,23 +76,18 @@ export class DatabaseService {
     return { ...service, id, createdAt: now, updatedAt: now };
   }
 
-  updateService(
-    id: string,
-    data: { name?: string; host?: string; ports?: number[]; checkPort?: number | null },
-  ): Service {
-    const existing = this.getService(id);
-
-    if (!existing) throw new Error("Service not found");
+  updateService(id: string, data: UpdateServiceRequest): Service {
+    if (!this.getService(id)) throw new Error("Service not found");
 
     const now = new Date().toISOString();
 
     this.orm
       .update(services)
       .set({
-        name: data.name ?? existing.name,
-        host: data.host ?? existing.host,
+        name: data.name,
+        host: data.host,
         ports: data.ports ?? [],
-        checkPort: data.checkPort !== undefined ? data.checkPort : (existing.checkPort ?? null),
+        checkPort: data.checkPort !== undefined ? data.checkPort : null,
         updatedAt: now,
       })
       .where(eq(services.id, id))
@@ -137,20 +133,26 @@ export class DatabaseService {
     this.orm.delete(services).where(eq(services.id, id)).run();
   }
 
-  saveServicePosition(
-    serviceId: string,
-    parentId: string | null,
-    x: number,
-    y: number,
-    w?: number | null,
-    h?: number | null,
-  ): void {
+  saveServicePosition(position: ServicePosition): void {
     this.orm
       .insert(servicePositions)
-      .values({ serviceId, x, y, parentId: parentId ?? null, w: w ?? null, h: h ?? null })
+      .values({
+        serviceId: position.serviceId,
+        x: position.x,
+        y: position.y,
+        parentId: position.parentId ?? null,
+        w: position.w ?? null,
+        h: position.h ?? null,
+      })
       .onConflictDoUpdate({
         target: servicePositions.serviceId,
-        set: { x, y, parentId: parentId ?? null, w: w ?? null, h: h ?? null },
+        set: {
+          x: position.x,
+          y: position.y,
+          parentId: position.parentId ?? null,
+          w: position.w ?? null,
+          h: position.h ?? null,
+        },
       })
       .run();
   }
@@ -176,7 +178,7 @@ export class DatabaseService {
       .all();
   }
 
-  saveLink(link: Omit<ServiceLink, "id" | "createdAt">): ServiceLink {
+  saveLink(link: CreateLinkRequest): ServiceLink {
     const id = uuidv4();
     const now = new Date().toISOString();
 
@@ -203,10 +205,7 @@ export class DatabaseService {
     return { ...link, id, createdAt: now };
   }
 
-  updateLink(
-    id: string,
-    data: Pick<ServiceLink, "label" | "type" | "description" | "targetPort" | "protocol">,
-  ): ServiceLink {
+  updateLink(id: string, data: UpdateLinkRequest): ServiceLink {
     const result = this.orm
       .update(serviceLinks)
       .set({
