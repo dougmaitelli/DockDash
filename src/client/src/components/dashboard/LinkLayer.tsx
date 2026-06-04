@@ -5,20 +5,16 @@ import type { LinkPath } from "./linkUtils";
 import { getNodeCenter, getPortPosition, PortSide } from "./nodeGeometry";
 import { colors } from "../../styles/vars";
 
-const PORT_LABEL_W = 34; // port badge width (px, unscaled)
-const PORT_LABEL_H = 17; // port badge height (px, unscaled)
+const PORT_LABEL_W = 34; // port badge width (px)
+const PORT_LABEL_H = 17; // port badge height (px)
 
 interface LinkLayerProps {
   links: ServiceLink[];
   services: ServiceWithPosition[];
   dragOffsets: Record<string, { dx: number; dy: number }>;
   resizeDimensions: Record<string, { w: number; h: number }>;
-  panOffset: { x: number; y: number };
-  zoomLevel: number;
   connectingSource: { serviceId: string; side: PortSide } | null;
   mouseCanvasPos: { x: number; y: number } | null;
-  canvasW: number;
-  canvasH: number;
   onEditLink: (link: ServiceLink) => void;
 }
 
@@ -27,12 +23,8 @@ export function LinkLayer({
   services,
   dragOffsets,
   resizeDimensions,
-  panOffset,
-  zoomLevel,
   connectingSource,
   mouseCanvasPos,
-  canvasW,
-  canvasH,
   onEditLink,
 }: LinkLayerProps) {
   const linkPaths = useMemo<LinkPath[]>(() => {
@@ -43,10 +35,10 @@ export function LinkLayer({
 
         if (!srcCenter || !tgtCenter) return null;
 
-        const sx = srcCenter.x * zoomLevel + panOffset.x;
-        const sy = srcCenter.y * zoomLevel + panOffset.y;
-        const tx = tgtCenter.x * zoomLevel + panOffset.x;
-        const ty = tgtCenter.y * zoomLevel + panOffset.y;
+        const sx = srcCenter.x;
+        const sy = srcCenter.y;
+        const tx = tgtCenter.x;
+        const ty = tgtCenter.y;
 
         const srcIsParent = services.some((s) => s.position?.parentId === link.sourceId);
         const tgtIsParent = services.some((s) => s.position?.parentId === link.targetId);
@@ -97,14 +89,14 @@ export function LinkLayer({
 
         if (!srcPort || !tgtPort) return null;
 
-        const x1 = srcPort.x * zoomLevel + panOffset.x;
-        const y1 = srcPort.y * zoomLevel + panOffset.y;
-        const x2 = tgtPort.x * zoomLevel + panOffset.x;
-        const y2 = tgtPort.y * zoomLevel + panOffset.y;
+        const x1 = srcPort.x;
+        const y1 = srcPort.y;
+        const x2 = tgtPort.x;
+        const y2 = tgtPort.y;
 
         return {
           id: link.id,
-          d: orthogonalPath(x1, y1, exitSide!, x2, y2, entrySide!, zoomLevel),
+          d: orthogonalPath(x1, y1, exitSide!, x2, y2, entrySide!),
           midX: (x1 + x2) / 2,
           midY: (y1 + y2) / 2,
           endX: x2,
@@ -116,7 +108,7 @@ export function LinkLayer({
       })
       .filter((p): p is LinkPath => p !== null);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- resizeDimensions invalidates DOM-based getNodeSize reads
-  }, [links, services, dragOffsets, resizeDimensions, panOffset, zoomLevel]);
+  }, [links, services, dragOffsets, resizeDimensions]);
 
   const previewPath = useMemo(() => {
     if (!connectingSource || !mouseCanvasPos) return null;
@@ -130,10 +122,10 @@ export function LinkLayer({
 
     if (!srcPort) return null;
 
-    const sx = srcPort.x * zoomLevel + panOffset.x;
-    const sy = srcPort.y * zoomLevel + panOffset.y;
-    const tx = mouseCanvasPos.x * zoomLevel + panOffset.x;
-    const ty = mouseCanvasPos.y * zoomLevel + panOffset.y;
+    const sx = srcPort.x;
+    const sy = srcPort.y;
+    const tx = mouseCanvasPos.x;
+    const ty = mouseCanvasPos.y;
 
     const pdx = tx - sx;
     const pdy = ty - sy;
@@ -145,8 +137,8 @@ export function LinkLayer({
       entrySide = pdy >= 0 ? PortSide.TOP : PortSide.BOTTOM;
     }
 
-    return orthogonalPath(sx, sy, connectingSource.side, tx, ty, entrySide, zoomLevel);
-  }, [connectingSource, mouseCanvasPos, services, dragOffsets, panOffset, zoomLevel]);
+    return orthogonalPath(sx, sy, connectingSource.side, tx, ty, entrySide);
+  }, [connectingSource, mouseCanvasPos, services, dragOffsets]);
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -158,22 +150,20 @@ export function LinkLayer({
         left: 0,
         width: "100%",
         height: "100%",
+        overflow: "visible",
         pointerEvents: "none",
       }}
-      viewBox={`0 0 ${canvasW} ${canvasH}`}
       xmlns="http://www.w3.org/2000/svg"
     >
       {[...linkPaths]
         .sort((a, b) => (a.id === hoveredId ? 1 : b.id === hoveredId ? -1 : 0))
         .map((p) => {
-          const boxW = PORT_LABEL_W * zoomLevel;
-          const boxH = PORT_LABEL_H * zoomLevel;
           const hasPort = p.link.targetPort != null;
           const hovered = hoveredId === p.id;
 
           const [dx, dy] = SIDE_VEC[p.entrySide];
-          const bx = p.endX + (dx * boxW) / 2;
-          const by = p.endY + (dy * boxH) / 2;
+          const bx = p.endX + (dx * PORT_LABEL_W) / 2;
+          const by = p.endY + (dy * PORT_LABEL_H) / 2;
 
           return (
             <g key={p.id}>
@@ -223,11 +213,11 @@ export function LinkLayer({
               {hasPort && (
                 <g style={{ pointerEvents: "none" }}>
                   <rect
-                    x={bx - boxW / 2}
-                    y={by - boxH / 2}
-                    width={boxW}
-                    height={boxH}
-                    rx={3 * zoomLevel}
+                    x={bx - PORT_LABEL_W / 2}
+                    y={by - PORT_LABEL_H / 2}
+                    width={PORT_LABEL_W}
+                    height={PORT_LABEL_H}
+                    rx={3}
                     fill={colors.bgCard}
                     stroke={p.color}
                     strokeWidth={1.5}
@@ -238,7 +228,7 @@ export function LinkLayer({
                     y={by}
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fontSize={10 * zoomLevel}
+                    fontSize={10}
                     fill={p.color}
                     fontFamily="monospace"
                     style={{ userSelect: "none" }}

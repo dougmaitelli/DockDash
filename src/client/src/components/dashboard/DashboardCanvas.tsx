@@ -182,8 +182,6 @@ export function DashboardCanvas({
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const [canvasDimensions, setCanvasDimensions] = useState({ w: 0, h: 0 });
-  const canvasW = canvasDimensions.w;
-  const canvasH = canvasDimensions.h;
 
   const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
   const servicesWithUpdates = services.filter((s) => s.metadata?.hasUpdate === true).length;
@@ -259,8 +257,11 @@ export function DashboardCanvas({
 
       const domSize = service.id ? getNodeSize(service.id) : null;
       const isContainer = services.some((s) => s.position?.parentId === service.id);
-      const nodeW = domSize?.w ?? (isContainer ? (service.position?.w ?? DEFAULT_CONTAINER_WIDTH) : NODE_WIDTH);
-      const nodeH = domSize?.h ?? (isContainer ? (service.position?.h ?? DEFAULT_CONTAINER_HEIGHT) : NODE_HEIGHT);
+      const nodeW =
+        domSize?.w ?? (isContainer ? (service.position?.w ?? DEFAULT_CONTAINER_WIDTH) : NODE_WIDTH);
+      const nodeH =
+        domSize?.h ??
+        (isContainer ? (service.position?.h ?? DEFAULT_CONTAINER_HEIGHT) : NODE_HEIGHT);
 
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
@@ -934,21 +935,16 @@ export function DashboardCanvas({
             onNodeMouseEnter={handleNodeMouseEnter}
             onNodeMouseLeave={handleNodeMouseLeave}
           />
+          <LinkLayer
+            links={links}
+            services={services}
+            dragOffsets={dragOffsets}
+            resizeDimensions={resizeDimensions}
+            connectingSource={connectingSource}
+            mouseCanvasPos={mouseCanvasPos}
+            onEditLink={openEditLinkModal}
+          />
         </div>
-
-        <LinkLayer
-          links={links}
-          services={services}
-          dragOffsets={dragOffsets}
-          resizeDimensions={resizeDimensions}
-          panOffset={panOffset}
-          zoomLevel={zoomLevel}
-          connectingSource={connectingSource}
-          mouseCanvasPos={mouseCanvasPos}
-          canvasW={canvasW}
-          canvasH={canvasH}
-          onEditLink={openEditLinkModal}
-        />
       </Canvas>
 
       <ZoomControls
@@ -963,7 +959,11 @@ export function DashboardCanvas({
       {addingService && (
         <EditServiceModal
           onSave={async (data) => {
-            await addService({ ...data, source: ServiceSource.NETWORK, checkPort: data.checkPort ?? undefined });
+            await addService({
+              ...data,
+              source: ServiceSource.NETWORK,
+              checkPort: data.checkPort ?? undefined,
+            });
             setAddingService(false);
           }}
           onCancel={() => setAddingService(false)}

@@ -174,7 +174,17 @@ export function useDashboard() {
           ...prev,
           services: prev.services.map((s) =>
             s.id === serviceId
-              ? { ...s, position: { serviceId, x, y, parentId: parentId ?? undefined, w: w ?? undefined, h: h ?? undefined } }
+              ? {
+                  ...s,
+                  position: {
+                    serviceId,
+                    x,
+                    y,
+                    parentId: parentId ?? undefined,
+                    w: w ?? undefined,
+                    h: h ?? undefined,
+                  },
+                }
               : s,
           ),
         };

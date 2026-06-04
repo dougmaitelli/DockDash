@@ -107,8 +107,6 @@ export function NodeLayer({
         const isNestTarget = nestingTarget === service.id;
         const isSelected = selectedId === service.id;
         const isHovered = hoveredNode === service.id;
-        const anyChildActive = children.some((c) => selectedId === c.id || hoveredNode === c.id);
-        const zIndex = isSelected || isHovered || anyChildActive ? 10 : 1;
 
         // Live resize dimensions take precedence over stored ones.
         const rz = resizeDimensions[service.id!];
@@ -162,7 +160,6 @@ export function NodeLayer({
               position: "absolute",
               left: `${x}px`,
               top: `${y}px`,
-              zIndex,
               pointerEvents: "auto",
             }}
           >
