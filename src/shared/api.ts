@@ -97,8 +97,8 @@ export interface CreateServiceRequest {
 // ---------------------------------------------------------------------------
 
 export interface UpdateServiceRequest {
-  name: string;
-  host: string;
+  name?: string;
+  host?: string;
   ports?: number[];
   checkPort?: number | null;
 }
@@ -133,8 +133,17 @@ export interface UpdateLinkRequest {
 // POST /api/positions
 // ---------------------------------------------------------------------------
 
+export interface PositionUpdate {
+  serviceId: string;
+  x?: number;
+  y?: number;
+  w?: number | null;
+  h?: number | null;
+  parentId?: string | null;
+}
+
 export interface SavePositionsRequest {
-  positions: ServicePosition[];
+  positions: PositionUpdate[];
 }
 
 export interface SavePositionsResponse {

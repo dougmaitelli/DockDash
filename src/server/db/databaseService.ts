@@ -16,7 +16,12 @@ import type {
   ServiceMetadata,
   ServiceHealthHistoryItem,
 } from "@shared";
-import type { CreateLinkRequest, UpdateLinkRequest, UpdateServiceRequest } from "@shared/api";
+import type {
+  CreateLinkRequest,
+  UpdateLinkRequest,
+  UpdateServiceRequest,
+  PositionUpdate,
+} from "@shared/api";
 
 const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 
@@ -79,16 +84,14 @@ export class DatabaseService {
   updateService(id: string, data: UpdateServiceRequest): Service {
     if (!this.getService(id)) throw new Error("Service not found");
 
-    const now = new Date().toISOString();
-
     this.orm
       .update(services)
       .set({
         name: data.name,
         host: data.host,
-        ports: data.ports ?? [],
-        checkPort: data.checkPort !== undefined ? data.checkPort : null,
-        updatedAt: now,
+        ports: data.ports,
+        checkPort: data.checkPort,
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(services.id, id))
       .run();
@@ -133,13 +136,13 @@ export class DatabaseService {
     this.orm.delete(services).where(eq(services.id, id)).run();
   }
 
-  saveServicePosition(position: ServicePosition): void {
+  saveServicePosition(position: PositionUpdate): void {
     this.orm
       .insert(servicePositions)
       .values({
         serviceId: position.serviceId,
-        x: position.x,
-        y: position.y,
+        x: position.x ?? 0,
+        y: position.y ?? 0,
         parentId: position.parentId ?? null,
         w: position.w ?? null,
         h: position.h ?? null,
@@ -149,9 +152,9 @@ export class DatabaseService {
         set: {
           x: position.x,
           y: position.y,
-          parentId: position.parentId ?? null,
-          w: position.w ?? null,
-          h: position.h ?? null,
+          parentId: position.parentId,
+          w: position.w,
+          h: position.h,
         },
       })
       .run();
@@ -212,8 +215,8 @@ export class DatabaseService {
         label: data.label,
         type: data.type,
         description: data.description,
-        targetPort: data.targetPort ?? null,
-        protocol: data.protocol ?? null,
+        targetPort: data.targetPort,
+        protocol: data.protocol,
       })
       .where(eq(serviceLinks.id, id))
       .run();

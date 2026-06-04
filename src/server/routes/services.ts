@@ -4,9 +4,16 @@ import { healthCheckService } from "../services/healthCheckService.js";
 import { dockerService } from "../services/dockerService.js";
 import { notificationService } from "../services/notificationService.js";
 import { changelogService } from "../services/changelogService.js";
-import { ServiceSource, ServiceStatus, ServiceLinkType, ContainerAction } from "@shared";
+import {
+  ServiceSource,
+  ServiceStatus,
+  ServiceLinkType,
+  ServiceProtocol,
+  ContainerAction,
+} from "@shared";
 import { APP_NAME } from "../lib/constants.js";
 import { t } from "../i18n/index.js";
+import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
 import { config } from "../lib/config.js";
 import type {
   ApiSuccess,
@@ -43,8 +50,20 @@ router.post("/services", (req, res) => {
   const { name, host, ports, checkPort, source, status, metadata } =
     req.body as CreateServiceRequest;
 
-  if (!name || !host) {
-    return res.status(400).json({ error: "name and host are required" });
+  if (!isNonEmptyString(name)) {
+    return res.status(400).json({ error: "name is required" });
+  }
+
+  if (!isNonEmptyString(host)) {
+    return res.status(400).json({ error: "host is required" });
+  }
+
+  if (source !== undefined && !isValidEnumValue(ServiceSource, source)) {
+    return res.status(400).json({ error: "invalid source" });
+  }
+
+  if (status !== undefined && !isValidEnumValue(ServiceStatus, status)) {
+    return res.status(400).json({ error: "invalid status" });
   }
 
   const now = new Date().toISOString();
@@ -69,15 +88,19 @@ router.post("/services", (req, res) => {
 router.put("/services/:id", (req, res) => {
   const { name, host, ports, checkPort } = req.body as UpdateServiceRequest;
 
-  if (!name || !host) {
-    return res.status(400).json({ error: "name and host are required" });
+  if (name !== undefined && !isNonEmptyString(name)) {
+    return res.status(400).json({ error: "name cannot be empty" });
+  }
+
+  if (host !== undefined && !isNonEmptyString(host)) {
+    return res.status(400).json({ error: "host cannot be empty" });
   }
 
   try {
     const service = db.updateService(req.params.id, {
       name,
       host,
-      ports: Array.isArray(ports) ? ports : [],
+      ports: Array.isArray(ports) ? ports : undefined,
       checkPort,
     });
 
@@ -103,12 +126,20 @@ router.post("/links", (req, res) => {
   const { sourceId, targetId, label, type, description, targetPort, protocol } =
     req.body as CreateLinkRequest;
 
-  if (!sourceId || !targetId) {
-    return res.status(400).json({ error: "source and target are required" });
+  if (!isNonEmptyString(sourceId)) {
+    return res.status(400).json({ error: "sourceId is required" });
+  }
+
+  if (!isNonEmptyString(targetId)) {
+    return res.status(400).json({ error: "targetId is required" });
   }
 
   if (sourceId === targetId) {
     return res.status(400).json({ error: "source and target cannot be the same" });
+  }
+
+  if (protocol != null && !isValidEnumValue(ServiceProtocol, protocol)) {
+    return res.status(400).json({ error: "invalid protocol" });
   }
 
   try {
@@ -132,13 +163,21 @@ router.post("/links", (req, res) => {
 router.put("/links/:id", (req, res) => {
   const { label, type, description, targetPort, protocol } = req.body as UpdateLinkRequest;
 
+  if (type !== undefined && !isValidEnumValue(ServiceLinkType, type)) {
+    return res.status(400).json({ error: "invalid type" });
+  }
+
+  if (protocol != null && !isValidEnumValue(ServiceProtocol, protocol)) {
+    return res.status(400).json({ error: "invalid protocol" });
+  }
+
   try {
     const link = db.updateLink(req.params.id, {
-      label: label ?? "",
-      type: type ?? ServiceLinkType.COMMUNICATION,
-      description: description ?? "",
-      targetPort: targetPort != null ? Number(targetPort) : null,
-      protocol: protocol ?? null,
+      label,
+      type,
+      description,
+      targetPort: targetPort != null ? Number(targetPort) : targetPort,
+      protocol,
     });
 
     res.json(link);
@@ -159,6 +198,36 @@ router.delete("/links/:id", (req, res) => {
 // Update service positions
 router.post("/positions", (req, res) => {
   const { positions } = req.body as SavePositionsRequest;
+
+  if (!Array.isArray(positions)) {
+    return res.status(400).json({ error: "positions must be an array" });
+  }
+
+  for (const p of positions) {
+    if (!isNonEmptyString(p.serviceId)) {
+      return res.status(400).json({ error: "each position must have a valid serviceId" });
+    }
+
+    if (p.x !== undefined && typeof p.x !== "number") {
+      return res.status(400).json({ error: "position x must be a number" });
+    }
+
+    if (p.y !== undefined && typeof p.y !== "number") {
+      return res.status(400).json({ error: "position y must be a number" });
+    }
+
+    if (p.parentId != null && !isNonEmptyString(p.parentId)) {
+      return res.status(400).json({ error: "position parentId must be a non-empty string" });
+    }
+
+    if (p.w != null && typeof p.w !== "number") {
+      return res.status(400).json({ error: "position w must be a number" });
+    }
+
+    if (p.h != null && typeof p.h !== "number") {
+      return res.status(400).json({ error: "position h must be a number" });
+    }
+  }
 
   for (const p of positions) {
     db.saveServicePosition(p);
