@@ -7,7 +7,7 @@ import { changelogService } from "../services/changelogService.js";
 import { ServiceSource, ServiceLinkType, ServiceProtocol, ContainerAction } from "@shared";
 import { APP_NAME } from "../lib/constants.js";
 import { t } from "../i18n/index.js";
-import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
+import { isNonEmptyString, isValidEnumValue, isValidContainerPath } from "../lib/validate.js";
 import { config } from "../lib/config.js";
 import type {
   ApiSuccess,
@@ -18,6 +18,7 @@ import type {
   SavePositionsRequest,
   SavePositionsResponse,
   CheckAllServicesResponse,
+  FileContentResponse,
 } from "@shared/api";
 import { SSE_EVENT } from "@shared/api";
 
@@ -458,7 +459,7 @@ router.get("/services/:id/files", async (req, res) => {
 
   const rawPath = typeof req.query.path === "string" ? req.query.path : "/";
 
-  if (!rawPath.startsWith("/") || rawPath.includes("\0") || rawPath.length > 4096) {
+  if (!isValidContainerPath(rawPath)) {
     return res.status(400).json({ error: "Invalid path" });
   }
 
@@ -474,6 +475,88 @@ router.get("/services/:id/files", async (req, res) => {
     const entries = await dockerService.listFiles(resolvedHost, containerId, rawPath);
 
     res.json({ path: rawPath, entries });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.get("/services/:id/files/content", async (req, res) => {
+  if (!config.fileExplorerEnabled) {
+    return res.status(403).json({ error: "File explorer is disabled" });
+  }
+
+  const service = db.getService(req.params.id);
+
+  if (!service) return res.status(404).json({ error: "Service not found" });
+
+  if (service.source !== ServiceSource.DOCKER) {
+    return res.status(400).json({ error: "Not a Docker service" });
+  }
+
+  const rawPath = typeof req.query.path === "string" ? req.query.path : "";
+
+  if (!isValidContainerPath(rawPath)) {
+    return res.status(400).json({ error: "Invalid path" });
+  }
+
+  const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+  const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
+  const containerId = service.metadata?.containerId as string | undefined;
+
+  if (!resolvedHost || !containerId) {
+    return res.status(400).json({ error: "Container metadata not available" });
+  }
+
+  try {
+    const result: FileContentResponse = await dockerService.readFile(
+      resolvedHost,
+      containerId,
+      rawPath,
+    );
+
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.put("/services/:id/files/content", async (req, res) => {
+  if (!config.fileExplorerEnabled) {
+    return res.status(403).json({ error: "File explorer is disabled" });
+  }
+
+  const service = db.getService(req.params.id);
+
+  if (!service) return res.status(404).json({ error: "Service not found" });
+
+  if (service.source !== ServiceSource.DOCKER) {
+    return res.status(400).json({ error: "Not a Docker service" });
+  }
+
+  const { path: filePath, content } = req.body as { path?: string; content?: string };
+
+  if (!isValidContainerPath(filePath)) {
+    return res.status(400).json({ error: "Invalid path" });
+  }
+
+  if (typeof content !== "string") {
+    return res.status(400).json({ error: "content must be a string" });
+  }
+
+  const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+  const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
+  const containerId = service.metadata?.containerId as string | undefined;
+
+  if (!resolvedHost || !containerId) {
+    return res.status(400).json({ error: "Container metadata not available" });
+  }
+
+  try {
+    await dockerService.writeFile(resolvedHost, containerId, filePath, content);
+
+    const response: ApiSuccess = { success: true };
+
+    res.json(response);
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }

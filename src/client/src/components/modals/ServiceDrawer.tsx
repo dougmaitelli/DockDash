@@ -83,11 +83,14 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
       id: "files" as Tab,
       label: t("modals.tabFiles"),
       dockerOnly: true,
+      enabled: config?.fileExplorerEnabled ?? false,
       content: <FileExplorer serviceId={service.id!} />,
     },
   ];
 
-  const visibleTabs = tabs.filter((t) => !t.dockerOnly || isDocker);
+  const visibleTabs = tabs.filter(
+    (t) => (!t.dockerOnly || isDocker) && (t.enabled === undefined || t.enabled),
+  );
   const activeTab = visibleTabs.find((t) => t.id === tab) ?? visibleTabs[0];
 
   return createPortal(

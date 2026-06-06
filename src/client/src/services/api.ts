@@ -18,6 +18,7 @@ import type {
   CheckAllServicesResponse,
   ChangelogResponse,
   FilesResponse,
+  FileContentResponse,
 } from "@shared";
 
 const api = axios.create({
@@ -44,6 +45,10 @@ export const serviceApi = {
     api.post<ApiSuccess>(`/services/${id}/container/${action}`),
   listFiles: (id: string, path: string) =>
     api.get<FilesResponse>(`/services/${id}/files`, { params: { path } }),
+  readFileContent: (id: string, path: string) =>
+    api.get<FileContentResponse>(`/services/${id}/files/content`, { params: { path } }),
+  writeFileContent: (id: string, path: string, content: string) =>
+    api.put<ApiSuccess>(`/services/${id}/files/content`, { path, content }),
 };
 
 // Link management APIs

@@ -152,6 +152,7 @@ router.get("/config", (_req, res) => {
     updateCheckInterval: config.updateCheckInterval,
     appriseConfigured: config.appriseConfigured,
     containerControlsEnabled: config.containerControlsEnabled,
+    fileExplorerEnabled: config.fileExplorerEnabled,
   };
 
   res.json(cfg);

@@ -60,6 +60,7 @@ export interface DashboardConfig {
   updateCheckInterval: number;
   appriseConfigured: boolean;
   containerControlsEnabled: boolean;
+  fileExplorerEnabled: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -171,4 +172,14 @@ export interface FileEntry {
 export interface FilesResponse {
   path: string;
   entries: FileEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/services/:id/files/content
+// PUT /api/services/:id/files/content
+// ---------------------------------------------------------------------------
+
+export interface FileContentResponse {
+  path: string;
+  content: string;
 }

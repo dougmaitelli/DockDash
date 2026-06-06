@@ -101,6 +101,10 @@ class Config {
     return process.env.DISABLE_CONTAINER_CONTROLS !== "true";
   }
 
+  get fileExplorerEnabled(): boolean {
+    return process.env.DISABLE_FILE_EXPLORER !== "true";
+  }
+
   get locale(): string {
     return process.env.LOCALE || "en";
   }
