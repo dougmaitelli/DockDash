@@ -11,8 +11,11 @@ interface FileExplorerProps {
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes}B`;
+
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}K`;
+
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}M`;
+
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)}G`;
 }
 
@@ -29,10 +32,12 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
       setError(null);
       try {
         const res = await serviceApi.listFiles(serviceId, p);
+
         setEntries(res.data.entries);
         setPath(res.data.path);
       } catch (err: unknown) {
         const axiosErr = err as { response?: { data?: { error?: string } }; message?: string };
+
         setError(axiosErr.response?.data?.error ?? axiosErr.message ?? String(err));
       } finally {
         setLoading(false);
@@ -51,6 +56,7 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
 
   const navigateUp = () => {
     const parent = path.split("/").slice(0, -1).join("/") || "/";
+
     loadPath(parent);
   };
 
@@ -59,6 +65,7 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
       loadPath("/");
     } else {
       const parts = path.split("/").filter(Boolean);
+
       loadPath("/" + parts.slice(0, index).join("/"));
     }
   };
@@ -67,12 +74,14 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
 
   const sorted = [...entries].sort((a, b) => {
     if (a.type === "directory" && b.type !== "directory") return -1;
+
     if (a.type !== "directory" && b.type === "directory") return 1;
+
     return a.name.localeCompare(b.name);
   });
 
   return (
-    <div className="flex flex-col h-full gap-3">
+    <div className="flex flex-col h-full gap-3 pt-4 px-5">
       {/* Breadcrumb */}
       <div className="flex items-center gap-0.5 px-2 py-1.5 text-xs font-mono bg-background border border-border rounded-md flex-wrap min-h-8">
         <button
@@ -89,6 +98,7 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
         </button>
         {breadcrumbParts.map((part, i) => {
           const isLast = i === breadcrumbParts.length - 1;
+
           return (
             <span key={i} className="flex items-center gap-0.5">
               <span className="text-muted-foreground px-0.5">/</span>
@@ -143,9 +153,7 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
               key={entry.name}
               className={cn(
                 "flex items-center gap-2 px-2 py-1.5 rounded text-xs font-mono",
-                entry.type === "directory"
-                  ? "cursor-pointer hover:bg-primary/5"
-                  : "cursor-default",
+                entry.type === "directory" ? "cursor-pointer hover:bg-primary/5" : "cursor-default",
               )}
               onClick={() => entry.type === "directory" && navigate(entry.name)}
             >

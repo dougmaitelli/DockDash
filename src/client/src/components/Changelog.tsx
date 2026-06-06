@@ -24,12 +24,16 @@ export function Changelog({ serviceId }: ChangelogProps) {
   }, [serviceId]);
 
   if (loading) {
-    return <div className="text-[0.82rem] text-muted-foreground text-center py-5">Loading…</div>;
+    return (
+      <div className="pt-4 px-5 text-[0.82rem] text-muted-foreground text-center py-5">
+        Loading…
+      </div>
+    );
   }
 
   if (!data || !data.available) {
     return (
-      <div className="text-[0.82rem] text-muted-foreground text-center py-5">
+      <div className="pt-4 px-5 text-[0.82rem] text-muted-foreground text-center py-5">
         {data?.reason ?? "Changelog not available"}
       </div>
     );
@@ -38,7 +42,7 @@ export function Changelog({ serviceId }: ChangelogProps) {
   const { release } = data;
 
   return (
-    <div className="flex flex-col gap-3 p-5 flex-1">
+    <div className="flex flex-col gap-3 p-5 flex-1 overflow-y-auto">
       <div className="flex items-center gap-2.5 flex-wrap">
         <span className="text-xs font-mono bg-background border border-border rounded px-2 py-0.5 text-primary">
           {release.version}

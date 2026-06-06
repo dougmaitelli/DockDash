@@ -110,7 +110,7 @@ export function DockerLogs({ serviceId, reconnectTrigger }: DockerLogsProps) {
   );
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col pb-4">
+    <div className="flex-1 min-h-0 flex flex-col pt-4 px-5 pb-4">
       <div className="flex items-center justify-between pb-2 shrink-0">
         <div className="flex items-center gap-1.5">
           <span className={statusDotClass} />

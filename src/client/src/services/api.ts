@@ -2,7 +2,6 @@ import axios from "axios";
 import type {
   Service,
   ServiceLink,
-  ServicePosition,
   DashboardData,
   ServiceStatusItem,
   ServiceHealthHistoryItem,
