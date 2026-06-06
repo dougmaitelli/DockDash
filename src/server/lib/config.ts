@@ -105,6 +105,10 @@ class Config {
     return process.env.DISABLE_FILE_EXPLORER !== "true";
   }
 
+  get terminalEnabled(): boolean {
+    return process.env.DISABLE_TERMINAL !== "true";
+  }
+
   get locale(): string {
     return process.env.LOCALE || "en";
   }

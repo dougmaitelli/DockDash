@@ -9,13 +9,12 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { DockerLogs } from "../DockerLogs";
 import { Changelog } from "../Changelog";
 import { FileExplorer } from "../FileExplorer";
+import { Terminal } from "../Terminal";
 import { ServiceDetails } from "../ServiceDetails";
 import { ContainerControls } from "../ContainerControls";
 import { useConfig } from "../../context/ConfigContext";
 
 const ANIM_MS = 220;
-
-type Tab = "details" | "logs" | "changelog" | "files";
 
 interface ServiceDrawerProps {
   service: Service;
@@ -28,11 +27,11 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
   const { t } = useTranslation();
   const [closing, setClosing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [tab, setTab] = useState<Tab>("details");
+  const [currentTab, setCurrentTab] = useState<Tab>("details");
+  const [logsReconnectTrigger, setLogsReconnectTrigger] = useState(0);
 
   const config = useConfig();
   const isDocker = service.source === ServiceSource.DOCKER;
-  const [logsReconnectTrigger, setLogsReconnectTrigger] = useState(0);
 
   const handleContainerActionComplete = useCallback((action: ContainerAction) => {
     if (action === ContainerAction.START || action === ContainerAction.RESTART) {
@@ -45,19 +44,11 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
     setTimeout(onClose, ANIM_MS);
   };
 
-  const tabButtonClass = (active: boolean) =>
-    cn(
-      "border-b-2 border-x-0 border-t-0 -mb-px px-3.5 pt-2.5 pb-2 text-xs bg-transparent transition-colors",
-      active
-        ? "border-primary font-semibold text-foreground"
-        : "border-transparent font-normal text-muted-foreground hover:text-foreground",
-    );
-
-  const tabs = [
-    {
-      id: "details" as Tab,
+  const tabs = {
+    details: {
       label: t("modals.tabDetails"),
       dockerOnly: false,
+      enabled: true,
       content: (
         <ServiceDetails
           service={service}
@@ -67,31 +58,46 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
         />
       ),
     },
-    {
-      id: "changelog" as Tab,
+    changelog: {
       label: t("modals.tabChangelog"),
       dockerOnly: true,
+      enabled: true,
       content: <Changelog serviceId={service.id!} />,
     },
-    {
-      id: "logs" as Tab,
+    logs: {
       label: t("modals.tabLogs"),
       dockerOnly: true,
+      enabled: true,
       content: <DockerLogs serviceId={service.id!} reconnectTrigger={logsReconnectTrigger} />,
     },
-    {
-      id: "files" as Tab,
+    files: {
       label: t("modals.tabFiles"),
       dockerOnly: true,
       enabled: config?.fileExplorerEnabled ?? false,
       content: <FileExplorer serviceId={service.id!} />,
     },
-  ];
+    terminal: {
+      label: t("modals.tabTerminal"),
+      dockerOnly: true,
+      enabled: config?.terminalEnabled ?? false,
+      content: <Terminal serviceId={service.id!} />,
+    },
+  };
 
-  const visibleTabs = tabs.filter(
-    (t) => (!t.dockerOnly || isDocker) && (t.enabled === undefined || t.enabled),
+  type Tab = keyof typeof tabs;
+
+  const visibleTabIds = (Object.keys(tabs) as Tab[]).filter(
+    (id) => (!tabs[id].dockerOnly || isDocker) && tabs[id].enabled,
   );
-  const activeTab = visibleTabs.find((t) => t.id === tab) ?? visibleTabs[0];
+  const tab = (visibleTabIds.includes(currentTab as Tab) ? currentTab : visibleTabIds[0]) as Tab;
+
+  const tabButtonClass = (active: boolean) =>
+    cn(
+      "border-b-2 border-x-0 border-t-0 -mb-px px-3.5 pt-2.5 pb-2 text-xs bg-transparent transition-colors",
+      active
+        ? "border-primary font-semibold text-foreground"
+        : "border-transparent font-normal text-muted-foreground hover:text-foreground",
+    );
 
   return createPortal(
     <>
@@ -149,19 +155,19 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
         </div>
 
         <div className="flex border-b border-border px-5">
-          {visibleTabs.map((tabDef) => (
+          {visibleTabIds.map((id) => (
             <button
-              key={tabDef.id}
+              key={id}
               type="button"
-              onClick={() => setTab(tabDef.id)}
-              className={tabButtonClass(tab === tabDef.id)}
+              onClick={() => setCurrentTab(id)}
+              className={tabButtonClass(tab === id)}
             >
-              {tabDef.label}
+              {tabs[id].label}
             </button>
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden">{activeTab.content}</div>
+        <div className="flex-1 flex flex-col overflow-hidden">{tabs[tab].content}</div>
       </div>
     </>,
     document.body,

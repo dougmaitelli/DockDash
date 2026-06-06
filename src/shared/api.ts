@@ -14,6 +14,8 @@ export const SSE_EVENT = {
   DONE: "done",
   SCAN_ERROR: "scan-error",
   LOG_ERROR: "log-error",
+  TERMINAL_SESSION: "terminal-session",
+  TERMINAL_ERROR: "terminal-error",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -61,6 +63,7 @@ export interface DashboardConfig {
   appriseConfigured: boolean;
   containerControlsEnabled: boolean;
   fileExplorerEnabled: boolean;
+  terminalEnabled: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -182,4 +185,21 @@ export interface FilesResponse {
 export interface FileContentResponse {
   path: string;
   content: string;
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/services/:id/terminal/input
+// ---------------------------------------------------------------------------
+
+export interface TerminalInputRequest {
+  sessionId: string;
+  data: string;
+}
+
+// ---------------------------------------------------------------------------
+// SSE terminal-session event payload
+// ---------------------------------------------------------------------------
+
+export interface SseTerminalSessionPayload {
+  sessionId: string;
 }

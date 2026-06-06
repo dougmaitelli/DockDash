@@ -153,6 +153,7 @@ router.get("/config", (_req, res) => {
     appriseConfigured: config.appriseConfigured,
     containerControlsEnabled: config.containerControlsEnabled,
     fileExplorerEnabled: config.fileExplorerEnabled,
+    terminalEnabled: config.terminalEnabled,
   };
 
   res.json(cfg);

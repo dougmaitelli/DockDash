@@ -1,12 +1,17 @@
 import { createHash } from "crypto";
-import { Readable } from "stream";
+import { PassThrough } from "stream";
 import Docker from "dockerode";
 import { v4 as uuidv4 } from "uuid";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
-import type { FileEntry } from "@shared/api";
-import type { FileContentResponse } from "@shared/api";
+import type { FileEntry, FileContentResponse } from "@shared/api";
 import { config } from "../lib/config.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
+import { db } from "../db/databaseService.js";
+import { fileService } from "./fileService.js";
+import { terminalService } from "./terminalService.js";
+
+// Docker multiplexed stream header: 1 byte type + 3 bytes padding + 4 bytes payload length
+export const DOCKER_STREAM_HEADER_SIZE = 8;
 
 export type ContainerStateMap = Map<
   string,
@@ -39,6 +44,22 @@ export class DockerService {
 
   resolveHost(dockerHostId: string): string | undefined {
     return config.dockerHosts.find((host) => DockerService.hostId(host) === dockerHostId);
+  }
+
+  getContainerForServiceId(serviceId: string): Docker.Container {
+    const service = db.getService(serviceId);
+
+    if (!service) throw new Error("Service not found");
+
+    if (service.source !== ServiceSource.DOCKER) throw new Error("Not a Docker service");
+
+    const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+    const resolvedHost = dockerHostId ? this.resolveHost(dockerHostId) : undefined;
+    const containerId = service.metadata?.containerId as string | undefined;
+
+    if (!resolvedHost || !containerId) throw new Error("Container metadata not available");
+
+    return this.createDockerClientForHost(resolvedHost).getContainer(containerId);
   }
 
   private buildClient(host: string): Docker {
@@ -184,233 +205,93 @@ export class DockerService {
     return { image: withoutDigest, tag: DOCKER_LATEST_TAG };
   }
 
-  async listFiles(resolvedHost: string, containerId: string, path: string): Promise<FileEntry[]> {
-    const docker = this.createDockerClientForHost(resolvedHost);
-    const container = docker.getContainer(containerId);
-
+  async listFiles(container: Docker.Container, path: string): Promise<FileEntry[]> {
     const info = await container.inspect();
 
-    if (!info.State?.Running) {
-      throw new Error("Container is not running");
-    }
+    if (!info.State?.Running) throw new Error("Container is not running");
 
-    const exec = await container.exec({
-      Cmd: ["ls", "-la", "--", path],
-      AttachStdout: true,
-      AttachStderr: true,
-      Tty: false,
-    });
-
-    const stream = await exec.start({ hijack: true, stdin: false });
-
-    const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>(
-      (resolve, reject) => {
-        let buf = Buffer.alloc(0);
-
-        stream.on("data", (chunk: Buffer) => {
-          buf = Buffer.concat([buf, chunk]);
-        });
-
-        stream.on("end", () => {
-          let remaining = buf;
-          const stdoutParts: string[] = [];
-          const stderrParts: string[] = [];
-
-          while (remaining.length >= 8) {
-            const size = remaining.readUInt32BE(4);
-
-            if (remaining.length < 8 + size) break;
-
-            const type = remaining[0];
-            const payload = remaining.slice(8, 8 + size);
-
-            if (type === 1) stdoutParts.push(payload.toString("utf8"));
-            else if (type === 2) stderrParts.push(payload.toString("utf8"));
-
-            remaining = remaining.slice(8 + size);
-          }
-
-          resolve({ stdout: stdoutParts.join(""), stderr: stderrParts.join("") });
-        });
-
-        stream.on("error", reject);
-      },
-    );
-
-    if (!stdout.trim() && stderr.trim()) {
-      throw new Error(stderr.trim());
-    }
-
-    return this.parseLsOutput(stdout);
+    return fileService.listFiles(container, path);
   }
 
-  async readFile(
-    resolvedHost: string,
-    containerId: string,
-    filePath: string,
-  ): Promise<FileContentResponse> {
-    const docker = this.createDockerClientForHost(resolvedHost);
-    const container = docker.getContainer(containerId);
-
+  async readFile(container: Docker.Container, filePath: string): Promise<FileContentResponse> {
     const info = await container.inspect();
 
-    if (!info.State?.Running) {
-      throw new Error("Container is not running");
-    }
+    if (!info.State?.Running) throw new Error("Container is not running");
 
-    const exec = await container.exec({
-      Cmd: ["cat", "--", filePath],
-      AttachStdout: true,
-      AttachStderr: true,
-      Tty: false,
-    });
+    return fileService.readFile(container, filePath);
+  }
 
-    const stream = await exec.start({ hijack: true, stdin: false });
+  async writeFile(container: Docker.Container, filePath: string, content: string): Promise<void> {
+    const info = await container.inspect();
 
-    const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>(
-      (resolve, reject) => {
-        let buf = Buffer.alloc(0);
+    if (!info.State?.Running) throw new Error("Container is not running");
 
-        stream.on("data", (chunk: Buffer) => {
-          buf = Buffer.concat([buf, chunk]);
-        });
+    return fileService.writeFile(container, filePath, content);
+  }
 
-        stream.on("end", () => {
-          let remaining = buf;
-          const stdoutParts: Buffer[] = [];
-          const stderrParts: string[] = [];
+  async openLogStream(
+    container: Docker.Container,
+  ): Promise<NodeJS.ReadableStream & { destroy: () => void }> {
+    const inspect = await container.inspect();
+    const isTty = inspect.Config?.Tty ?? false;
+    const output = new PassThrough();
 
-          while (remaining.length >= 8) {
-            const size = remaining.readUInt32BE(4);
+    container.logs(
+      { follow: true, stdout: true, stderr: true, tail: 100, timestamps: true },
+      (err, stream) => {
+        if (err || !stream) {
+          output.destroy(err ?? new Error("Stream unavailable"));
 
-            if (remaining.length < 8 + size) break;
+          return;
+        }
 
-            const type = remaining[0];
-            const payload = remaining.slice(8, 8 + size);
+        const emitLines = (chunk: Buffer) =>
+          chunk
+            .toString("utf8")
+            .split("\n")
+            .filter(Boolean)
+            .forEach((line) => output.write(line));
 
-            if (type === 1) stdoutParts.push(payload);
-            else if (type === 2) stderrParts.push(payload.toString("utf8"));
+        if (isTty) {
+          stream.on("data", emitLines);
+        } else {
+          let buf = Buffer.alloc(0);
 
-            remaining = remaining.slice(8 + size);
-          }
+          stream.on("data", (chunk: Buffer) => {
+            buf = Buffer.concat([buf, chunk]);
 
-          resolve({
-            stdout: Buffer.concat(stdoutParts).toString("utf8"),
-            stderr: stderrParts.join(""),
+            while (buf.length >= DOCKER_STREAM_HEADER_SIZE) {
+              const size = buf.readUInt32BE(4);
+
+              if (buf.length < DOCKER_STREAM_HEADER_SIZE + size) break;
+
+              const type = buf[0];
+              const payload = buf.subarray(
+                DOCKER_STREAM_HEADER_SIZE,
+                DOCKER_STREAM_HEADER_SIZE + size,
+              );
+
+              if (type === 1 || type === 2) emitLines(payload);
+
+              buf = buf.subarray(DOCKER_STREAM_HEADER_SIZE + size);
+            }
           });
-        });
+        }
 
-        stream.on("error", reject);
+        stream.on("end", () => output.end());
+        stream.on("error", (e) => output.destroy(e));
       },
     );
 
-    if (!stdout && stderr.trim()) throw new Error(stderr.trim());
-
-    return { path: filePath, content: stdout };
+    return output;
   }
 
-  async writeFile(
-    resolvedHost: string,
-    containerId: string,
-    filePath: string,
-    content: string,
-  ): Promise<void> {
-    const docker = this.createDockerClientForHost(resolvedHost);
-    const container = docker.getContainer(containerId);
-
-    const info = await container.inspect();
-
-    if (!info.State?.Running) {
-      throw new Error("Container is not running");
-    }
-
-    const contentBuffer = Buffer.from(content, "utf8");
-    const lastSlash = filePath.lastIndexOf("/");
-    const filename = filePath.slice(lastSlash + 1);
-    const dir = lastSlash > 0 ? filePath.slice(0, lastSlash) : "/";
-
-    const tarBuffer = this.createTarBuffer(filename, contentBuffer);
-
-    await new Promise<void>((resolve, reject) => {
-      container.putArchive(Readable.from(tarBuffer), { path: dir }, (err: Error | null) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-  }
-
-  private createTarBuffer(filename: string, content: Buffer): Buffer {
-    const header = Buffer.alloc(512, 0);
-
-    Buffer.from(filename).copy(header, 0);
-    Buffer.from("0000644\0").copy(header, 100); // mode
-    Buffer.from("0000000\0").copy(header, 108); // uid
-    Buffer.from("0000000\0").copy(header, 116); // gid
-    Buffer.from(content.length.toString(8).padStart(11, "0") + "\0").copy(header, 124); // size
-    Buffer.from(
-      Math.floor(Date.now() / 1000)
-        .toString(8)
-        .padStart(11, "0") + "\0",
-    ).copy(header, 136); // mtime
-    header[156] = 0x30; // type: regular file
-    Buffer.from("ustar\0").copy(header, 257); // magic
-    Buffer.from("00").copy(header, 263); // version
-
-    // Checksum: sum of all bytes with checksum field treated as spaces
-    Buffer.from("        ").copy(header, 148);
-    let sum = 0;
-
-    for (let i = 0; i < 512; i++) sum += header[i];
-
-    Buffer.from(sum.toString(8).padStart(6, "0") + "\0 ").copy(header, 148);
-
-    const paddedSize = Math.ceil(content.length / 512) * 512;
-    const contentPadded = Buffer.alloc(paddedSize, 0);
-
-    content.copy(contentPadded);
-
-    return Buffer.concat([header, contentPadded, Buffer.alloc(1024, 0)]);
-  }
-
-  private parseLsOutput(output: string): FileEntry[] {
-    const entries: FileEntry[] = [];
-
-    for (const line of output.split("\n")) {
-      const trimmed = line.trim();
-
-      if (!trimmed || trimmed.startsWith("total ")) continue;
-
-      // Format: perms links owner group size month day time/year name...
-      const parts = trimmed.split(/\s+/);
-
-      if (parts.length < 9) continue;
-
-      const permissions = parts[0];
-      const size = parseInt(parts[4], 10);
-      const modified = `${parts[5]} ${parts[6]} ${parts[7]}`;
-      const fullName = parts.slice(8).join(" ");
-
-      if (fullName === "." || fullName === "..") continue;
-
-      const firstChar = permissions[0];
-      let type: FileEntry["type"];
-      let name = fullName;
-
-      if (firstChar === "d") {
-        type = "directory";
-      } else if (firstChar === "l") {
-        type = "symlink";
-        name = fullName.split(" -> ")[0];
-      } else if (firstChar === "-") {
-        type = "file";
-      } else {
-        type = "other";
-      }
-
-      entries.push({ name, type, size: isNaN(size) ? 0 : size, permissions, modified });
-    }
-
-    return entries;
+  async openTerminal(
+    container: Docker.Container,
+    cols: number,
+    rows: number,
+  ): Promise<{ sessionId: string; stream: NodeJS.ReadWriteStream }> {
+    return terminalService.openSession(container, cols, rows);
   }
 }
 

@@ -4,6 +4,12 @@ import path from "path";
 import { fileURLToPath } from "url";
 import discoveryRoutes from "./routes/discovery.js";
 import serviceRoutes from "./routes/services.js";
+import linkRoutes from "./routes/links.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import containerRoutes from "./routes/container.js";
+import fileRoutes from "./routes/files.js";
+import terminalRoutes from "./routes/terminal.js";
+import notificationRoutes from "./routes/notifications.js";
 import { config } from "./lib/config.js";
 import { APP_NAME } from "./lib/constants.js";
 import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
@@ -22,6 +28,12 @@ app.use(express.json());
 // API Routes
 app.use("/api", discoveryRoutes);
 app.use("/api", serviceRoutes);
+app.use("/api", linkRoutes);
+app.use("/api", dashboardRoutes);
+app.use("/api", containerRoutes);
+app.use("/api", fileRoutes);
+app.use("/api", terminalRoutes);
+app.use("/api", notificationRoutes);
 
 // Health check
 app.get("/api/health", (_req, res) => {

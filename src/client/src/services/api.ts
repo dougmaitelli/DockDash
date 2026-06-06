@@ -19,6 +19,7 @@ import type {
   ChangelogResponse,
   FilesResponse,
   FileContentResponse,
+  TerminalInputRequest,
 } from "@shared";
 
 const api = axios.create({
@@ -49,6 +50,8 @@ export const serviceApi = {
     api.get<FileContentResponse>(`/services/${id}/files/content`, { params: { path } }),
   writeFileContent: (id: string, path: string, content: string) =>
     api.put<ApiSuccess>(`/services/${id}/files/content`, { path, content }),
+  writeTerminalInput: (id: string, data: TerminalInputRequest) =>
+    api.post<ApiSuccess>(`/services/${id}/terminal/input`, data),
 };
 
 // Link management APIs
