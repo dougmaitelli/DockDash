@@ -1,0 +1,290 @@
+/*
+  Full Tailwind import — includes preflight (CSS reset), theme tokens, and utilities.
+  Preflight removes browser default button borders/backgrounds, resets margins/paddings,
+  and normalises elements so our Tailwind utility classes are the sole source of styles.
+*/
+@import "tailwindcss";
+
+/*
+  Restore the base styles that preflight removes. Only the things we actually need:
+  body font/color/layout, scrollbar appearance, and font-family inheritance for form
+  elements (preflight intentionally skips those so the design system controls them).
+*/
+@layer base {
+  body {
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-color);
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+  }
+
+  button,
+  [role="option"] {
+    cursor: pointer;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+}
+
+/*
+  Bridge our existing runtime CSS variables (set by GlobalStyles / theme switching)
+  into the names shadcn components expect. Fallback hex values ensure colors are
+  visible on first paint, before GlobalStyles injects and sets the --bg-* variables.
+*/
+:root {
+  --background: var(--bg-primary, #0f1117);
+  --foreground: var(--text-primary, #e8eaf0);
+  --card: var(--bg-card, #1e2230);
+  --card-foreground: var(--text-primary, #e8eaf0);
+  --popover: var(--bg-card, #1e2230);
+  --popover-foreground: var(--text-primary, #e8eaf0);
+  --primary: var(--accent-blue, #3b82f6);
+  --primary-foreground: #ffffff;
+  --secondary: var(--bg-tertiary, #242836);
+  --secondary-foreground: var(--text-secondary, #9ca3b8);
+  --muted: var(--bg-secondary, #1a1d27);
+  --muted-foreground: var(--text-muted, #6b7290);
+  --accent: var(--bg-tertiary, #242836);
+  --accent-foreground: var(--text-primary, #e8eaf0);
+  --success: var(--accent-green, #10b981);
+  --success-foreground: #ffffff;
+  --warning: var(--accent-yellow, #f59e0b);
+  --warning-foreground: rgba(0, 0, 0, 0.8);
+  --destructive: var(--accent-red, #ef4444);
+  --destructive-foreground: #ffffff;
+  --border: var(--border-color, #2d3348);
+  --input: var(--border-color, #2d3348);
+  --ring: var(--accent-blue, #3b82f6);
+  --radius: 0.375rem;
+}
+
+/*
+  @theme inline tells Tailwind v4 to generate utilities that reference these as
+  CSS variables at runtime instead of baking in static values at build time.
+  This is what makes `bg-background`, `text-muted-foreground`, etc. work and
+  stay in sync when the theme changes.
+*/
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  /* App accent colours — enables bg-accent-blue, text-accent-green, bg-accent-blue/10, etc. */
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-blue-dark: var(--accent-blue-dark);
+  --color-accent-blue-lighter: var(--accent-blue-lighter);
+  --color-accent-green: var(--accent-green);
+  --color-accent-green-lighter: var(--accent-green-lighter);
+  --color-accent-red: var(--accent-red);
+  --color-accent-red-dark: var(--accent-red-dark);
+  --color-accent-yellow: var(--accent-yellow);
+  --color-accent-purple: var(--accent-purple);
+  --color-accent-cyan: var(--accent-cyan);
+  --color-accent-gray: var(--accent-gray);
+  --color-text-light: var(--text-light);
+  --color-border-hover: var(--border-hover);
+  /* Black alpha tokens — for shadows and overlays */
+  --color-black-alpha-20: var(--black-alpha-20);
+  --color-black-alpha-30: var(--black-alpha-30);
+  --color-black-alpha-40: var(--black-alpha-40);
+  --color-black-alpha-50: var(--black-alpha-50);
+  /* Named shadow tokens — avoids var() inside arbitrary shadow values */
+  --shadow-modal: 0 20px 60px var(--black-alpha-50);
+  --shadow-tooltip: 0 2px 8px var(--black-alpha-30);
+  --shadow-port-glow: 0 0 8px color-mix(in srgb, var(--primary) 50%, transparent);
+}
+
+/* Animations used by ServiceDrawer slide in/out */
+@keyframes slideInDrawer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes slideOutDrawer {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+/* Port pulse animation used by ServiceNode when a connection drag is active */
+@keyframes pulse-port {
+  0%,
+  100% {
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.2);
+  }
+}
+
+/*
+  Port dot positioning classes for ServiceNode connection ports.
+  These can't be expressed as static Tailwind utilities because they rely on
+  class-based hover transforms that differ per side.
+*/
+@layer components {
+  .port-left {
+    left: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .port-left:hover {
+    transform: translateY(-50%) scale(1.4);
+  }
+
+  .port-right {
+    right: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .port-right:hover {
+    transform: translateY(-50%) scale(1.4);
+  }
+
+  .port-top {
+    top: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .port-top:hover {
+    transform: translateX(-50%) scale(1.4);
+  }
+
+  .port-bottom {
+    bottom: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .port-bottom:hover {
+    transform: translateX(-50%) scale(1.4);
+  }
+
+  .port-container-bottom {
+    bottom: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .port-container-bottom:hover {
+    transform: translateX(-50%) scale(1.4);
+  }
+
+  /* Canvas dot-grid background — radial-gradient can't use Tailwind opacity modifiers */
+  .canvas-dot-grid {
+    background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Rendered markdown content in Changelog */
+  .changelog-body {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .changelog-body h1,
+  .changelog-body h2,
+  .changelog-body h3,
+  .changelog-body h4 {
+    color: var(--text-primary);
+    margin: 14px 0 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .changelog-body p {
+    margin: 4px 0;
+  }
+  .changelog-body ul,
+  .changelog-body ol {
+    padding-left: 18px;
+    margin: 4px 0;
+  }
+  .changelog-body code {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 0.78rem;
+    background: var(--bg-primary);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+  .changelog-body pre code {
+    display: block;
+    padding: 10px;
+    overflow-x: auto;
+  }
+  .changelog-body a {
+    color: var(--accent-blue);
+    text-decoration: none;
+  }
+  .changelog-body a:hover {
+    text-decoration: underline;
+  }
+  .changelog-body hr {
+    border-color: var(--border-color);
+    margin: 10px 0;
+  }
+}

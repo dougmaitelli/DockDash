@@ -1,194 +1,25 @@
 import { useState, Fragment, useCallback } from "react";
-import styled, { keyframes } from "styled-components";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import type { Service } from "@shared";
 import { ServiceSource, ContainerAction } from "@shared";
-import { colors } from "../../styles/vars";
-import {
-  PrimaryButton,
-  SecondaryButton,
-  DangerButton,
-  StyledInput,
-  NumberInput,
-} from "../../utils/ui";
-import { NumberTagArrayInput } from "../../utils/TagArrayInput";
-import { Icons } from "../../utils/Icons";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
+import { NumberInput } from "@/components/NumberInput";
+import { Input } from "@/components/ui/Input";
+import { NumberTagArrayInput } from "@/components/TagArrayInput";
+import { Icons } from "@/components/Icons";
 import { FormGroup, Label } from "./BaseModal";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { HealthHistoryGraph } from "../reusable/HealthHistoryGraph";
-import { DockerLogs } from "../reusable/DockerLogs";
-import { Changelog } from "../reusable/Changelog";
-import { ContainerControls } from "../reusable/ContainerControls";
+import { HealthHistoryGraph } from "../HealthHistoryGraph";
+import { DockerLogs } from "../DockerLogs";
+import { Changelog } from "../Changelog";
+import { ContainerControls } from "../ContainerControls";
 import { useConfig } from "../../context/ConfigContext";
 
 const ANIM_MS = 220;
 
 type Tab = "details" | "logs" | "changelog";
-
-const slideIn = keyframes`
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(0); }
-`;
-
-const slideOut = keyframes`
-  from { transform: translateX(0); }
-  to   { transform: translateX(-100%); }
-`;
-
-const Drawer = styled.div<{ $closing: boolean; $wide: boolean }>`
-  position: fixed;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: ${({ $wide }) => ($wide ? "900px" : "600px")};
-  background: ${colors.bgSecondary};
-  border-right: 1px solid ${colors.border};
-  z-index: 101;
-  display: flex;
-  flex-direction: column;
-  animation: ${({ $closing }) => ($closing ? slideOut : slideIn)} ${ANIM_MS}ms ease;
-  transition: width ${ANIM_MS}ms ease;
-  animation-fill-mode: both;
-  box-shadow: 6px 0 32px ${colors.blackAlpha40};
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 20px 20px 16px;
-  border-bottom: 1px solid ${colors.border};
-`;
-
-const HeaderInfo = styled.div`
-  flex: 1;
-  min-width: 0;
-`;
-
-const HeaderName = styled.div`
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: ${colors.textPrimary};
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const HeaderId = styled.div`
-  font-size: 0.65rem;
-  color: ${colors.textMuted};
-  font-family: "SF Mono", "Fira Code", monospace;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  color: ${colors.textMuted};
-  cursor: pointer;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-
-  &:hover {
-    color: ${colors.textPrimary};
-  }
-`;
-
-const TabBar = styled.div`
-  display: flex;
-  border-bottom: 1px solid ${colors.border};
-  padding: 0 20px;
-`;
-
-const TabButton = styled.button<{ $active: boolean }>`
-  background: none;
-  border: none;
-  border-bottom: 2px solid ${({ $active }) => ($active ? colors.accentBlue : "transparent")};
-  padding: 10px 14px 8px;
-  margin-bottom: -1px;
-  font-size: 0.8rem;
-  font-weight: ${({ $active }) => ($active ? 600 : 400)};
-  color: ${({ $active }) => ($active ? colors.textPrimary : colors.textMuted)};
-  cursor: pointer;
-
-  &:hover {
-    color: ${colors.textPrimary};
-  }
-`;
-
-const Body = styled.div<{ $padded?: boolean }>`
-  flex: 1;
-  overflow-y: auto;
-  padding: ${({ $padded }) => ($padded ? "20px" : "16px 20px 0")};
-  display: flex;
-  flex-direction: column;
-`;
-
-const MetadataToggle = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 8px 0 4px;
-  cursor: pointer;
-  color: ${colors.textMuted};
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  &:hover {
-    color: ${colors.textSecondary};
-  }
-`;
-
-const MetadataGrid = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 16px;
-  padding: 8px 12px;
-  background: ${colors.bgPrimary};
-  border-radius: 6px;
-  margin-bottom: 14px;
-`;
-
-const MetaKey = styled.span`
-  font-size: 0.75rem;
-  font-family: "SF Mono", "Fira Code", monospace;
-  color: ${colors.textMuted};
-  white-space: nowrap;
-`;
-
-const MetaValue = styled.span`
-  font-size: 0.75rem;
-  color: ${colors.textSecondary};
-  word-break: break-all;
-`;
-
-const Footer = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 20px;
-  border-top: 1px solid ${colors.border};
-`;
-
-const FooterRight = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
-const HeaderActions = styled.div`
-  display: flex;
-  flex-shrink: 0;
-`;
 
 interface ServiceDrawerProps {
   service: Service;
@@ -255,7 +86,15 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
     });
   };
 
-  return (
+  const tabButtonClass = (active: boolean) =>
+    cn(
+      "border-b-2 border-x-0 border-t-0 -mb-px px-3.5 pt-2.5 pb-2 text-xs bg-transparent transition-colors",
+      active
+        ? "border-primary font-semibold text-foreground"
+        : "border-transparent font-normal text-muted-foreground hover:text-foreground",
+    );
+
+  return createPortal(
     <>
       {confirmingDelete && (
         <ConfirmDialog
@@ -268,59 +107,83 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
           onCancel={() => setConfirmingDelete(false)}
         />
       )}
-      <Drawer $closing={closing} $wide={tab !== "details"}>
-        <Header>
-          {isDocker ? (
-            <Icons.Docker
-              size={18}
-              style={{ color: colors.textMuted, flexShrink: 0, marginTop: 2 }}
-            />
-          ) : (
-            <Icons.Globe
-              size={18}
-              style={{ color: colors.textMuted, flexShrink: 0, marginTop: 2 }}
-            />
-          )}
-          <HeaderInfo>
-            <HeaderName>{service.name}</HeaderName>
-            <HeaderId>{service.id}</HeaderId>
-          </HeaderInfo>
+      <div
+        className="fixed left-0 top-0 h-full flex flex-col border-r border-border z-[101] bg-muted"
+        style={{
+          width: tab !== "details" ? 900 : 600,
+          animation: `${closing ? "slideOutDrawer" : "slideInDrawer"} ${ANIM_MS}ms ease both`,
+          transition: `width ${ANIM_MS}ms ease`,
+          boxShadow: "6px 0 32px rgba(0, 0, 0, 0.4)",
+        }}
+      >
+        <div className="border-b border-border relative">
           {isDocker && config?.containerControlsEnabled && (
-            <HeaderActions>
+            <div className="absolute top-0 right-15 flex">
               <ContainerControls
                 service={service}
                 onActionComplete={handleContainerActionComplete}
               />
-            </HeaderActions>
+            </div>
           )}
-          <CloseButton onClick={dismiss}>
-            <Icons.X size={16} />
-          </CloseButton>
-        </Header>
+          <div className="flex items-start gap-2.5 px-5 pb-4 pt-3">
+            {isDocker ? (
+              <Icons.Docker size={18} className="text-muted-foreground mt-0.5 shrink-0" />
+            ) : (
+              <Icons.Globe size={18} className="text-muted-foreground mt-0.5 shrink-0" />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="text-[0.95rem] font-semibold text-foreground truncate">
+                {service.name}
+              </div>
+              <div className="text-[0.65rem] text-muted-foreground font-mono mt-0.5 truncate">
+                {service.id}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={dismiss}
+              className="bg-transparent border-none text-muted-foreground p-0.5 flex items-center shrink-0 hover:text-foreground"
+            >
+              <Icons.X size={16} />
+            </button>
+          </div>
+        </div>
 
-        <TabBar>
-          <TabButton $active={tab === "details"} onClick={() => setTab("details")}>
+        <div className="flex border-b border-border px-5">
+          <button
+            type="button"
+            onClick={() => setTab("details")}
+            className={tabButtonClass(tab === "details")}
+          >
             {t("modals.tabDetails")}
-          </TabButton>
+          </button>
           {isDocker && (
-            <TabButton $active={tab === "changelog"} onClick={() => setTab("changelog")}>
+            <button
+              type="button"
+              onClick={() => setTab("changelog")}
+              className={tabButtonClass(tab === "changelog")}
+            >
               {t("modals.tabChangelog")}
-            </TabButton>
+            </button>
           )}
           {isDocker && (
-            <TabButton $active={tab === "logs"} onClick={() => setTab("logs")}>
+            <button
+              type="button"
+              onClick={() => setTab("logs")}
+              className={tabButtonClass(tab === "logs")}
+            >
               {t("modals.tabLogs")}
-            </TabButton>
+            </button>
           )}
-        </TabBar>
+        </div>
 
         {tab === "details" ? (
-          <Body $padded>
+          <div className="flex-1 overflow-y-auto flex flex-col p-5">
             <HealthHistoryGraph serviceId={service.id!} />
 
             <FormGroup>
               <Label>{t("modals.name")}</Label>
-              <StyledInput
+              <Input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 placeholder={t("modals.namePlaceholder")}
@@ -328,7 +191,7 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
             </FormGroup>
             <FormGroup>
               <Label>{t("modals.host")}</Label>
-              <StyledInput
+              <Input
                 value={editHost}
                 onChange={(e) => setEditHost(e.target.value)}
                 placeholder={t("modals.hostPlaceholder")}
@@ -357,45 +220,56 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
 
             {metadataEntries.length > 0 && (
               <>
-                <MetadataToggle onClick={() => setMetadataExpanded((v) => !v)}>
+                <button
+                  type="button"
+                  onClick={() => setMetadataExpanded((v) => !v)}
+                  className="flex items-center gap-1.5 w-full bg-transparent border-none py-2 text-muted-foreground text-xs uppercase tracking-wide hover:text-secondary-foreground"
+                >
                   <span>{metadataExpanded ? "▾" : "▸"}</span>
                   {t("modals.metadata")}
-                </MetadataToggle>
+                </button>
                 {metadataExpanded && (
-                  <MetadataGrid>
+                  <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 p-2 px-3 bg-background rounded-md mb-3.5">
                     {metadataEntries.map(({ key, value }) => (
                       <Fragment key={key}>
-                        <MetaKey>{key}</MetaKey>
-                        <MetaValue>{value}</MetaValue>
+                        <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
+                          {key}
+                        </span>
+                        <span className="text-xs text-secondary-foreground break-all">{value}</span>
                       </Fragment>
                     ))}
-                  </MetadataGrid>
+                  </div>
                 )}
               </>
             )}
-          </Body>
+          </div>
         ) : tab === "logs" ? (
-          <Body>
+          <div className="flex-1 overflow-y-auto flex flex-col pt-4 px-5">
             <DockerLogs serviceId={service.id!} reconnectTrigger={logsReconnectTrigger} />
-          </Body>
+          </div>
         ) : (
-          <Body>
+          <div className="flex-1 overflow-y-auto flex flex-col pt-4 px-5">
             <Changelog serviceId={service.id!} />
-          </Body>
+          </div>
         )}
 
         {tab === "details" && (
-          <Footer>
-            <DangerButton onClick={() => setConfirmingDelete(true)}>
+          <div className="flex justify-between items-center gap-2 px-5 py-4 border-t border-border">
+            <Button variant="destructive" onClick={() => setConfirmingDelete(true)}>
               {t("modals.delete")}
-            </DangerButton>
-            <FooterRight>
-              <SecondaryButton onClick={dismiss}>{t("modals.cancel")}</SecondaryButton>
-              <PrimaryButton onClick={handleSave}>{t("modals.save")}</PrimaryButton>
-            </FooterRight>
-          </Footer>
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={dismiss}>
+                {t("modals.cancel")}
+              </Button>
+              <Button variant="default" onClick={handleSave}>
+                {t("modals.save")}
+              </Button>
+            </div>
+          </div>
         )}
-      </Drawer>
-    </>
+      </div>
+    </>,
+    document.body,
   );
 }

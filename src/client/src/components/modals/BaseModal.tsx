@@ -1,55 +1,25 @@
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
-import styled from "styled-components";
-import { colors } from "../../styles/vars";
-import { ModalBackdrop } from "../../utils/ui";
 
-const ModalOverlay = ModalBackdrop;
+export function FormGroup({ children }: { children: ReactNode }) {
+  return <div className="mb-3.5">{children}</div>;
+}
 
-const ModalPanel = styled.div<{ $width: number }>`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: ${colors.bgCard};
-  border: 1px solid ${colors.border};
-  border-radius: 12px;
-  padding: 24px;
-  z-index: 200;
-  width: ${({ $width }) => $width}px;
-  box-shadow: 0 20px 60px ${colors.blackAlpha50};
-`;
+export function Label({ children }: { children: ReactNode }) {
+  return (
+    <label className="block text-xs text-muted-foreground mb-1 uppercase tracking-[0.5px]">
+      {children}
+    </label>
+  );
+}
 
-export const ModalTitle = styled.h3`
-  font-size: 1rem;
-  margin-bottom: 16px;
-  color: ${colors.textPrimary};
-`;
+export function ModalActions({ children }: { children: ReactNode }) {
+  return <div className="flex justify-between gap-2 mt-5">{children}</div>;
+}
 
-export const FormGroup = styled.div`
-  margin-bottom: 14px;
-`;
-
-export const Label = styled.label`
-  display: block;
-  font-size: 0.75rem;
-  color: ${colors.textMuted};
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-export const ModalActions = styled.div`
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 20px;
-`;
-
-export const ModalActionsRight = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-`;
+export function ModalActionsRight({ children }: { children: ReactNode }) {
+  return <div className="flex gap-2 ml-auto">{children}</div>;
+}
 
 interface BaseModalProps {
   onClose: () => void;
@@ -60,14 +30,19 @@ interface BaseModalProps {
 }
 
 export function BaseModal({ onClose, title, actions, children, width = 400 }: BaseModalProps) {
-  return (
+  return createPortal(
     <>
-      <ModalOverlay onClick={onClose} />
-      <ModalPanel $width={width} onClick={(e) => e.stopPropagation()}>
-        <ModalTitle>{title}</ModalTitle>
+      <div className="fixed inset-0 z-[199] bg-black/50" onClick={onClose} />
+      <div
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card border border-border rounded-xl p-6 z-[200] shadow-modal"
+        style={{ width }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-base mb-4 text-foreground">{title}</h3>
         {children}
         {actions}
-      </ModalPanel>
-    </>
+      </div>
+    </>,
+    document.body,
   );
 }

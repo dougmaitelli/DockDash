@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import styled from "styled-components";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 import type { ServiceHealthHistoryItem } from "@shared";
 import { ServiceStatus } from "@shared";
-import { colors } from "../../styles/vars";
-import { serviceApi } from "../../services/api";
+import { serviceApi } from "@/services/api";
 
 const BUCKETS = 80;
 const PERIODS = [1, 7, 30] as const;
@@ -82,110 +81,12 @@ function formatBucketTime(ts: number, days: number): string {
   });
 }
 
-// ─── Styled components ────────────────────────────────────────────────────────
-
-const Section = styled.div`
-  margin-bottom: 20px;
-`;
-
-const SectionHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-`;
-
-const SectionLabel = styled.span`
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: ${colors.textMuted};
-`;
-
-const SectionMeta = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-const UptimePct = styled.span`
-  font-size: 0.75rem;
-  color: ${colors.textSecondary};
-`;
-
-const PeriodTabs = styled.div`
-  display: flex;
-  gap: 2px;
-  background: ${colors.bgPrimary};
-  border-radius: 5px;
-  padding: 2px;
-`;
-
-const PeriodTab = styled.button<{ $active: boolean }>`
-  background: ${({ $active }) => ($active ? colors.bgCard : "none")};
-  border: none;
-  border-radius: 3px;
-  padding: 2px 8px;
-  font-size: 0.7rem;
-  font-weight: ${({ $active }) => ($active ? 600 : 400)};
-  color: ${({ $active }) => ($active ? colors.textPrimary : colors.textMuted)};
-  cursor: pointer;
-
-  &:hover {
-    color: ${colors.textPrimary};
-  }
-`;
-
-const BarContainer = styled.div`
-  display: flex;
-  gap: 1.5px;
-  height: 28px;
-  border-radius: 4px;
-`;
-
 const BUCKET_COLORS: Record<string, string> = {
-  [ServiceStatus.UP]: colors.accentGreen,
-  [ServiceStatus.DOWN]: colors.accentRed,
-  [ServiceStatus.UNKNOWN]: colors.accentGray,
-  mixed: colors.accentYellow,
+  [ServiceStatus.UP]: "var(--accent-green)",
+  [ServiceStatus.DOWN]: "var(--accent-red)",
+  [ServiceStatus.UNKNOWN]: "var(--accent-gray)",
+  mixed: "var(--accent-yellow)",
 };
-
-const BucketBar = styled.div<{ $display: BucketDisplay }>`
-  flex: 1;
-  border-radius: 2px;
-  background: ${({ $display }) => ($display ? BUCKET_COLORS[$display] : colors.border)};
-  opacity: ${({ $display }) => ($display ? 1 : 0.4)};
-  cursor: default;
-  transition: opacity 0.1s;
-
-  &:hover {
-    opacity: 1;
-  }
-`;
-
-const Tooltip = styled.div`
-  position: fixed;
-  background: ${colors.bgCard};
-  border: 1px solid ${colors.border};
-  border-radius: 5px;
-  padding: 5px 9px;
-  font-size: 0.7rem;
-  color: ${colors.textPrimary};
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 300;
-  box-shadow: 0 2px 8px ${colors.blackAlpha30};
-`;
-
-const Placeholder = styled.div`
-  font-size: 0.75rem;
-  color: ${colors.textMuted};
-  text-align: center;
-  padding: 8px 0;
-`;
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 interface TooltipState {
   x: number;
@@ -237,46 +138,71 @@ export function HealthHistoryGraph({ serviceId }: HealthHistoryGraphProps) {
 
   return (
     <>
-      <Section>
-        <SectionHeader>
-          <SectionLabel>{t("modals.healthHistory")}</SectionLabel>
-          <SectionMeta>
+      <div className="mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
+            {t("modals.healthHistory")}
+          </span>
+          <div className="flex items-center gap-2.5">
             {uptime !== null && (
-              <UptimePct>{t("modals.healthHistoryUptime", { pct: uptime })}</UptimePct>
+              <span className="text-xs text-secondary-foreground">
+                {t("modals.healthHistoryUptime", { pct: uptime })}
+              </span>
             )}
-            <PeriodTabs>
+            <div className="flex gap-0.5 bg-background rounded-[5px] p-0.5">
               {PERIODS.map((p) => (
-                <PeriodTab key={p} $active={period === p} onClick={() => setPeriod(p)}>
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPeriod(p)}
+                  className={cn(
+                    "rounded-sm px-2 py-0.5 text-[0.7rem] hover:text-foreground",
+                    period === p
+                      ? "bg-card text-foreground font-semibold"
+                      : "bg-transparent text-muted-foreground font-normal",
+                  )}
+                >
                   {t(`modals.healthHistoryPeriod${p}d` as const)}
-                </PeriodTab>
+                </button>
               ))}
-            </PeriodTabs>
-          </SectionMeta>
-        </SectionHeader>
+            </div>
+          </div>
+        </div>
 
         {!buckets ? (
-          <Placeholder>…</Placeholder>
+          <div className="text-xs text-muted-foreground text-center py-2">…</div>
         ) : history!.length === 0 ? (
-          <Placeholder>{t("modals.healthHistoryNoData")}</Placeholder>
+          <div className="text-xs text-muted-foreground text-center py-2">
+            {t("modals.healthHistoryNoData")}
+          </div>
         ) : (
-          <BarContainer>
+          <div className="flex gap-[1.5px] h-7 rounded-sm">
             {buckets.map((bucket, i) => (
-              <BucketBar
+              <div
                 key={i}
-                $display={bucket.display}
+                className="flex-1 rounded-sm cursor-default transition-opacity duration-100 hover:opacity-100"
+                style={{
+                  background: bucket.display
+                    ? BUCKET_COLORS[bucket.display]
+                    : "var(--border-color)",
+                  opacity: bucket.display ? 1 : 0.4,
+                }}
                 onMouseMove={(e) => handleMouseMove(e, bucket)}
                 onMouseLeave={() => setTooltip(null)}
               />
             ))}
-          </BarContainer>
+          </div>
         )}
-      </Section>
+      </div>
 
       {tooltip && (
-        <Tooltip style={{ left: tooltip.x + 12, top: tooltip.y - 40 }}>
+        <div
+          className="fixed bg-card border border-border rounded-[5px] px-2.5 py-1.5 text-[0.7rem] text-foreground whitespace-nowrap pointer-events-none z-[300] shadow-tooltip"
+          style={{ left: tooltip.x + 12, top: tooltip.y - 40 }}
+        >
           <div style={{ opacity: 0.7 }}>{tooltip.timeLabel}</div>
           <div>{tooltip.statusLabel}</div>
-        </Tooltip>
+        </div>
       )}
     </>
   );

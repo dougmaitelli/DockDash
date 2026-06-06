@@ -1,120 +1,45 @@
 import { useState, useEffect, useRef } from "react";
-import styled from "styled-components";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { colors } from "../styles/vars";
-import { Icons } from "../utils/Icons";
-import { PrimaryButton, SecondaryButton, PortTag, Section, StyledInput } from "../utils/ui";
-import { TagArrayInput } from "../utils/TagArrayInput";
+import { Icons } from "@/components/Icons";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
+import { PortTag } from "@/components/PortTag";
+import { Input } from "@/components/ui/Input";
+import { Card, CardContent } from "@/components/ui/Card";
+import { TagArrayInput } from "@/components/TagArrayInput";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
 import { useConfig } from "../context/ConfigContext";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
-const Page = styled.div`
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-`;
+function StatusDot({ status }: { status: string }) {
+  return (
+    <span
+      className={cn(
+        "w-2 h-2 rounded-full inline-block shrink-0",
+        status === ServiceStatus.UP
+          ? "bg-success"
+          : status === ServiceStatus.DOWN
+            ? "bg-destructive"
+            : "bg-muted-foreground",
+      )}
+    />
+  );
+}
 
-const SectionTitle = styled.h2`
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 4px;
-  color: ${colors.textPrimary};
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const SectionDesc = styled.p`
-  font-size: 0.85rem;
-  color: ${colors.textMuted};
-  margin-bottom: 20px;
-`;
-
-const ButtonRow = styled.div`
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-`;
-
-const ResultList = styled.div`
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const ResultItem = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: ${colors.bgPrimary};
-  border: 1px solid ${colors.border};
-  border-radius: 8px;
-  transition: border-color 0.15s;
-
-  &:hover {
-    border-color: ${colors.borderHover};
-  }
-`;
-
-const ResultInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-`;
-
-const ResultName = styled.div`
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: ${colors.textPrimary};
-`;
-
-const ResultMeta = styled.div`
-  font-size: 0.75rem;
-  color: ${colors.textMuted};
-  display: flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-const StatusDot = styled.span<{ status: string }>`
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: ${(props) =>
-    props.status === ServiceStatus.UP
-      ? colors.accentGreen
-      : props.status === ServiceStatus.DOWN
-        ? colors.accentRed
-        : colors.textMuted};
-`;
-
-const StatusBadge = styled.span<{ ok: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 16px;
-  font-size: 0.8rem;
-  background: ${(props) => (props.ok ? colors.accentGreenAlpha15 : colors.accentRedAlpha15)};
-  color: ${(props) => (props.ok ? colors.accentGreen : colors.accentRed)};
-`;
-
-const Tag = styled.span<{ bg: string; color: string }>`
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  background: ${(props) => props.bg};
-  color: ${(props) => props.color};
-`;
+function StatusBadge({ ok, children }: { ok: boolean; children: ReactNode }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs",
+        ok ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
 
 export default function Discovery() {
   const { t } = useTranslation();
@@ -253,238 +178,206 @@ export default function Discovery() {
   };
 
   return (
-    <Page>
+    <div className="p-6 max-w-[1200px] mx-auto">
       {toast && (
-        <div
-          style={{
-            position: "fixed",
-            top: 70,
-            right: 24,
-            background: colors.bgCard,
-            border: `1px solid ${colors.border}`,
-            borderRadius: 8,
-            padding: "10px 20px",
-            color: colors.textPrimary,
-            fontSize: "0.85rem",
-            zIndex: 200,
-            boxShadow: `0 4px 20px ${colors.blackAlpha40}`,
-          }}
-        >
+        <div className="fixed top-[70px] right-6 z-[200] bg-card border border-border rounded-lg px-5 py-2.5 text-sm text-foreground shadow-lg">
           {toast}
         </div>
       )}
 
-      <Section>
-        <SectionTitle>
-          <Icons.Docker size={18} /> {t("discovery.dockerTitle")}
-        </SectionTitle>
-        <SectionDesc>{t("discovery.dockerDesc")}</SectionDesc>
-        <div
-          style={{
-            marginBottom: 12,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "flex-start",
-            gap: 4,
-          }}
-        >
-          {health ? (
-            health.map((h) =>
-              h.connected ? (
-                <StatusBadge key={h.host} ok={true}>
-                  <Icons.Check size={12} />
-                  {h.host} —{" "}
-                  {t("discovery.connected", {
-                    version: h.serverVersion,
-                    running: h.containersRunning,
-                    total: h.containers,
-                  })}
-                </StatusBadge>
-              ) : (
-                <StatusBadge key={h.host} ok={false}>
-                  <Icons.X size={12} />
-                  {h.host} — {t("discovery.notConnected", { error: h.error })}
-                </StatusBadge>
-              ),
-            )
-          ) : (
-            <StatusBadge ok={false}>{t("discovery.checking")}</StatusBadge>
-          )}
-        </div>
-        <ButtonRow>
-          <PrimaryButton
-            onClick={handleDockerScan}
-            disabled={scanningDocker || !health?.some((h) => h.connected)}
-          >
-            <Icons.Scan size={14} />
-            {scanningDocker ? t("discovery.scanning") : t("discovery.scanDocker")}
-          </PrimaryButton>
-          {availableDocker.length > 0 && !scanningDocker && (
-            <SecondaryButton onClick={handleImportAllDocker}>
-              {t("discovery.importAll", { count: availableDocker.length })}
-            </SecondaryButton>
-          )}
-        </ButtonRow>
-
-        {dockerResults.length > 0 && (
-          <ResultList>
-            <div
-              style={{
-                fontSize: "0.8rem",
-                color: colors.textMuted,
-                marginBottom: 4,
-                display: "flex",
-                justifyContent: "space-between",
-              }}
+      <Card className="mb-5">
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-1 text-foreground flex items-center gap-2">
+            <Icons.Docker size={18} /> {t("discovery.dockerTitle")}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-5">{t("discovery.dockerDesc")}</p>
+          <div className="mb-3 flex flex-col items-start gap-1">
+            {health ? (
+              health.map((h) =>
+                h.connected ? (
+                  <StatusBadge key={h.host} ok={true}>
+                    <Icons.Check size={12} />
+                    {h.host} —{" "}
+                    {t("discovery.connected", {
+                      version: h.serverVersion,
+                      running: h.containersRunning,
+                      total: h.containers,
+                    })}
+                  </StatusBadge>
+                ) : (
+                  <StatusBadge key={h.host} ok={false}>
+                    <Icons.X size={12} />
+                    {h.host} — {t("discovery.notConnected", { error: h.error })}
+                  </StatusBadge>
+                ),
+              )
+            ) : (
+              <StatusBadge ok={false}>{t("discovery.checking")}</StatusBadge>
+            )}
+          </div>
+          <div className="flex gap-2.5 flex-wrap">
+            <Button
+              variant="default"
+              onClick={handleDockerScan}
+              disabled={scanningDocker || !health?.some((h) => h.connected)}
             >
-              <span>{t("discovery.foundContainers", { count: dockerResults.length })}</span>
-              <span>{t("discovery.notOnDashboard", { count: availableDocker.length })}</span>
+              <Icons.Scan size={14} />
+              {scanningDocker ? t("discovery.scanning") : t("discovery.scanDocker")}
+            </Button>
+            {availableDocker.length > 0 && !scanningDocker && (
+              <Button variant="outline" onClick={handleImportAllDocker}>
+                {t("discovery.importAll", { count: availableDocker.length })}
+              </Button>
+            )}
+          </div>
+
+          {dockerResults.length > 0 && (
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="text-xs text-muted-foreground mb-1 flex justify-between">
+                <span>{t("discovery.foundContainers", { count: dockerResults.length })}</span>
+                <span>{t("discovery.notOnDashboard", { count: availableDocker.length })}</span>
+              </div>
+              {dockerResults.map((svc) => {
+                const imported = services.some((e) => Service.equals(svc, e));
+
+                return (
+                  <div
+                    key={svc.id}
+                    className="flex items-center justify-between px-4 py-3 bg-background border border-border rounded-lg transition-colors hover:border-primary/50"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <StatusDot status={svc.status} /> {svc.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase bg-accent-purple/10 text-accent-purple">
+                          {t("discovery.tagDocker")}
+                        </span>
+                        {svc.host}
+                        {svc.ports?.map((p) => (
+                          <PortTag key={p}>:{p}</PortTag>
+                        ))}
+                      </div>
+                    </div>
+                    {imported ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase bg-success/15 text-success">
+                        <Icons.Check size={11} /> {t("discovery.onDashboard")}
+                      </span>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          importService({
+                            name: svc.name,
+                            host: svc.host,
+                            ports: svc.ports,
+                            source: ServiceSource.DOCKER,
+                            metadata: svc.metadata,
+                          });
+                        }}
+                      >
+                        <Icons.Plus size={14} /> {t("discovery.importOne")}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            {dockerResults.map((svc) => {
-              const imported = services.some((e) => Service.equals(svc, e));
-
-              return (
-                <ResultItem key={svc.id}>
-                  <ResultInfo>
-                    <ResultName>
-                      <StatusDot status={svc.status} /> {svc.name}
-                    </ResultName>
-                    <ResultMeta>
-                      <Tag bg={colors.accentPurpleAlpha10} color={colors.accentPurple}>
-                        {t("discovery.tagDocker")}
-                      </Tag>
-                      {svc.host}
-                      {svc.ports?.map((p) => (
-                        <PortTag key={p}>:{p}</PortTag>
-                      ))}
-                    </ResultMeta>
-                  </ResultInfo>
-                  {imported ? (
-                    <Tag bg={colors.accentGreenAlpha15} color={colors.accentGreen}>
-                      <Icons.Check size={11} /> {t("discovery.onDashboard")}
-                    </Tag>
-                  ) : (
-                    <SecondaryButton
-                      onClick={() => {
-                        importService({
-                          name: svc.name,
-                          host: svc.host,
-                          ports: svc.ports,
-                          source: ServiceSource.DOCKER,
-                          metadata: svc.metadata,
-                        });
-                      }}
-                    >
-                      <Icons.Plus size={14} /> {t("discovery.importOne")}
-                    </SecondaryButton>
-                  )}
-                </ResultItem>
-              );
-            })}
-          </ResultList>
-        )}
-      </Section>
-
-      <Section>
-        <SectionTitle>
-          <Icons.Globe size={18} /> {t("discovery.networkTitle")}
-        </SectionTitle>
-        <SectionDesc>{t("discovery.networkDesc")}</SectionDesc>
-        <div style={{ marginBottom: 16 }}>
-          <TagArrayInput
-            values={cidrs}
-            onChange={setCidrs}
-            validate={validateCidr}
-            placeholder={t("discovery.cidrPlaceholder")}
-          />
-        </div>
-        <div style={{ marginBottom: 16 }}>
-          <label
-            style={{
-              fontSize: "0.75rem",
-              color: colors.textMuted,
-              marginBottom: 4,
-              display: "block",
-            }}
-          >
-            {t("discovery.scanPortsLabel")}
-          </label>
-          <StyledInput
-            value={scanPorts}
-            onChange={(e) => setScanPorts(e.target.value)}
-            placeholder={t("discovery.portsPlaceholder")}
-          />
-        </div>
-        <ButtonRow>
-          <PrimaryButton onClick={handleNetworkScan} disabled={scanningNetwork}>
-            <Icons.Scan size={14} />
-            {scanningNetwork ? t("discovery.scanning") : t("discovery.scanNetwork")}
-          </PrimaryButton>
-          {availableNetwork.length > 0 && !scanningNetwork && (
-            <SecondaryButton onClick={handleImportAllNetwork}>
-              {t("discovery.importAll", { count: availableNetwork.length })}
-            </SecondaryButton>
           )}
-        </ButtonRow>
+        </CardContent>
+      </Card>
 
-        {networkResults.length > 0 && (
-          <ResultList>
-            <div
-              style={{
-                fontSize: "0.8rem",
-                color: colors.textMuted,
-                marginBottom: 4,
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
-              <span>{t("discovery.foundServices", { count: networkResults.length })}</span>
-              <span>{t("discovery.notOnDashboard", { count: availableNetwork.length })}</span>
+      <Card className="mb-5">
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-1 text-foreground flex items-center gap-2">
+            <Icons.Globe size={18} /> {t("discovery.networkTitle")}
+          </h2>
+          <p className="text-sm text-muted-foreground mb-5">{t("discovery.networkDesc")}</p>
+          <div className="mb-4">
+            <TagArrayInput
+              values={cidrs}
+              onChange={setCidrs}
+              validate={validateCidr}
+              placeholder={t("discovery.cidrPlaceholder")}
+            />
+          </div>
+          <div className="mb-4">
+            <label className="text-xs text-muted-foreground mb-1 block">
+              {t("discovery.scanPortsLabel")}
+            </label>
+            <Input
+              value={scanPorts}
+              onChange={(e) => setScanPorts(e.target.value)}
+              placeholder={t("discovery.portsPlaceholder")}
+            />
+          </div>
+          <div className="flex gap-2.5 flex-wrap">
+            <Button variant="default" onClick={handleNetworkScan} disabled={scanningNetwork}>
+              <Icons.Scan size={14} />
+              {scanningNetwork ? t("discovery.scanning") : t("discovery.scanNetwork")}
+            </Button>
+            {availableNetwork.length > 0 && !scanningNetwork && (
+              <Button variant="outline" onClick={handleImportAllNetwork}>
+                {t("discovery.importAll", { count: availableNetwork.length })}
+              </Button>
+            )}
+          </div>
+
+          {networkResults.length > 0 && (
+            <div className="mt-4 flex flex-col gap-2">
+              <div className="text-xs text-muted-foreground mb-1 flex justify-between">
+                <span>{t("discovery.foundServices", { count: networkResults.length })}</span>
+                <span>{t("discovery.notOnDashboard", { count: availableNetwork.length })}</span>
+              </div>
+              {networkResults.map((svc) => {
+                const imported = services.some((e) => Service.equals(svc, e));
+
+                return (
+                  <div
+                    key={svc.id}
+                    className="flex items-center justify-between px-4 py-3 bg-background border border-border rounded-lg transition-colors hover:border-primary/50"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <StatusDot status={svc.status} /> {svc.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase bg-success/10 text-success">
+                          {t("discovery.tagNetwork")}
+                        </span>
+                        {svc.host}
+                        {svc.ports?.map((p) => (
+                          <PortTag key={p}>:{p}</PortTag>
+                        ))}
+                      </div>
+                    </div>
+                    {imported ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase bg-success/15 text-success">
+                        <Icons.Check size={11} /> {t("discovery.onDashboard")}
+                      </span>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          importService({
+                            name: svc.name,
+                            host: svc.host,
+                            ports: svc.ports,
+                            source: ServiceSource.NETWORK,
+                            metadata: svc.metadata,
+                          });
+                        }}
+                      >
+                        <Icons.Plus size={14} /> {t("discovery.importOne")}
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            {networkResults.map((svc) => {
-              const imported = services.some((e) => Service.equals(svc, e));
-
-              return (
-                <ResultItem key={svc.id}>
-                  <ResultInfo>
-                    <ResultName>
-                      <StatusDot status={svc.status} /> {svc.name}
-                    </ResultName>
-                    <ResultMeta>
-                      <Tag bg={colors.accentGreenAlpha10} color={colors.accentGreen}>
-                        {t("discovery.tagNetwork")}
-                      </Tag>
-                      {svc.host}
-                      {svc.ports?.map((p) => (
-                        <PortTag key={p}>:{p}</PortTag>
-                      ))}
-                    </ResultMeta>
-                  </ResultInfo>
-                  {imported ? (
-                    <Tag bg={colors.accentGreenAlpha15} color={colors.accentGreen}>
-                      <Icons.Check size={11} /> {t("discovery.onDashboard")}
-                    </Tag>
-                  ) : (
-                    <SecondaryButton
-                      onClick={() => {
-                        importService({
-                          name: svc.name,
-                          host: svc.host,
-                          ports: svc.ports,
-                          source: ServiceSource.NETWORK,
-                          metadata: svc.metadata,
-                        });
-                      }}
-                    >
-                      <Icons.Plus size={14} /> {t("discovery.importOne")}
-                    </SecondaryButton>
-                  )}
-                </ResultItem>
-              );
-            })}
-          </ResultList>
-        )}
-      </Section>
-    </Page>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

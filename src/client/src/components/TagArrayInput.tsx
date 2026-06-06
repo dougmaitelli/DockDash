@@ -1,74 +1,8 @@
 import { useState, type KeyboardEvent } from "react";
-import styled from "styled-components";
-import { colors } from "../styles/vars";
-import { SecondaryButton, isNonDigitKey } from "./ui";
+import { Button } from "@/components/ui/Button";
+import { isNonDigitKey } from "./NumberInput";
 import { Icons } from "./Icons";
-
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-const TagsRow = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-`;
-
-const Tag = styled.span`
-  padding: 4px 12px;
-  background: ${colors.accentBlueAlpha10};
-  border: 1px solid ${colors.accentBlueAlpha20};
-  border-radius: 16px;
-  font-size: 0.8rem;
-  color: ${colors.accentBlue};
-  font-family: "SF Mono", "Fira Code", monospace;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-`;
-
-const RemoveButton = styled.button`
-  background: none;
-  border: none;
-  color: ${colors.textSecondary};
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-
-  &:hover {
-    color: ${colors.accentRed};
-  }
-`;
-
-const InputRow = styled.div`
-  display: flex;
-  gap: 10px;
-`;
-
-export const TagInput = styled.input`
-  flex: 1;
-  min-width: 120px;
-  padding: 8px 12px;
-  border: 1px solid ${colors.border};
-  border-radius: 6px;
-  background: ${colors.bgPrimary};
-  color: ${colors.textPrimary};
-  font-size: 0.85rem;
-  outline: none;
-
-  &:focus {
-    border-color: ${colors.accentBlue};
-  }
-`;
-
-const ErrorText = styled.span`
-  font-size: 0.75rem;
-  color: ${colors.accentRed};
-`;
+import { cn } from "@/lib/utils";
 
 export interface TagArrayInputProps {
   values: string[];
@@ -123,21 +57,28 @@ export function TagArrayInput({
   };
 
   return (
-    <Container>
+    <div className="flex flex-col gap-2">
       {values.length > 0 && (
-        <TagsRow>
+        <div className="flex flex-wrap gap-1.5">
           {values.map((v, i) => (
-            <Tag key={i}>
+            <span
+              key={i}
+              className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-[0.8rem] text-primary font-mono"
+            >
               {formatTag(v)}
-              <RemoveButton onClick={() => handleRemove(i)}>
+              <button
+                type="button"
+                onClick={() => handleRemove(i)}
+                className="flex items-center text-secondary-foreground hover:text-destructive"
+              >
                 <Icons.X size={12} />
-              </RemoveButton>
-            </Tag>
+              </button>
+            </span>
           ))}
-        </TagsRow>
+        </div>
       )}
-      <InputRow>
-        <TagInput
+      <div className="flex gap-2.5">
+        <input
           {...inputProps}
           value={inputValue}
           onChange={(e) => {
@@ -146,14 +87,17 @@ export function TagArrayInput({
           }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          style={error ? { borderColor: colors.accentRed } : undefined}
+          className={cn(
+            "flex-1 min-w-[120px] px-3 py-2 border rounded-md bg-background text-foreground text-[0.85rem] outline-none focus:border-primary placeholder:text-muted-foreground",
+            error ? "border-destructive" : "border-input",
+          )}
         />
-        <SecondaryButton onClick={handleAdd}>
+        <Button variant="outline" onClick={handleAdd}>
           <Icons.Plus size={14} />
-        </SecondaryButton>
-      </InputRow>
-      {error && <ErrorText>{error}</ErrorText>}
-    </Container>
+        </Button>
+      </div>
+      {error && <span className="text-xs text-destructive">{error}</span>}
+    </div>
   );
 }
 

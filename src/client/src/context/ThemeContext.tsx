@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useLayoutEffect } from "react";
 import type { ReactNode } from "react";
-import { GlobalStyles } from "../styles/GlobalStyles";
-import { themes, SYSTEM_THEME } from "../styles/themes";
+import { themes, SYSTEM_THEME, applyTheme } from "../styles/themes";
 import type { ThemeName, ThemeSelection } from "../styles/themes";
 
 const STORAGE_KEY = "dockdash-theme";
@@ -49,11 +48,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const resolved = selection === SYSTEM_THEME ? systemTheme : selection;
 
+  useLayoutEffect(() => {
+    applyTheme(themes[resolved].colors);
+  }, [resolved]);
+
   return (
-    <ThemeContext.Provider value={{ theme: selection, setTheme }}>
-      <GlobalStyles $colors={themes[resolved].colors} />
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme: selection, setTheme }}>{children}</ThemeContext.Provider>
   );
 }
 

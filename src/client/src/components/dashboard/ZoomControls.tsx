@@ -1,53 +1,7 @@
-import styled from "styled-components";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../styles/vars";
-import { Icons } from "../../utils/Icons";
-
-const Wrapper = styled.div`
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  z-index: 10;
-  pointer-events: all;
-`;
-
-const ZoomButton = styled.button`
-  width: 38px;
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: ${colors.bgSecondary};
-  border: 1px solid ${colors.border};
-  border-radius: 6px;
-  color: ${colors.textSecondary};
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.15s;
-
-  &:hover {
-    border-color: ${colors.accentBlue};
-    color: ${colors.accentBlue};
-  }
-`;
-
-const ResetButton = styled(ZoomButton)`
-  margin-top: 4px;
-  font-size: 1rem;
-`;
-
-const ZoomLabel = styled.span`
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: ${colors.textLight};
-  min-width: 32px;
-  text-align: center;
-  letter-spacing: 0.3px;
-`;
+import { cn } from "@/lib/utils";
+import { Icons } from "@/components/Icons";
+import { Button } from "@/components/ui/Button";
 
 interface ZoomControlsProps {
   zoom: number;
@@ -69,17 +23,37 @@ export function ZoomControls({
   const { t } = useTranslation();
 
   return (
-    <Wrapper>
-      <ZoomButton onClick={onZoomIn} disabled={zoom >= maxZoom} title={t("dashboard.zoom.in")}>
+    <div className="absolute bottom-4 right-4 flex flex-col items-center gap-1 z-10 pointer-events-auto">
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={onZoomIn}
+        disabled={zoom >= maxZoom}
+        title={t("dashboard.zoom.in")}
+      >
         <Icons.Plus size={16} />
-      </ZoomButton>
-      <ZoomLabel>{Math.round(zoom * 100)}%</ZoomLabel>
-      <ZoomButton onClick={onZoomOut} disabled={zoom <= minZoom} title={t("dashboard.zoom.out")}>
+      </Button>
+      <span className="text-[0.7rem] font-semibold text-text-light min-w-8 text-center tracking-[0.3px]">
+        {Math.round(zoom * 100)}%
+      </span>
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={onZoomOut}
+        disabled={zoom <= minZoom}
+        title={t("dashboard.zoom.out")}
+      >
         <Icons.Minus size={16} />
-      </ZoomButton>
-      <ResetButton onClick={onFit} title={t("dashboard.zoom.fit")}>
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={onFit}
+        title={t("dashboard.zoom.fit")}
+        className="mt-1"
+      >
         <Icons.FitView size={16} />
-      </ResetButton>
-    </Wrapper>
+      </Button>
+    </div>
   );
 }

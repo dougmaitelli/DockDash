@@ -3,7 +3,6 @@ import type { ServiceLink, ServiceWithPosition } from "@shared";
 import { orthogonalPath, getLinkColor, SIDE_VEC } from "./linkUtils";
 import type { LinkPath } from "./linkUtils";
 import { getNodeCenter, getPortPosition, getNodeSize, NODE_HEIGHT, PortSide } from "./nodeGeometry";
-import { colors } from "../../styles/vars";
 
 const PORT_LABEL_W = 34; // port badge width (px)
 const PORT_LABEL_H = 17; // port badge height (px)
@@ -177,7 +176,7 @@ export function LinkLayer({
               <path
                 d={p.d}
                 fill="none"
-                stroke={hovered ? colors.accentBlueLighter : p.color}
+                stroke={hovered ? "var(--accent-blue-lighter)" : p.color}
                 strokeWidth={hovered ? 2.5 : 2}
                 strokeOpacity={hovered ? 1 : 0.6}
                 style={{ pointerEvents: "none" }}
@@ -185,7 +184,7 @@ export function LinkLayer({
               <path
                 d={p.d}
                 fill="none"
-                stroke={hovered ? colors.accentBlueLighter : p.color}
+                stroke={hovered ? "var(--accent-blue-lighter)" : p.color}
                 strokeWidth={hovered ? 7 : 6}
                 strokeDasharray="6 4"
                 strokeOpacity={hovered ? 0.65 : 0.4}
@@ -199,7 +198,7 @@ export function LinkLayer({
                   dominantBaseline="middle"
                   fontSize={15}
                   fill={p.color}
-                  stroke={colors.bgPrimary}
+                  stroke="var(--bg-primary)"
                   strokeWidth={3}
                   paintOrder="stroke"
                   style={{ pointerEvents: "none", userSelect: "none" }}
@@ -215,7 +214,7 @@ export function LinkLayer({
                     width={PORT_LABEL_W}
                     height={PORT_LABEL_H}
                     rx={3}
-                    fill={colors.bgCard}
+                    fill="var(--bg-card)"
                     stroke={p.color}
                     strokeWidth={1.5}
                     strokeOpacity={0.8}
@@ -242,7 +241,7 @@ export function LinkLayer({
         <path
           d={previewPath}
           fill="none"
-          stroke={colors.accentBlueLighter}
+          stroke="var(--accent-blue-lighter)"
           strokeWidth={2}
           strokeDasharray="8 4"
           strokeOpacity={0.8}

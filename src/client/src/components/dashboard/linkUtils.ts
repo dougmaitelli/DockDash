@@ -1,5 +1,4 @@
 import { LINK_TYPES } from "../../types";
-import { rawColors } from "../../styles/themes/dark.theme";
 import type { ServiceLink } from "@shared";
 import { PortSide } from "./nodeGeometry";
 
@@ -21,7 +20,7 @@ const CORNER_R = 10; // corner radius
 export function getLinkColor(type: string): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
 
-  return linkType?.color || rawColors.accentGray;
+  return linkType?.color || "var(--accent-gray)";
 }
 
 export const SIDE_VEC: Record<PortSide, [number, number]> = {

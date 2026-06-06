@@ -1,14 +1,5 @@
-import styled from "styled-components";
 import { useDashboard } from "../hooks/useData";
 import { DashboardCanvas } from "../components/dashboard/DashboardCanvas";
-
-const Page = styled.div`
-  padding: 24px;
-  height: calc(100vh - 56px);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-`;
 
 export default function Dashboard() {
   const {
@@ -27,7 +18,7 @@ export default function Dashboard() {
   } = useDashboard();
 
   return (
-    <Page>
+    <div className="p-6 h-[calc(100vh-56px)] flex flex-col gap-5">
       <DashboardCanvas
         services={services}
         links={links}
@@ -42,6 +33,6 @@ export default function Dashboard() {
         removeLink={removeLink}
         removeService={removeService}
       />
-    </Page>
+    </div>
   );
 }

@@ -1,69 +1,12 @@
 import { useState, useCallback } from "react";
-import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import type { Service } from "@shared";
 import { ServiceStatus, ContainerAction } from "@shared";
-import { colors } from "../../styles/vars";
-import { Icons } from "../../utils/Icons";
-import { serviceApi } from "../../services/api";
+import { Icons } from "@/components/Icons";
+import { Button } from "@/components/ui/Button";
+import { serviceApi } from "@/services/api";
 
-const ButtonRow = styled.div`
-  display: flex;
-  gap: 5px;
-`;
-
-const ContainerBtn = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: filter 0.15s;
-
-  &:disabled {
-    opacity: 0.2;
-    cursor: not-allowed;
-  }
-
-  &:hover:not(:disabled) {
-    filter: brightness(0.88);
-  }
-`;
-
-const StopBtn = styled(ContainerBtn)`
-  background: ${colors.accentRed};
-  color: white;
-`;
-
-const StartBtn = styled(ContainerBtn)`
-  background: ${colors.accentGreen};
-  color: white;
-`;
-
-const RestartBtn = styled(ContainerBtn)`
-  background: ${colors.accentYellow};
-  color: rgba(0, 0, 0, 0.8);
-`;
-
-const ErrorText = styled.span`
-  font-size: 0.7rem;
-  color: ${colors.accentRed};
-  max-width: 220px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const Wrap = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-`;
+const tabClass = "rounded-t-none rounded-b-md h-7 w-10 disabled:opacity-20 disabled:cursor-not-allowed";
 
 interface ContainerControlsProps {
   service: Service;
@@ -93,31 +36,42 @@ export function ContainerControls({ service, onActionComplete }: ContainerContro
   );
 
   return (
-    <Wrap>
-      <ButtonRow>
-        <StopBtn
+    <div className="flex flex-col gap-1">
+      <div className="flex gap-px">
+        <Button
+          variant="destructive"
           onClick={() => handleAction(ContainerAction.STOP)}
           disabled={activeAction !== null || service.status !== ServiceStatus.UP}
           title={t("modals.containerStop")}
+          className={tabClass}
         >
           <Icons.Stop size={13} />
-        </StopBtn>
-        <StartBtn
+        </Button>
+        <Button
           onClick={() => handleAction(ContainerAction.START)}
           disabled={activeAction !== null || service.status !== ServiceStatus.DOWN}
           title={t("modals.containerStart")}
+          className={`${tabClass} bg-success text-success-foreground hover:bg-success/90`}
         >
           <Icons.Play size={13} />
-        </StartBtn>
-        <RestartBtn
+        </Button>
+        <Button
           onClick={() => handleAction(ContainerAction.RESTART)}
           disabled={activeAction !== null || service.status !== ServiceStatus.UP}
           title={t("modals.containerRestart")}
+          className={`${tabClass} bg-warning text-warning-foreground hover:bg-warning/90`}
         >
           <Icons.Refresh size={13} />
-        </RestartBtn>
-      </ButtonRow>
-      {error && <ErrorText title={error}>{t("modals.containerActionFailed", { error })}</ErrorText>}
-    </Wrap>
+        </Button>
+      </div>
+      {error && (
+        <span
+          className="text-[0.7rem] text-destructive max-w-[220px] whitespace-nowrap overflow-hidden text-ellipsis"
+          title={error}
+        >
+          {t("modals.containerActionFailed", { error })}
+        </span>
+      )}
+    </div>
   );
 }

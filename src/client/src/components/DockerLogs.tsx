@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import styled from "styled-components";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 import { SSE_EVENT } from "@shared";
-import { colors } from "../../styles/vars";
-import { SecondaryButton } from "../../utils/ui";
+import { Button } from "@/components/ui/Button";
 
 const MAX_LINES = 1000;
 
@@ -30,88 +29,7 @@ function parseLine(line: string): { ts: string; msg: string } {
   return { ts: "", msg: stripAnsi(line) };
 }
 
-// ─── Styled components ────────────────────────────────────────────────────────
-
 type ConnStatus = "connecting" | "streaming" | "disconnected";
-
-const Wrapper = styled.div`
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 16px;
-`;
-
-const StatusBar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 0 8px;
-  flex-shrink: 0;
-`;
-
-const StatusLeft = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-`;
-
-const StatusDot = styled.span<{ $status: ConnStatus }>`
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: ${({ $status }) =>
-    $status === "streaming"
-      ? colors.accentGreen
-      : $status === "disconnected"
-        ? colors.accentRed
-        : colors.textMuted};
-`;
-
-const StatusText = styled.span`
-  font-size: 0.7rem;
-  color: ${colors.textMuted};
-`;
-
-const Terminal = styled.div`
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  background: ${colors.bgPrimary};
-  border: 1px solid ${colors.border};
-  border-radius: 6px;
-  padding: 10px 12px;
-  font-family: "SF Mono", "Fira Code", monospace;
-  font-size: 0.72rem;
-  line-height: 1.6;
-`;
-
-const LogLine = styled.div`
-  display: flex;
-  gap: 10px;
-  white-space: pre-wrap;
-  word-break: break-all;
-`;
-
-const Timestamp = styled.span`
-  flex-shrink: 0;
-  color: ${colors.textMuted};
-  opacity: 0.6;
-  user-select: none;
-`;
-
-const Message = styled.span`
-  color: ${colors.textSecondary};
-`;
-
-const EmptyState = styled.div`
-  color: ${colors.textMuted};
-  font-size: 0.75rem;
-  padding: 8px 0;
-`;
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 interface DockerLogsProps {
   serviceId: string;
@@ -182,36 +100,51 @@ export function DockerLogs({ serviceId, reconnectTrigger }: DockerLogsProps) {
         ? t("modals.logsDisconnected")
         : t("modals.logsConnecting");
 
-  return (
-    <Wrapper>
-      <StatusBar>
-        <StatusLeft>
-          <StatusDot $status={status} />
-          <StatusText>{statusLabel}</StatusText>
-          {errorMsg && <StatusText style={{ color: colors.accentRed }}>— {errorMsg}</StatusText>}
-        </StatusLeft>
-        {status === "disconnected" && (
-          <SecondaryButton onClick={() => setConnectKey((k) => k + 1)}>
-            {t("modals.logsReconnect")}
-          </SecondaryButton>
-        )}
-      </StatusBar>
+  const statusDotClass = cn(
+    "w-[7px] h-[7px] rounded-full shrink-0",
+    status === "streaming"
+      ? "bg-success"
+      : status === "disconnected"
+        ? "bg-destructive"
+        : "bg-muted-foreground",
+  );
 
-      <Terminal ref={terminalRef} onScroll={handleScroll}>
+  return (
+    <div className="flex-1 min-h-0 flex flex-col pb-4">
+      <div className="flex items-center justify-between pb-2 shrink-0">
+        <div className="flex items-center gap-1.5">
+          <span className={statusDotClass} />
+          <span className="text-[0.7rem] text-muted-foreground">{statusLabel}</span>
+          {errorMsg && <span className="text-[0.7rem] text-destructive">— {errorMsg}</span>}
+        </div>
+        {status === "disconnected" && (
+          <Button variant="outline" onClick={() => setConnectKey((k) => k + 1)}>
+            {t("modals.logsReconnect")}
+          </Button>
+        )}
+      </div>
+
+      <div
+        ref={terminalRef}
+        onScroll={handleScroll}
+        className="flex-1 min-h-0 overflow-y-auto bg-background border border-border rounded-md px-3 py-2.5 font-mono text-[0.72rem] leading-relaxed"
+      >
         {lines.length === 0 && status === "streaming" && (
-          <EmptyState>{t("modals.logsNoOutput")}</EmptyState>
+          <div className="text-muted-foreground text-xs py-2">{t("modals.logsNoOutput")}</div>
         )}
         {lines.map((line, i) => {
           const { ts, msg } = parseLine(line);
 
           return (
-            <LogLine key={i}>
-              {ts && <Timestamp>{ts}</Timestamp>}
-              <Message>{msg}</Message>
-            </LogLine>
+            <div key={i} className="flex gap-2.5 whitespace-pre-wrap break-all">
+              {ts && (
+                <span className="shrink-0 text-muted-foreground opacity-60 select-none">{ts}</span>
+              )}
+              <span className="text-secondary-foreground">{msg}</span>
+            </div>
           );
         })}
-      </Terminal>
-    </Wrapper>
+      </div>
+    </div>
   );
 }

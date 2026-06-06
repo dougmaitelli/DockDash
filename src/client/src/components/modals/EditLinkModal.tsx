@@ -1,45 +1,27 @@
 import { useState } from "react";
 import { ConfirmDialog } from "./ConfirmDialog";
-import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import type { ServiceLink } from "@shared";
-import { ServiceProtocol } from "@shared";
+import { ServiceLinkType, ServiceProtocol } from "@shared";
 import type { UpdateLinkRequest } from "@shared/api";
-import { LINK_TYPES, ServiceLinkType, SERVICE_PROTOCOLS } from "../../types";
-import { colors } from "../../styles/vars";
-import { rawColors } from "../../styles/themes/dark.theme";
+import { LINK_TYPES } from "../../types";
+import { Button } from "@/components/ui/Button";
+import { NumberInput } from "@/components/NumberInput";
+import { Input } from "@/components/ui/Input";
 import {
-  PrimaryButton,
-  SecondaryButton,
-  DangerButton,
-  StyledInput,
-  NumberInput,
-  StyledSelect,
-} from "../../utils/ui";
-import { Icons } from "../../utils/Icons";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import { Icons } from "@/components/Icons";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
-
-const TextArea = styled.textarea`
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid ${colors.border};
-  border-radius: 6px;
-  background: ${colors.bgPrimary};
-  color: ${colors.textPrimary};
-  font-size: 0.85rem;
-  outline: none;
-  resize: vertical;
-  min-height: 60px;
-
-  &:focus {
-    border-color: ${colors.accentBlue};
-  }
-`;
 
 function getLinkColor(type: string): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
 
-  return linkType?.color || rawColors.accentGray;
+  return linkType?.color || "var(--accent-gray)";
 }
 
 interface EditLinkModalProps {
@@ -84,58 +66,53 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
         width={380}
         actions={
           <ModalActions>
-            <DangerButton onClick={() => setConfirmingDelete(true)}>
+            <Button variant="destructive" onClick={() => setConfirmingDelete(true)}>
               {t("modals.delete")}
-            </DangerButton>
+            </Button>
             <ModalActionsRight>
-              <SecondaryButton onClick={onCancel}>{t("modals.cancel")}</SecondaryButton>
-              <PrimaryButton onClick={handleConfirm}>{t("modals.save")}</PrimaryButton>
+              <Button variant="outline" onClick={onCancel}>
+                {t("modals.cancel")}
+              </Button>
+              <Button variant="default" onClick={handleConfirm}>
+                {t("modals.save")}
+              </Button>
             </ModalActionsRight>
           </ModalActions>
         }
       >
-        <div
-          style={{
-            fontSize: "0.85rem",
-            color: colors.textSecondary,
-            marginBottom: 16,
-            padding: "10px 12px",
-            background: colors.bgPrimary,
-            borderRadius: 6,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="text-sm text-secondary-foreground mb-4 py-2.5 px-3 bg-background rounded-md">
+          <div className="flex items-center gap-2">
             <span>{link.sourceName || link.sourceId}</span>
-            <Icons.ArrowRight size={14} style={{ color: getLinkColor(link.type), flexShrink: 0 }} />
+            <Icons.ArrowRight
+              size={14}
+              style={{ color: getLinkColor(link.type) }}
+              className="shrink-0"
+            />
             <span>{link.targetName || link.targetId}</span>
           </div>
-          {link.label && (
-            <div style={{ marginTop: 4, fontSize: "0.8rem", color: colors.textMuted }}>
-              {link.label}
-            </div>
-          )}
+          {link.label && <div className="mt-1 text-xs text-muted-foreground">{link.label}</div>}
           {link.description && (
-            <div style={{ marginTop: 4, fontSize: "0.8rem", color: colors.textMuted }}>
-              {link.description}
-            </div>
+            <div className="mt-1 text-xs text-muted-foreground">{link.description}</div>
           )}
         </div>
         <FormGroup>
           <Label>{t("modals.linkType")}</Label>
-          <StyledSelect
-            value={editType}
-            onChange={(e) => setEditType(e.target.value as ServiceLinkType)}
-          >
-            {LINK_TYPES.map((lt) => (
-              <option key={lt.value} value={lt.value}>
-                {t(`dashboard.linkTypes.${lt.value}`)}
-              </option>
-            ))}
-          </StyledSelect>
+          <Select value={editType} onValueChange={(v) => setEditType(v as ServiceLinkType)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LINK_TYPES.map((lt) => (
+                <SelectItem key={lt.value} value={lt.value}>
+                  {t(`dashboard.linkTypes.${lt.value}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormGroup>
         <FormGroup>
           <Label>{t("modals.linkLabel")}</Label>
-          <StyledInput
+          <Input
             value={editLabel}
             onChange={(e) => setEditLabel(e.target.value)}
             placeholder={t("modals.linkLabelPlaceholder")}
@@ -153,24 +130,30 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
         </FormGroup>
         <FormGroup>
           <Label>{t("modals.linkProtocol")}</Label>
-          <StyledSelect
-            value={editProtocol}
-            onChange={(e) => setEditProtocol(e.target.value as ServiceProtocol | "")}
+          <Select
+            value={editProtocol || "__none__"}
+            onValueChange={(v) => setEditProtocol(v === "__none__" ? "" : (v as ServiceProtocol))}
           >
-            <option value="">{t("modals.linkProtocolNone")}</option>
-            {SERVICE_PROTOCOLS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </StyledSelect>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">{t("modals.linkProtocolNone")}</SelectItem>
+              {Object.values(ServiceProtocol).map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </FormGroup>
         <FormGroup>
           <Label>{t("modals.linkDescription")}</Label>
-          <TextArea
+          <textarea
             value={editDesc}
             onChange={(e) => setEditDesc(e.target.value)}
             placeholder={t("modals.linkDescriptionPlaceholder")}
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-vertical min-h-[60px]"
           />
         </FormGroup>
       </BaseModal>

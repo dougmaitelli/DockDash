@@ -1,77 +1,13 @@
 import { useState, Fragment } from "react";
-import styled from "styled-components";
 import { useTranslation } from "react-i18next";
 import type { Service } from "@shared";
 import { ServiceSource } from "@shared";
-import { colors } from "../../styles/vars";
-import {
-  PrimaryButton,
-  SecondaryButton,
-  DangerButton,
-  StyledInput,
-  NumberInput,
-} from "../../utils/ui";
-import { NumberTagArrayInput } from "../../utils/TagArrayInput";
+import { Button } from "@/components/ui/Button";
+import { NumberInput } from "@/components/NumberInput";
+import { Input } from "@/components/ui/Input";
+import { NumberTagArrayInput } from "@/components/TagArrayInput";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
-import { Icons } from "../../utils/Icons";
-
-const NodeInfo = styled.div`
-  font-size: 0.85rem;
-  color: ${colors.textSecondary};
-  margin-bottom: 16px;
-  padding: 10px 12px;
-  background: ${colors.bgPrimary};
-  border-radius: 6px;
-`;
-
-const NodeId = styled.div`
-  font-size: 0.7rem;
-  color: ${colors.textMuted};
-  font-family: "SF Mono", "Fira Code", monospace;
-  margin-top: 4px;
-`;
-
-const MetadataToggle = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 8px 0 4px;
-  cursor: pointer;
-  color: ${colors.textMuted};
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-
-  &:hover {
-    color: ${colors.textSecondary};
-  }
-`;
-
-const MetadataGrid = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 16px;
-  padding: 8px 12px;
-  background: ${colors.bgPrimary};
-  border-radius: 6px;
-  margin-bottom: 14px;
-`;
-
-const MetaKey = styled.span`
-  font-size: 0.75rem;
-  font-family: "SF Mono", "Fira Code", monospace;
-  color: ${colors.textMuted};
-  white-space: nowrap;
-`;
-
-const MetaValue = styled.span`
-  font-size: 0.75rem;
-  color: ${colors.textSecondary};
-  word-break: break-all;
-`;
+import { Icons } from "@/components/Icons";
 
 interface EditServiceModalProps {
   service?: Service;
@@ -127,34 +63,40 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
       width={400}
       actions={
         <ModalActions>
-          {onDelete && <DangerButton onClick={onDelete}>{t("modals.delete")}</DangerButton>}
+          {onDelete && (
+            <Button variant="destructive" onClick={onDelete}>
+              {t("modals.delete")}
+            </Button>
+          )}
           <ModalActionsRight>
-            <SecondaryButton onClick={onCancel}>{t("modals.cancel")}</SecondaryButton>
-            <PrimaryButton onClick={handleConfirm}>
+            <Button variant="outline" onClick={onCancel}>
+              {t("modals.cancel")}
+            </Button>
+            <Button variant="default" onClick={handleConfirm}>
               {service ? t("modals.save") : t("modals.add")}
-            </PrimaryButton>
+            </Button>
           </ModalActionsRight>
         </ModalActions>
       }
     >
       {service && (
-        <NodeInfo>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div className="text-sm text-secondary-foreground mb-4 py-2.5 px-3 bg-background rounded-md">
+          <div className="flex items-center gap-2">
             {service.source === ServiceSource.DOCKER ? (
-              <Icons.Docker size={20} style={{ color: colors.textMuted }} />
+              <Icons.Docker size={20} className="text-muted-foreground" />
             ) : (
-              <Icons.Globe size={20} style={{ color: colors.textMuted }} />
+              <Icons.Globe size={20} className="text-muted-foreground" />
             )}
             <div>
-              <div style={{ fontWeight: 600, color: colors.textPrimary }}>{service.name}</div>
-              <NodeId>{service.id}</NodeId>
+              <div className="font-semibold text-foreground">{service.name}</div>
+              <div className="text-[0.7rem] text-muted-foreground font-mono mt-1">{service.id}</div>
             </div>
           </div>
-        </NodeInfo>
+        </div>
       )}
       <FormGroup>
         <Label>{t("modals.name")}</Label>
-        <StyledInput
+        <Input
           value={editNodeName}
           onChange={(e) => setEditNodeName(e.target.value)}
           placeholder={t("modals.namePlaceholder")}
@@ -162,7 +104,7 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
       </FormGroup>
       <FormGroup>
         <Label>{t("modals.host")}</Label>
-        <StyledInput
+        <Input
           value={editNodeHost}
           onChange={(e) => setEditNodeHost(e.target.value)}
           placeholder={t("modals.hostPlaceholder")}
@@ -190,19 +132,25 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
       </FormGroup>
       {metadataEntries.length > 0 && (
         <>
-          <MetadataToggle onClick={() => setMetadataExpanded((v) => !v)}>
+          <button
+            type="button"
+            onClick={() => setMetadataExpanded((v) => !v)}
+            className="flex items-center gap-1.5 w-full bg-transparent border-none py-2 text-muted-foreground text-xs uppercase tracking-wide hover:text-secondary-foreground"
+          >
             <span>{metadataExpanded ? "▾" : "▸"}</span>
             {t("modals.metadata")}
-          </MetadataToggle>
+          </button>
           {metadataExpanded && (
-            <MetadataGrid>
+            <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 p-2 px-3 bg-background rounded-md mb-3.5">
               {metadataEntries.map(({ key, value }) => (
                 <Fragment key={key}>
-                  <MetaKey>{key}</MetaKey>
-                  <MetaValue>{value}</MetaValue>
+                  <span className="text-xs font-mono text-muted-foreground whitespace-nowrap">
+                    {key}
+                  </span>
+                  <span className="text-xs text-secondary-foreground break-all">{value}</span>
                 </Fragment>
               ))}
-            </MetadataGrid>
+            </div>
           )}
         </>
       )}

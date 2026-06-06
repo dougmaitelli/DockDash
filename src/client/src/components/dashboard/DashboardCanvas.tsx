@@ -1,7 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import styled from "styled-components";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../styles/vars";
 import { EditLinkModal } from "../modals/EditLinkModal";
 import { EditServiceModal } from "../modals/EditServiceModal";
 import { ConfirmDialog } from "../modals/ConfirmDialog";
@@ -35,8 +33,8 @@ import type { ResizeDirection } from "./ServiceNode";
 import { LinkLayer } from "./LinkLayer";
 import { NodeLayer } from "./NodeLayer";
 import { ZoomControls } from "./ZoomControls";
-import { Icons } from "../../utils/Icons";
-import { SecondaryButton, DangerButton } from "../../utils/ui";
+import { Icons } from "@/components/Icons";
+import { Button } from "@/components/ui/Button";
 
 interface DashboardCanvasProps {
   services: ServiceWithPosition[];
@@ -59,67 +57,6 @@ interface DashboardCanvasProps {
   removeService: (id: string) => Promise<void>;
   removeLink: (id: string) => Promise<void>;
 }
-
-const CanvasWrapper = styled.div`
-  flex: 1;
-  position: relative;
-  background: ${colors.bgSecondary};
-  border: 1px solid ${colors.border};
-  border-radius: 10px;
-  overflow: hidden;
-  min-height: 400px;
-`;
-
-const Canvas = styled.div`
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
-  background-image: radial-gradient(${colors.border} 1px, transparent 1px);
-  background-size: 24px 24px;
-  cursor: grab;
-
-  &:active {
-    cursor: grabbing;
-  }
-`;
-
-const Toolbar = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: ${colors.bgCardAlpha90};
-  border-bottom: 1px solid ${colors.border};
-`;
-
-const ToolButton = styled.button.withConfig({
-  shouldForwardProp: (prop) => prop !== "active",
-})<{ active?: boolean }>`
-  padding: 8px 14px;
-  border: 1px solid ${(props) => (props.active ? colors.accentBlue : colors.border)};
-  background: ${(props) => (props.active ? colors.accentBlueAlpha15 : "transparent")};
-  color: ${(props) => (props.active ? colors.accentBlue : colors.textSecondary)};
-  border-radius: 6px;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: all 0.15s;
-
-  &:hover {
-    border-color: ${colors.accentBlue};
-    color: ${colors.accentBlue};
-  }
-`;
-
-const ToolbarInner = styled(Toolbar)`
-  justify-content: space-between;
-`;
-
-const ToolbarGroup = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
 
 function findNestTarget(
   services: ServiceWithPosition[],
@@ -502,8 +439,8 @@ export function DashboardCanvas({
           newParentId = target;
         }
       }
-      // Parent nodes (draggedHasChildren) move freely — preserve their w/h
 
+      // Parent nodes (draggedHasChildren) move freely — preserve their w/h
       const existingPos = draggedService?.position;
       const wToSave = draggedHasChildren ? (existingPos?.w ?? null) : null;
       const hToSave = draggedHasChildren ? (existingPos?.h ?? null) : null;
@@ -857,54 +794,52 @@ export function DashboardCanvas({
   };
 
   return (
-    <CanvasWrapper>
-      <ToolbarInner>
-        <ToolbarGroup>
-          <span style={{ fontSize: "0.85rem", color: colors.textPrimary, fontWeight: 600 }}>
+    <div className="flex-1 relative bg-muted border border-border rounded-[10px] overflow-hidden min-h-[400px]">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-card/90 border-b border-border">
+        <div className="flex items-center gap-2.5">
+          <span className="text-[0.85rem] text-foreground font-semibold">
             {servicesOnline} / {services.length}
           </span>
-          <span style={{ fontSize: "0.75rem", color: colors.textMuted }}>
-            {t("dashboard.online")}
-          </span>
+          <span className="text-[0.75rem] text-muted-foreground">{t("dashboard.online")}</span>
           {servicesWithUpdates > 0 && (
             <>
-              <span style={{ color: colors.border }}>·</span>
-              <span style={{ fontSize: "0.85rem", color: colors.accentYellow, fontWeight: 600 }}>
+              <span className="text-border">·</span>
+              <span className="text-[0.85rem] text-warning font-semibold">
                 {servicesWithUpdates}
               </span>
-              <span style={{ fontSize: "0.75rem", color: colors.textMuted }}>
-                {t("dashboard.updates")}
-              </span>
+              <span className="text-[0.75rem] text-muted-foreground">{t("dashboard.updates")}</span>
             </>
           )}
-        </ToolbarGroup>
-        <ToolbarGroup>
-          <SecondaryButton onClick={() => setAddingService(true)}>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Button variant="outline" onClick={() => setAddingService(true)}>
             <Icons.Plus size={14} />
             {t("dashboard.addService")}
-          </SecondaryButton>
+          </Button>
           {selectedService && (
-            <DangerButton onClick={() => setPendingDeleteId(selectedService.id!)}>
+            <Button variant="destructive" onClick={() => setPendingDeleteId(selectedService.id!)}>
               <Icons.Trash size={14} />
               {t("dashboard.remove")}
-            </DangerButton>
+            </Button>
           )}
-          <ToolButton title={t("dashboard.refresh")} onClick={() => refresh()}>
+          <Button variant="outline" title={t("dashboard.refresh")} onClick={() => refresh()}>
             <Icons.Refresh size={14} />
-          </ToolButton>
-          <ToolButton
+          </Button>
+          <Button
+            variant="outline"
             title={t("dashboard.triggerStatusChecks")}
             onClick={() => dashboardApi.checkAllServices()}
           >
             <Icons.CheckCircle size={14} />
-          </ToolButton>
-        </ToolbarGroup>
-      </ToolbarInner>
+          </Button>
+        </div>
+      </div>
 
-      <Canvas
+      <div
         ref={canvasRef}
+        className="w-full h-full relative overflow-hidden canvas-dot-grid"
+        style={{ cursor: isPanning ? "grabbing" : "grab" }}
         onMouseDown={handleCanvasMouseDown}
-        style={{ cursor: isPanning ? "grabbing" : "" }}
       >
         <div
           style={{
@@ -945,7 +880,7 @@ export function DashboardCanvas({
             onEditLink={openEditLinkModal}
           />
         </div>
-      </Canvas>
+      </div>
 
       <ZoomControls
         zoom={zoomLevel}
@@ -1007,6 +942,6 @@ export function DashboardCanvas({
       {services.length === 0 && !editingLink && !error && <EmptyOverlay />}
 
       {error && !loading && <ErrorOverlay message={error} onRetry={refresh} />}
-    </CanvasWrapper>
+    </div>
   );
 }

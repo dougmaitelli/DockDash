@@ -1,47 +1,5 @@
-import styled from "styled-components";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../styles/vars";
-import { DangerButton } from "../../utils/ui";
-
-const Overlay = styled.div`
-  position: absolute;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  background: rgba(13, 11, 20, 0.5);
-  backdrop-filter: blur(2px);
-`;
-
-const Box = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 28px 36px;
-  background: ${colors.bgCard};
-  border: 1px solid ${colors.accentRed};
-  border-radius: 12px;
-  text-align: center;
-  max-width: 420px;
-`;
-
-const Title = styled.p`
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: ${colors.textPrimary};
-  margin: 0;
-`;
-
-const Message = styled.p`
-  font-size: 0.8rem;
-  color: ${colors.textMuted};
-  margin: 0;
-  word-break: break-word;
-`;
+import { Button } from "@/components/ui/Button";
 
 interface ErrorOverlayProps {
   message: string;
@@ -52,12 +10,14 @@ export function ErrorOverlay({ message, onRetry }: ErrorOverlayProps) {
   const { t } = useTranslation();
 
   return (
-    <Overlay>
-      <Box>
-        <Title>{t("dashboard.errorTitle")}</Title>
-        <Message>{message}</Message>
-        <DangerButton onClick={onRetry}>{t("dashboard.retry")}</DangerButton>
-      </Box>
-    </Overlay>
+    <div className="absolute inset-0 z-[50] flex flex-col items-center justify-center gap-4 bg-black/50 backdrop-blur-[2px]">
+      <div className="flex flex-col items-center gap-2.5 px-9 py-7 bg-card border border-destructive rounded-xl text-center max-w-[420px]">
+        <p className="text-[0.95rem] font-semibold text-foreground">{t("dashboard.errorTitle")}</p>
+        <p className="text-[0.8rem] text-muted-foreground break-words">{message}</p>
+        <Button variant="destructive" onClick={onRetry}>
+          {t("dashboard.retry")}
+        </Button>
+      </div>
+    </div>
   );
 }

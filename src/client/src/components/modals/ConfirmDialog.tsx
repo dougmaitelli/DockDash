@@ -1,37 +1,7 @@
+import { createPortal } from "react-dom";
 import { useEffect, useRef } from "react";
-import styled from "styled-components";
 import { useTranslation } from "react-i18next";
-import { colors } from "../../styles/vars";
-import { DangerButton, SecondaryButton, ModalBackdrop } from "../../utils/ui";
-
-const Overlay = styled(ModalBackdrop)`
-  z-index: 300;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
-
-const Panel = styled.div`
-  background: ${colors.bgCard};
-  border: 1px solid ${colors.border};
-  border-radius: 10px;
-  padding: 24px;
-  width: 340px;
-  box-shadow: 0 20px 60px ${colors.blackAlpha50};
-`;
-
-const Message = styled.p`
-  font-size: 0.9rem;
-  color: ${colors.textSecondary};
-  margin-bottom: 20px;
-  line-height: 1.5;
-`;
-
-const Actions = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-`;
+import { Button } from "@/components/ui/Button";
 
 interface ConfirmDialogProps {
   message: string;
@@ -48,17 +18,26 @@ export function ConfirmDialog({ message, confirmLabel, onConfirm, onCancel }: Co
     confirmRef.current?.focus();
   }, []);
 
-  return (
-    <Overlay onClick={onCancel}>
-      <Panel onClick={(e) => e.stopPropagation()}>
-        <Message>{message}</Message>
-        <Actions>
-          <SecondaryButton onClick={onCancel}>{t("modals.cancel")}</SecondaryButton>
-          <DangerButton ref={confirmRef} onClick={onConfirm}>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[300] bg-black/50 flex items-center justify-center"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-card border border-border rounded-[10px] p-6 w-[340px] shadow-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <p className="text-[0.9rem] text-secondary-foreground mb-5 leading-relaxed">{message}</p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onCancel}>
+            {t("modals.cancel")}
+          </Button>
+          <Button variant="destructive" ref={confirmRef} onClick={onConfirm}>
             {confirmLabel ?? t("modals.delete")}
-          </DangerButton>
-        </Actions>
-      </Panel>
-    </Overlay>
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
