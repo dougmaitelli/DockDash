@@ -1,17 +1,19 @@
 import { createContext, useContext, useState, useEffect, useLayoutEffect } from "react";
 import type { ReactNode } from "react";
 import { themes, SYSTEM_THEME, applyTheme } from "../styles/themes";
-import type { ThemeName, ThemeSelection } from "../styles/themes";
+import type { RawColors, ThemeName, ThemeSelection } from "../styles/themes";
 
 const STORAGE_KEY = "dockdash-theme";
 
 interface ThemeContextValue {
   theme: ThemeSelection;
+  colors: RawColors;
   setTheme: (theme: ThemeSelection) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
   theme: SYSTEM_THEME,
+  colors: themes["dark"].colors,
   setTheme: () => {},
 });
 
@@ -46,14 +48,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, t);
   };
 
-  const resolved = selection === SYSTEM_THEME ? systemTheme : selection;
+  const resolvedTheme = selection === SYSTEM_THEME ? systemTheme : (selection as ThemeName);
 
   useLayoutEffect(() => {
-    applyTheme(themes[resolved].colors);
-  }, [resolved]);
+    applyTheme(themes[resolvedTheme].colors);
+  }, [resolvedTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme: selection, setTheme }}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider
+      value={{ theme: selection, colors: themes[resolvedTheme].colors, setTheme }}
+    >
+      {children}
+    </ThemeContext.Provider>
   );
 }
 

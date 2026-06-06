@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Terminal as XTerm } from "@xterm/xterm";
+import type { ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { cn } from "@/lib/utils";
 import { SSE_EVENT } from "@shared";
 import { serviceApi } from "@/services/api";
+import { useTheme } from "@/context/ThemeContext";
+import type { RawColors } from "@/styles/themes";
 import "@xterm/xterm/css/xterm.css";
 
 type ConnStatus = "connecting" | "connected" | "disconnected";
@@ -13,8 +16,35 @@ interface TerminalProps {
   serviceId: string;
 }
 
+function buildXtermTheme(colors: RawColors): ITheme {
+  return {
+    background: colors.bgPrimary,
+    foreground: colors.textPrimary,
+    cursor: colors.accentBlue,
+    cursorAccent: colors.bgPrimary,
+    selectionBackground: colors.accentBlue + "40",
+    black: colors.bgSecondary,
+    red: colors.accentRed,
+    green: colors.accentGreen,
+    yellow: colors.accentYellow,
+    blue: colors.accentBlue,
+    magenta: colors.accentPurple,
+    cyan: colors.accentCyan,
+    white: colors.textLight,
+    brightBlack: colors.textMuted,
+    brightRed: colors.accentRed,
+    brightGreen: colors.accentGreenLighter,
+    brightYellow: colors.accentYellow,
+    brightBlue: colors.accentBlueLighter,
+    brightMagenta: colors.accentPurple,
+    brightCyan: colors.accentCyan,
+    brightWhite: colors.textPrimary,
+  };
+}
+
 export function Terminal({ serviceId }: TerminalProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -30,9 +60,7 @@ export function Terminal({ serviceId }: TerminalProps) {
       cursorBlink: true,
       fontSize: 13,
       fontFamily: "monospace",
-      theme: {
-        background: "transparent",
-      },
+      theme: buildXtermTheme(colors),
     });
 
     const fitAddon = new FitAddon();
@@ -102,7 +130,13 @@ export function Terminal({ serviceId }: TerminalProps) {
       xtermRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [serviceId, connectKey]);
+  }, [serviceId, connectKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!xtermRef.current) return;
+
+    xtermRef.current.options.theme = buildXtermTheme(colors);
+  }, [colors]);
 
   const statusLabel =
     status === "connected"
@@ -141,7 +175,7 @@ export function Terminal({ serviceId }: TerminalProps) {
 
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 overflow-hidden bg-background border border-border rounded-md px-3 py-2.5"
+        className="flex-1 min-h-0 overflow-hidden border border-border rounded-md px-3 py-2.5"
       />
     </div>
   );
