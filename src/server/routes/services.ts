@@ -447,4 +447,36 @@ router.get("/services/:id/changelog", async (req, res) => {
   res.json(result);
 });
 
+router.get("/services/:id/files", async (req, res) => {
+  const service = db.getService(req.params.id);
+
+  if (!service) return res.status(404).json({ error: "Service not found" });
+
+  if (service.source !== ServiceSource.DOCKER) {
+    return res.status(400).json({ error: "Not a Docker service" });
+  }
+
+  const rawPath = typeof req.query.path === "string" ? req.query.path : "/";
+
+  if (!rawPath.startsWith("/") || rawPath.includes("\0") || rawPath.length > 4096) {
+    return res.status(400).json({ error: "Invalid path" });
+  }
+
+  const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+  const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
+  const containerId = service.metadata?.containerId as string | undefined;
+
+  if (!resolvedHost || !containerId) {
+    return res.status(400).json({ error: "Container metadata not available" });
+  }
+
+  try {
+    const entries = await dockerService.listFiles(resolvedHost, containerId, rawPath);
+
+    res.json({ path: rawPath, entries });
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
 export default router;

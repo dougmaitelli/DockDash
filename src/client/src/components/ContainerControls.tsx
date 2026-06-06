@@ -6,7 +6,8 @@ import { Icons } from "@/components/Icons";
 import { Button } from "@/components/ui/Button";
 import { serviceApi } from "@/services/api";
 
-const tabClass = "rounded-t-none rounded-b-md h-7 w-10 disabled:opacity-20 disabled:cursor-not-allowed";
+const tabClass =
+  "rounded-t-none rounded-b-md h-7 w-10 disabled:opacity-20 disabled:cursor-not-allowed";
 
 interface ContainerControlsProps {
   service: Service;

@@ -14,12 +14,13 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { HealthHistoryGraph } from "../HealthHistoryGraph";
 import { DockerLogs } from "../DockerLogs";
 import { Changelog } from "../Changelog";
+import { FileExplorer } from "../FileExplorer";
 import { ContainerControls } from "../ContainerControls";
 import { useConfig } from "../../context/ConfigContext";
 
 const ANIM_MS = 220;
 
-type Tab = "details" | "logs" | "changelog";
+type Tab = "details" | "logs" | "changelog" | "files";
 
 interface ServiceDrawerProps {
   service: Service;
@@ -175,6 +176,15 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
               {t("modals.tabLogs")}
             </button>
           )}
+          {isDocker && (
+            <button
+              type="button"
+              onClick={() => setTab("files")}
+              className={tabButtonClass(tab === "files")}
+            >
+              {t("modals.tabFiles")}
+            </button>
+          )}
         </div>
 
         {tab === "details" ? (
@@ -249,9 +259,13 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
           <div className="flex-1 overflow-y-auto flex flex-col pt-4 px-5">
             <DockerLogs serviceId={service.id!} reconnectTrigger={logsReconnectTrigger} />
           </div>
-        ) : (
+        ) : tab === "changelog" ? (
           <div className="flex-1 overflow-y-auto flex flex-col pt-4 px-5">
             <Changelog serviceId={service.id!} />
+          </div>
+        ) : (
+          <div className="flex-1 overflow-hidden flex flex-col pt-4 px-5">
+            <FileExplorer serviceId={service.id!} />
           </div>
         )}
 

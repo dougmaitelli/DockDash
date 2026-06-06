@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import Docker from "dockerode";
 import { v4 as uuidv4 } from "uuid";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
+import type { FileEntry } from "@shared/api";
 import { config } from "../lib/config.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 
@@ -179,6 +180,107 @@ export class DockerService {
     }
 
     return { image: withoutDigest, tag: DOCKER_LATEST_TAG };
+  }
+
+  async listFiles(resolvedHost: string, containerId: string, path: string): Promise<FileEntry[]> {
+    const docker = this.createDockerClientForHost(resolvedHost);
+    const container = docker.getContainer(containerId);
+
+    const info = await container.inspect();
+
+    if (!info.State?.Running) {
+      throw new Error("Container is not running");
+    }
+
+    const exec = await container.exec({
+      Cmd: ["ls", "-la", "--", path],
+      AttachStdout: true,
+      AttachStderr: true,
+      Tty: false,
+    });
+
+    const stream = await exec.start({ hijack: true, stdin: false });
+
+    const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>(
+      (resolve, reject) => {
+        let buf = Buffer.alloc(0);
+
+        stream.on("data", (chunk: Buffer) => {
+          buf = Buffer.concat([buf, chunk]);
+        });
+
+        stream.on("end", () => {
+          let remaining = buf;
+          const stdoutParts: string[] = [];
+          const stderrParts: string[] = [];
+
+          while (remaining.length >= 8) {
+            const size = remaining.readUInt32BE(4);
+
+            if (remaining.length < 8 + size) break;
+
+            const type = remaining[0];
+            const payload = remaining.slice(8, 8 + size);
+
+            if (type === 1) stdoutParts.push(payload.toString("utf8"));
+            else if (type === 2) stderrParts.push(payload.toString("utf8"));
+
+            remaining = remaining.slice(8 + size);
+          }
+
+          resolve({ stdout: stdoutParts.join(""), stderr: stderrParts.join("") });
+        });
+
+        stream.on("error", reject);
+      },
+    );
+
+    if (!stdout.trim() && stderr.trim()) {
+      throw new Error(stderr.trim());
+    }
+
+    return this.parseLsOutput(stdout);
+  }
+
+  private parseLsOutput(output: string): FileEntry[] {
+    const entries: FileEntry[] = [];
+
+    for (const line of output.split("\n")) {
+      const trimmed = line.trim();
+
+      if (!trimmed || trimmed.startsWith("total ")) continue;
+
+      // Format: perms links owner group size month day time/year name...
+      const parts = trimmed.split(/\s+/);
+
+      if (parts.length < 9) continue;
+
+      const permissions = parts[0];
+      const size = parseInt(parts[4], 10);
+      const modified = `${parts[5]} ${parts[6]} ${parts[7]}`;
+      const fullName = parts.slice(8).join(" ");
+
+      if (fullName === "." || fullName === "..") continue;
+
+      const firstChar = permissions[0];
+      let type: FileEntry["type"];
+      let name = fullName;
+
+      if (firstChar === "d") {
+        type = "directory";
+      } else if (firstChar === "l") {
+        type = "symlink";
+        name = fullName.split(" -> ")[0];
+      } else if (firstChar === "-") {
+        type = "file";
+      } else {
+        type = "other";
+      }
+
+      entries.push({ name, type, size: isNaN(size) ? 0 : size, permissions, modified });
+    }
+
+    return entries;
   }
 }
 

@@ -155,3 +155,20 @@ export interface CheckAllServicesResponse {
   status: string;
   message: string;
 }
+
+// ---------------------------------------------------------------------------
+// GET /api/services/:id/files
+// ---------------------------------------------------------------------------
+
+export interface FileEntry {
+  name: string;
+  type: "directory" | "file" | "symlink" | "other";
+  size: number;
+  permissions: string;
+  modified: string;
+}
+
+export interface FilesResponse {
+  path: string;
+  entries: FileEntry[];
+}
