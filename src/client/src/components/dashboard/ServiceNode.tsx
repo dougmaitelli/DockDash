@@ -38,12 +38,15 @@ function getBorderColor(
 
   if (isSelected) return "var(--primary)";
 
-  if (isHovered) return "var(--border-hover)";
-
-  if (status === ServiceStatus.UP) return "color-mix(in srgb, var(--success) 50%, transparent)";
+  if (status === ServiceStatus.UP)
+    return isHovered ? "var(--success)" : "color-mix(in srgb, var(--success) 50%, transparent)";
 
   if (status === ServiceStatus.DOWN)
-    return "color-mix(in srgb, var(--destructive) 50%, transparent)";
+    return isHovered
+      ? "var(--destructive)"
+      : "color-mix(in srgb, var(--destructive) 50%, transparent)";
+
+  if (isHovered) return "var(--border-hover)";
 
   return "var(--border-color)";
 }
