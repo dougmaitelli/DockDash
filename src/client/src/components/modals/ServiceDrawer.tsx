@@ -209,14 +209,16 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
                 placeholder={t("modals.portsPlaceholder")}
               />
             </FormGroup>
-            <FormGroup>
-              <Label>{t("modals.checkPort")}</Label>
-              <NumberInput
-                value={editCheckPort}
-                onChange={(e) => setEditCheckPort(e.target.value)}
-                placeholder={t("modals.checkPortPlaceholder")}
-              />
-            </FormGroup>
+            {!isDocker && (
+              <FormGroup>
+                <Label>{t("modals.checkPort")}</Label>
+                <NumberInput
+                  value={editCheckPort}
+                  onChange={(e) => setEditCheckPort(e.target.value)}
+                  placeholder={t("modals.checkPortPlaceholder")}
+                />
+              </FormGroup>
+            )}
 
             {metadataEntries.length > 0 && (
               <>
