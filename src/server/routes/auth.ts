@@ -6,6 +6,7 @@ import { config } from "../lib/config.js";
 function callbackUrl(req: Request): string {
   // Explicit override takes precedence for unusual proxy setups
   if (config.oidcRedirectUri) return config.oidcRedirectUri;
+
   return `${req.protocol}://${req.get("host")}/auth/callback`;
 }
 

@@ -2,6 +2,7 @@ import { useLocation, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useAuth } from "../context/AuthContext";
+import { Icons } from "./Icons";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,20 +41,7 @@ function Layout({ children }: LayoutProps) {
     <>
       <nav className="fixed top-0 left-0 right-0 h-14 bg-muted/95 backdrop-blur-[12px] border-b border-border flex items-center px-6 z-[100]">
         <Link to="/" className="flex items-center gap-2 mr-10 text-xl font-bold no-underline">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--primary)"
-            strokeWidth="2"
-          >
-            <rect x="2" y="3" width="20" height="18" rx="3" />
-            <path d="M8 3v18" />
-            <path d="M16 8h2" />
-            <path d="M16 12h2" />
-            <path d="M16 16h2" />
-          </svg>
+          <Icons.Logo stroke="var(--primary)" />
           <span
             className="bg-gradient-to-br from-primary to-primary/70 bg-clip-text"
             style={{ WebkitTextFillColor: "transparent" }}

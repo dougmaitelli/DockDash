@@ -106,7 +106,9 @@ export function LinkLayer({
       const tgtKey = `${a.link.targetId}:${a.entrySide}`;
 
       if (!sideLinks.has(srcKey)) sideLinks.set(srcKey, []);
+
       if (!sideLinks.has(tgtKey)) sideLinks.set(tgtKey, []);
+
       sideLinks.get(srcKey)!.push(a.link.id);
       sideLinks.get(tgtKey)!.push(a.link.id);
     }

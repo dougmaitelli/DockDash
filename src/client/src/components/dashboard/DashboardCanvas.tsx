@@ -121,7 +121,24 @@ export function DashboardCanvas({
   const [canvasDimensions, setCanvasDimensions] = useState({ w: 0, h: 0 });
 
   const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
-  const servicesWithUpdates = services.filter((s) => s.metadata?.hasUpdate === true).length;
+  const servicesWithUpdates = services.filter((s) => s.metadata?.hasUpdate === true);
+
+  const [showUpdatesPopover, setShowUpdatesPopover] = useState(false);
+  const updatesPopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showUpdatesPopover) return;
+
+    function handleClickOutside(e: MouseEvent) {
+      if (updatesPopoverRef.current && !updatesPopoverRef.current.contains(e.target as Node)) {
+        setShowUpdatesPopover(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showUpdatesPopover]);
 
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
@@ -801,13 +818,55 @@ export function DashboardCanvas({
             {servicesOnline} / {services.length}
           </span>
           <span className="text-[0.75rem] text-muted-foreground">{t("dashboard.online")}</span>
-          {servicesWithUpdates > 0 && (
+          {servicesWithUpdates.length > 0 && (
             <>
               <span className="text-border">·</span>
-              <span className="text-[0.85rem] text-warning font-semibold">
-                {servicesWithUpdates}
-              </span>
-              <span className="text-[0.75rem] text-muted-foreground">{t("dashboard.updates")}</span>
+              <div ref={updatesPopoverRef} className="relative flex items-center gap-1.5">
+                <button
+                  onClick={() => setShowUpdatesPopover((v) => !v)}
+                  className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <span className="text-[0.85rem] text-warning font-semibold">
+                    {servicesWithUpdates.length}
+                  </span>
+                  <span className="text-[0.75rem] text-muted-foreground">
+                    {t("dashboard.updates")}
+                  </span>
+                </button>
+                {showUpdatesPopover && (
+                  <div className="absolute top-full left-0 mt-2 z-50 min-w-64 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
+                    <div className="px-3 py-2 border-b border-border">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        {t("dashboard.availableUpdates")}
+                      </span>
+                    </div>
+                    <ul className="py-1 max-h-72 overflow-y-auto">
+                      {servicesWithUpdates.map((s) => (
+                        <li key={s.id}>
+                          <button
+                            className="w-full flex items-center justify-between gap-4 px-3 py-2 text-left hover:bg-primary/5 transition-colors cursor-pointer"
+                            onClick={() => {
+                              setEditingNode(s);
+                              setShowUpdatesPopover(false);
+                            }}
+                          >
+                            <span className="text-sm font-medium text-foreground truncate">
+                              {s.name}
+                            </span>
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                              <span className="font-mono">{s.metadata?.imageTag ?? "—"}</span>
+                              <Icons.ArrowRight size={11} />
+                              <span className="font-mono text-warning">
+                                {s.metadata?.latestVersion ?? "—"}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>

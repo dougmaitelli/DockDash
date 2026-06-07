@@ -12,6 +12,7 @@
     "remove": "Remove",
     "refresh": "Refresh",
     "triggerStatusChecks": "Trigger status checks",
+    "availableUpdates": "Available updates",
     "errorTitle": "Failed to load dashboard",
     "retry": "Retry",
     "emptyMessage": "No services yet. Go to Discovery to find services.",

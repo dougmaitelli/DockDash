@@ -135,4 +135,13 @@ export const Icons = {
       <polyline points="18 15 12 9 6 15" />
     </svg>
   ),
+  Logo: ({ size = 24, ...props }: IconProps) => (
+    <svg {...defaults(size, 2)} {...props}>
+      <rect x="2" y="3" width="20" height="18" rx="3" />
+      <path d="M8 3v18" />
+      <path d="M16 8h2" />
+      <path d="M16 12h2" />
+      <path d="M16 16h2" />
+    </svg>
+  ),
 };

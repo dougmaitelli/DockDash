@@ -12,6 +12,7 @@
     "remove": "Remover",
     "refresh": "Atualizar",
     "triggerStatusChecks": "Verificar status agora",
+    "availableUpdates": "Atualizações disponíveis",
     "errorTitle": "Falha ao carregar o painel",
     "retry": "Tentar novamente",
     "emptyMessage": "Nenhum serviço ainda. Vá para Descoberta para encontrar serviços.",
