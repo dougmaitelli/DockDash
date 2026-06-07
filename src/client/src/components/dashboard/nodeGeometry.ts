@@ -184,6 +184,49 @@ export function portCoords(
   return { x: cx, y: cy + halfH };
 }
 
+const SPREAD_SPACING = 22; // px between adjacent spread ports
+const SPREAD_MARGIN = 14; // min px from node edge when clamping
+
+export function getSpreadPortPosition(
+  serviceId: string,
+  side: PortSide,
+  services: ServiceWithPosition[],
+  dragOffsets: Record<string, { dx: number; dy: number }>,
+  index: number,
+  total: number,
+): { x: number; y: number } | null {
+  const base = getPortPosition(serviceId, side, services, dragOffsets);
+
+  if (!base || total <= 1) return base;
+
+  const offset = (index - (total - 1) / 2) * SPREAD_SPACING;
+
+  const service = services.find((s) => s.id === serviceId);
+
+  if (!service) return base;
+
+  const absPos = getAbsoluteNodePosition(service, services, dragOffsets);
+  const size = getNodeSize(serviceId);
+  const w = size?.w ?? NODE_WIDTH;
+  const h = size?.h ?? NODE_HEIGHT;
+
+  if (side === PortSide.LEFT || side === PortSide.RIGHT) {
+    // For parent nodes, constrain spread to the header height, not the full container
+    const isParent = services.some((s) => s.position?.parentId === serviceId);
+    const effectiveH = isParent ? getInfoSectionHeight(serviceId) : h;
+    const minY = absPos.y + SPREAD_MARGIN;
+    const maxY = absPos.y + effectiveH - SPREAD_MARGIN;
+
+    return { x: base.x, y: Math.max(minY, Math.min(maxY, base.y + offset)) };
+  }
+
+  // TOP, BOTTOM, CONTAINER_BOTTOM — spread horizontally
+  const minX = absPos.x + SPREAD_MARGIN;
+  const maxX = absPos.x + w - SPREAD_MARGIN;
+
+  return { x: Math.max(minX, Math.min(maxX, base.x + offset)), y: base.y };
+}
+
 export function getMinContainerDimensions(
   nodeId: string,
   services: ServiceWithPosition[],
