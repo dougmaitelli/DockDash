@@ -25,7 +25,7 @@ const app = express();
 const PORT = config.port;
 
 // Trust reverse-proxy headers so req.protocol reflects X-Forwarded-Proto
-app.set("trust proxy", true);
+app.set("trust proxy", config.trustProxy);
 
 // Middleware
 app.use(cors());

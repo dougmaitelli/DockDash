@@ -138,6 +138,10 @@ class Config {
     return !!(this.oidcIssuer && this.oidcClientId && this.oidcClientSecret);
   }
 
+  get trustProxy(): string | boolean {
+    return process.env.TRUST_PROXY ?? "loopback, uniquelocal";
+  }
+
   get sessionSecret(): string {
     return process.env.SESSION_SECRET || "change-me-in-production";
   }

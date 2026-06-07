@@ -69,6 +69,7 @@ All configuration is done via environment variables. Changes require a container
 | `DISABLE_CONTAINER_CONTROLS` | — | Set to `true` to hide the Stop / Start / Restart buttons in the service drawer |
 | `DISABLE_FILE_EXPLORER` | — | Set to `true` to hide the file explorer tab in the service drawer |
 | `DISABLE_TERMINAL` | — | Set to `true` to hide the terminal tab in the service drawer |
+| `TRUST_PROXY` | `loopback, uniquelocal` | Express trust proxy setting — controls which `X-Forwarded-*` headers are trusted. The default covers same-host and LAN proxies. Set to `true` to trust all proxies or a specific IP/CIDR for stricter control |
 | `OIDC_ISSUER` | — | OIDC provider discovery URL (e.g. `https://auth.example.com/realms/myrealm`); enables authentication when set together with the other `OIDC_*` vars |
 | `OIDC_CLIENT_ID` | — | Client ID registered with the OIDC provider |
 | `OIDC_CLIENT_SECRET` | — | Client secret registered with the OIDC provider |
