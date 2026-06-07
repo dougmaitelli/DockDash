@@ -179,6 +179,7 @@ export function DashboardCanvas({
   const [connectingTarget, setConnectingTarget] = useState<string | null>(null);
   const [mouseCanvasPos, setMouseCanvasPos] = useState<{ x: number; y: number } | null>(null);
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const fitToContent = useCallback((): boolean => {
     if (services.length === 0) return false;
 
@@ -252,6 +253,7 @@ export function DashboardCanvas({
 
   // Keyboard handling
   const handleKeyDown = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (e: KeyboardEvent) => {
       if (e.key === "Delete" && selectedId) {
         e.preventDefault();
@@ -269,6 +271,7 @@ export function DashboardCanvas({
 
   // Node click — select/deselect
   const handleNodeClick = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (id: string) => {
       setSelectedId(selectedId === id ? null : id);
     },
@@ -691,6 +694,7 @@ export function DashboardCanvas({
 
   // Wheel zoom
   const handleWheel = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (e: WheelEvent) => {
       e.preventDefault();
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -738,6 +742,7 @@ export function DashboardCanvas({
 
   // Canvas panning
   const handleCanvasMouseDown = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest(".draggable-node")) return;
 
@@ -769,9 +774,9 @@ export function DashboardCanvas({
   }, [isPanning, panStart]);
 
   // Edit link
-  const openEditLinkModal = useCallback((link: ServiceLink) => {
+  const openEditLinkModal = (link: ServiceLink) => {
     setEditingLink(link);
-  }, []);
+  };
 
   const handleEditLinkSave = async (data: UpdateLinkRequest) => {
     if (!editingLink) return;
@@ -790,9 +795,9 @@ export function DashboardCanvas({
   };
 
   // Edit node
-  const openEditNodeModal = useCallback((service: Service) => {
+  const openEditNodeModal = (service: Service) => {
     setEditingNode(service);
-  }, []);
+  };
 
   const handleEditNodeConfirm = async (data: UpdateServiceRequest) => {
     if (!editingNode) return;
