@@ -26,6 +26,17 @@ const api = axios.create({
   baseURL: "/api",
 });
 
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 && !window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
+
+    return Promise.reject(err);
+  },
+);
+
 // Discovery APIs
 export const discoveryApi = {
   dockerHealth: () => api.get<DockerHostHealth[]>("/docker/health"),

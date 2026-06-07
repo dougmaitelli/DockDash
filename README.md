@@ -9,9 +9,13 @@ A self-hosted dashboard for visualizing Docker containers and network services. 
 - **Health monitoring** — periodically checks every service and shows live status
 - **Health history** — visualizes uptime over the last 1, 7, or 30 days as a color-coded timeline per service
 - **Docker logs** — streams live container logs directly in the UI with timestamp parsing and ANSI stripping
+- **File explorer** — browse a container's filesystem, view text files, and edit them in place directly from the service drawer
+- **Terminal** — interactive shell inside any container via xterm.js; inherits the active UI theme
 - **Update monitoring** — checks Docker images against registries and flags outdated containers; update badges refresh automatically without a full page reload
 - **Changelog** — fetches GitHub release notes for the running (or available) version of a Docker image and displays them in the service drawer; resolves the GitHub repository via OCI image labels, GHCR URLs, or Docker Hub owner/image heuristics
 - **Interactive canvas** — drag nodes, draw connections between services, zoom and pan
+- **Themes** — multiple built-in UI themes selectable from the Settings page
+- **OIDC authentication** — optional SSO via any standard OpenID Connect provider (Keycloak, Authentik, Authelia, Google, etc.)
 
 ## Running with Docker Compose
 
@@ -63,6 +67,14 @@ All configuration is done via environment variables. Changes require a container
 | `APPRISE_TAGS` | — | Optional — comma-separated tags to filter which configured Apprise endpoints receive notifications (e.g. `admin`) |
 | `APPRISE_URLS` | — | Optional — comma-separated Apprise notification URLs sent inline (e.g. `slack://token/channel`) |
 | `DISABLE_CONTAINER_CONTROLS` | — | Set to `true` to hide the Stop / Start / Restart buttons in the service drawer |
+| `DISABLE_FILE_EXPLORER` | — | Set to `true` to hide the file explorer tab in the service drawer |
+| `DISABLE_TERMINAL` | — | Set to `true` to hide the terminal tab in the service drawer |
+| `OIDC_ISSUER` | — | OIDC provider discovery URL (e.g. `https://auth.example.com/realms/myrealm`); enables authentication when set together with the other `OIDC_*` vars |
+| `OIDC_CLIENT_ID` | — | Client ID registered with the OIDC provider |
+| `OIDC_CLIENT_SECRET` | — | Client secret registered with the OIDC provider |
+| `OIDC_REDIRECT_URI` | — | Callback URL override — auto-detected from the request as `<protocol>://<host>/auth/callback`; only needed if your reverse proxy setup causes incorrect detection |
+| `OIDC_SCOPES` | `openid profile email` | Space-separated scopes to request from the provider |
+| `SESSION_SECRET` | — | Secret used to sign session cookies — **required in production when OIDC is enabled** |
 
 ### Docker socket
 

@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import session from "express-session";
 import path from "path";
 import { fileURLToPath } from "url";
 import discoveryRoutes from "./routes/discovery.js";
@@ -10,6 +11,8 @@ import containerRoutes from "./routes/container.js";
 import fileRoutes from "./routes/files.js";
 import terminalRoutes from "./routes/terminal.js";
 import notificationRoutes from "./routes/notifications.js";
+import authRoutes from "./routes/auth.js";
+import { requireAuth } from "./middleware/auth.js";
 import { config } from "./lib/config.js";
 import { APP_NAME } from "./lib/constants.js";
 import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
@@ -21,9 +24,31 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = config.port;
 
+// Trust reverse-proxy headers so req.protocol reflects X-Forwarded-Proto
+app.set("trust proxy", true);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(
+  session({
+    secret: config.sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: { httpOnly: true, sameSite: "lax", maxAge: config.sessionMaxAge },
+  }),
+);
+
+// Auth routes (no auth required)
+app.use("/auth", authRoutes);
+
+// Health check (no auth required — used by container orchestrators)
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Protect all other API routes
+app.use("/api", requireAuth);
 
 // API Routes
 app.use("/api", discoveryRoutes);
@@ -34,11 +59,6 @@ app.use("/api", containerRoutes);
 app.use("/api", fileRoutes);
 app.use("/api", terminalRoutes);
 app.use("/api", notificationRoutes);
-
-// Health check
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
 
 // Serve static files from Vite build
 app.use(express.static(path.join(__dirname, "../client")));
@@ -62,6 +82,9 @@ const server = app.listen(PORT, () => {
   console.log(`Network CIDRs: ${config.networkCidrs.join(",")}`);
   console.log(`Health check interval: ${config.healthCheckInterval}ms`);
   console.log(`Update check interval: ${config.updateCheckInterval}ms`);
+  console.log(
+    `Auth: ${config.oidcEnabled ? `OIDC (${config.oidcIssuer})` : "disabled (unsecured)"}`,
+  );
 
   new HealthCheckJob().start();
   new UpdateCheckJob().start();

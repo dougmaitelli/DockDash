@@ -1,6 +1,7 @@
 import { useLocation, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { useAuth } from "../context/AuthContext";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -33,6 +34,7 @@ function NavLink({
 function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { t } = useTranslation();
+  const { enabled, user, logout } = useAuth();
 
   return (
     <>
@@ -70,6 +72,30 @@ function Layout({ children }: LayoutProps) {
             {t("nav.settings")}
           </NavLink>
         </div>
+        {enabled && user && (
+          <div className="ml-auto flex items-center gap-3">
+            {user.picture ? (
+              <img
+                src={user.picture}
+                alt={user.name ?? user.email ?? ""}
+                className="w-7 h-7 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                {(user.name ?? user.email ?? "?")[0].toUpperCase()}
+              </div>
+            )}
+            <span className="text-sm text-secondary-foreground hidden sm:block">
+              {user.name ?? user.email}
+            </span>
+            <button
+              onClick={logout}
+              className="px-3 py-1 text-xs font-medium rounded-md text-secondary-foreground hover:text-foreground hover:bg-primary/5 transition-colors cursor-pointer"
+            >
+              {t("nav.logout")}
+            </button>
+          </div>
+        )}
       </nav>
       <main className="pt-14 min-h-screen">{children}</main>
     </>

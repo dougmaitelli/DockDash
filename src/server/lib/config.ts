@@ -10,6 +10,7 @@ export const DEFAULT_HEALTH_CHECK_INTERVAL = 30000;
 export const DEFAULT_REFRESH_INTERVAL = 30000;
 export const DEFAULT_UPDATE_CHECK_INTERVAL = 3_600_000; // 1 hour
 export const DEFAULT_HEALTH_HISTORY_TTL_DAYS = 30;
+export const DEFAULT_SESSION_MAX_AGE = 8 * 60 * 60 * 1000; // 8 hours
 
 class Config {
   get port(): number {
@@ -111,6 +112,40 @@ class Config {
 
   get locale(): string {
     return process.env.LOCALE || "en";
+  }
+
+  get oidcIssuer(): string | null {
+    return process.env.OIDC_ISSUER || null;
+  }
+
+  get oidcClientId(): string | null {
+    return process.env.OIDC_CLIENT_ID || null;
+  }
+
+  get oidcClientSecret(): string | null {
+    return process.env.OIDC_CLIENT_SECRET || null;
+  }
+
+  get oidcRedirectUri(): string | null {
+    return process.env.OIDC_REDIRECT_URI || null;
+  }
+
+  get oidcScopes(): string {
+    return process.env.OIDC_SCOPES || "openid profile email";
+  }
+
+  get oidcEnabled(): boolean {
+    return !!(this.oidcIssuer && this.oidcClientId && this.oidcClientSecret);
+  }
+
+  get sessionSecret(): string {
+    return process.env.SESSION_SECRET || "change-me-in-production";
+  }
+
+  get sessionMaxAge(): number {
+    return process.env.SESSION_MAX_AGE
+      ? parseInt(process.env.SESSION_MAX_AGE, 10)
+      : DEFAULT_SESSION_MAX_AGE;
   }
 }
 

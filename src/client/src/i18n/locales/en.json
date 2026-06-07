@@ -2,7 +2,8 @@
   "nav": {
     "dashboard": "Dashboard",
     "discovery": "Discovery",
-    "settings": "Settings"
+    "settings": "Settings",
+    "logout": "Logout"
   },
   "dashboard": {
     "online": "Online",

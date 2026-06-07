@@ -2,7 +2,8 @@
   "nav": {
     "dashboard": "Painel",
     "discovery": "Descoberta",
-    "settings": "Configurações"
+    "settings": "Configurações",
+    "logout": "Sair"
   },
   "dashboard": {
     "online": "Online",
