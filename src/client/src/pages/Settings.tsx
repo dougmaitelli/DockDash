@@ -135,6 +135,11 @@ export default function Settings() {
           ))}
         </CardContent>
       </Card>
+      {config?.version && (
+        <p className="text-center text-xs text-muted-foreground/50 pb-2">
+          DockDash {config.version}
+        </p>
+      )}
     </div>
   );
 }

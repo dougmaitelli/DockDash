@@ -1,5 +1,7 @@
 # Stage 1: Build
+ARG APP_VERSION=dev
 FROM node:20-alpine AS builder
+ARG APP_VERSION
 
 WORKDIR /app
 
@@ -29,6 +31,7 @@ VOLUME ["/app/data"]
 
 EXPOSE 3001
 
+ENV APP_VERSION=$APP_VERSION
 ENV PORT=3001
 ENV DOCKER_HOST=unix:///var/run/docker.sock
 ENV NETWORK_CIDRS=192.168.0.1/24

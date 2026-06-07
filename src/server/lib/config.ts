@@ -138,6 +138,10 @@ class Config {
     return !!(this.oidcIssuer && this.oidcClientId && this.oidcClientSecret);
   }
 
+  get appVersion(): string {
+    return process.env.APP_VERSION || "dev";
+  }
+
   get trustProxy(): string | boolean {
     return process.env.TRUST_PROXY ?? "loopback, uniquelocal";
   }

@@ -54,6 +54,7 @@ export interface DockerHostHealth {
 // ---------------------------------------------------------------------------
 
 export interface DashboardConfig {
+  version: string;
   dockerHosts: string[];
   networkCidrs: string[];
   scanPorts: number[];

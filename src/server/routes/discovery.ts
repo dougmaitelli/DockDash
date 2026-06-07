@@ -144,6 +144,7 @@ router.get("/network/scan/stream", async (req, res) => {
 // Get configuration
 router.get("/config", (_req, res) => {
   const cfg: DashboardConfig = {
+    version: config.appVersion,
     dockerHosts: config.dockerHosts,
     networkCidrs: config.networkCidrs,
     scanPorts: config.scanPorts,
