@@ -8,6 +8,7 @@ import { NumberInput } from "@/components/NumberInput";
 import { NumberTagArrayInput } from "@/components/TagArrayInput";
 import { FormGroup, Label } from "./modals/BaseModal";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 interface ServiceDetailsProps {
   service: Service;
@@ -24,6 +25,17 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
   const [editPorts, setEditPorts] = useState<number[]>(service.ports ?? []);
   const [editCheckPort, setEditCheckPort] = useState(service.checkPort?.toString() ?? "");
   const [metadataExpanded, setMetadataExpanded] = useState(false);
+  const { errors, validate, clearError } = useFormValidation({
+    name: { required: t("modals.nameRequired") },
+    host: { required: t("modals.hostRequired") },
+    checkPort: {
+      custom: (v) => {
+        const n = parseInt(v, 10);
+
+        return v.trim() && (isNaN(n) || n < 1 || n > 65535) ? t("modals.portsInvalidPort") : null;
+      },
+    },
+  });
 
   const metadataEntries = service.metadata
     ? Object.entries(service.metadata).map(([key, value]) => ({
@@ -47,6 +59,8 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
   };
 
   const handleSave = () => {
+    if (!validate({ name: editName, host: editHost, checkPort: editCheckPort })) return;
+
     const checkPort = parseInt(editCheckPort, 10);
 
     onSave({
@@ -62,19 +76,25 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
       <div className="flex-1 overflow-y-auto flex flex-col p-5">
         <HealthHistoryGraph serviceId={service.id!} />
 
-        <FormGroup>
+        <FormGroup error={errors.name}>
           <Label>{t("modals.name")}</Label>
           <Input
             value={editName}
-            onChange={(e) => setEditName(e.target.value)}
+            onChange={(e) => {
+              setEditName(e.target.value);
+              clearError("name");
+            }}
             placeholder={t("modals.namePlaceholder")}
           />
         </FormGroup>
-        <FormGroup>
+        <FormGroup error={errors.host}>
           <Label>{t("modals.host")}</Label>
           <Input
             value={editHost}
-            onChange={(e) => setEditHost(e.target.value)}
+            onChange={(e) => {
+              setEditHost(e.target.value);
+              clearError("host");
+            }}
             placeholder={t("modals.hostPlaceholder")}
           />
         </FormGroup>
@@ -91,11 +111,14 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
           />
         </FormGroup>
         {!isDocker && (
-          <FormGroup>
+          <FormGroup error={errors.checkPort}>
             <Label>{t("modals.checkPort")}</Label>
             <NumberInput
               value={editCheckPort}
-              onChange={(e) => setEditCheckPort(e.target.value)}
+              onChange={(e) => {
+                setEditCheckPort(e.target.value);
+                clearError("checkPort");
+              }}
               placeholder={t("modals.checkPortPlaceholder")}
             />
           </FormGroup>

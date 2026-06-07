@@ -83,6 +83,8 @@
     "hostPlaceholder": "IP address or hostname",
     "ports": "Ports",
     "portsPlaceholder": "e.g., 8080",
+    "nameRequired": "Name is required",
+    "hostRequired": "Host is required",
     "portsInvalidPort": "Port must be a number between 1 and 65535",
     "portsDuplicate": "Port already added",
     "checkPort": "Check Port",

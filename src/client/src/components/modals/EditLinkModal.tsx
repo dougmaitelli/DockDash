@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/Select";
 import { Icons } from "@/components/Icons";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 function getLinkColor(type: string): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
@@ -39,12 +40,23 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
   const [editTargetPort, setEditTargetPort] = useState<string>(
     link.targetPort != null ? String(link.targetPort) : "",
   );
+  const { errors, validate, clearError } = useFormValidation({
+    targetPort: {
+      custom: (v) => {
+        const n = Number(v.trim());
+
+        return v.trim() && (isNaN(n) || n < 1 || n > 65535) ? t("modals.portsInvalidPort") : null;
+      },
+    },
+  });
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [editProtocol, setEditProtocol] = useState<ServiceProtocol | "">(
     (link.protocol as ServiceProtocol) ?? "",
   );
 
   const handleConfirm = () => {
+    if (!validate({ targetPort: editTargetPort })) return;
+
     const targetPort = editTargetPort.trim() !== "" ? Number(editTargetPort) : null;
     const protocol = editProtocol !== "" ? editProtocol : null;
 
@@ -118,13 +130,16 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
             placeholder={t("modals.linkLabelPlaceholder")}
           />
         </FormGroup>
-        <FormGroup>
+        <FormGroup error={errors.targetPort}>
           <Label>{t("modals.linkTargetPort")}</Label>
           <NumberInput
             min={1}
             max={65535}
             value={editTargetPort}
-            onChange={(e) => setEditTargetPort(e.target.value)}
+            onChange={(e) => {
+              setEditTargetPort(e.target.value);
+              clearError("targetPort");
+            }}
             placeholder={t("modals.linkTargetPortPlaceholder")}
           />
         </FormGroup>

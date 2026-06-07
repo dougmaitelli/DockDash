@@ -1,8 +1,13 @@
 import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 
-export function FormGroup({ children }: { children: ReactNode }) {
-  return <div className="mb-3.5">{children}</div>;
+export function FormGroup({ children, error }: { children: ReactNode; error?: string }) {
+  return (
+    <div className="mb-3.5">
+      {children}
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+    </div>
+  );
 }
 
 export function Label({ children }: { children: ReactNode }) {

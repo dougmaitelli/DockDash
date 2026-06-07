@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { NumberTagArrayInput } from "@/components/TagArrayInput";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
 import { Icons } from "@/components/Icons";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 interface EditServiceModalProps {
   service?: Service;
@@ -23,6 +24,17 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
   const [editPorts, setEditPorts] = useState<number[]>(service?.ports ?? []);
   const [editCheckPort, setEditCheckPort] = useState(service?.checkPort?.toString() ?? "");
   const [metadataExpanded, setMetadataExpanded] = useState(false);
+  const { errors, validate, clearError } = useFormValidation({
+    name: { required: t("modals.nameRequired") },
+    host: { required: t("modals.hostRequired") },
+    checkPort: {
+      custom: (v) => {
+        const n = parseInt(v, 10);
+
+        return v.trim() && (isNaN(n) || n < 1 || n > 65535) ? t("modals.portsInvalidPort") : null;
+      },
+    },
+  });
 
   const metadataEntries = service?.metadata
     ? Object.entries(service.metadata).map(([key, value]) => ({
@@ -46,6 +58,8 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
   };
 
   const handleConfirm = () => {
+    if (!validate({ name: editNodeName, host: editNodeHost, checkPort: editCheckPort })) return;
+
     const checkPort = parseInt(editCheckPort, 10);
 
     onSave({
@@ -94,19 +108,25 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
           </div>
         </div>
       )}
-      <FormGroup>
+      <FormGroup error={errors.name}>
         <Label>{t("modals.name")}</Label>
         <Input
           value={editNodeName}
-          onChange={(e) => setEditNodeName(e.target.value)}
+          onChange={(e) => {
+            setEditNodeName(e.target.value);
+            clearError("name");
+          }}
           placeholder={t("modals.namePlaceholder")}
         />
       </FormGroup>
-      <FormGroup>
+      <FormGroup error={errors.host}>
         <Label>{t("modals.host")}</Label>
         <Input
           value={editNodeHost}
-          onChange={(e) => setEditNodeHost(e.target.value)}
+          onChange={(e) => {
+            setEditNodeHost(e.target.value);
+            clearError("host");
+          }}
           placeholder={t("modals.hostPlaceholder")}
         />
       </FormGroup>
@@ -122,11 +142,14 @@ export function EditServiceModal({ service, onSave, onDelete, onCancel }: EditSe
           placeholder={t("modals.portsPlaceholder")}
         />
       </FormGroup>
-      <FormGroup>
+      <FormGroup error={errors.checkPort}>
         <Label>{t("modals.checkPort")}</Label>
         <NumberInput
           value={editCheckPort}
-          onChange={(e) => setEditCheckPort(e.target.value)}
+          onChange={(e) => {
+            setEditCheckPort(e.target.value);
+            clearError("checkPort");
+          }}
           placeholder={t("modals.checkPortPlaceholder")}
         />
       </FormGroup>
