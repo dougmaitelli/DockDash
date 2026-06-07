@@ -33,6 +33,7 @@ import type { ResizeDirection } from "./ServiceNode";
 import { LinkLayer } from "./LinkLayer";
 import { NodeLayer } from "./NodeLayer";
 import { ZoomControls } from "./ZoomControls";
+import { UpdatesPopover } from "./UpdatesPopover";
 import { Icons } from "@/components/Icons";
 import { Button } from "@/components/ui/Button";
 
@@ -123,23 +124,6 @@ export function DashboardCanvas({
   const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
   const servicesWithUpdates = services.filter((s) => s.metadata?.hasUpdate === true);
 
-  const [showUpdatesPopover, setShowUpdatesPopover] = useState(false);
-  const updatesPopoverRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showUpdatesPopover) return;
-
-    function handleClickOutside(e: MouseEvent) {
-      if (updatesPopoverRef.current && !updatesPopoverRef.current.contains(e.target as Node)) {
-        setShowUpdatesPopover(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showUpdatesPopover]);
-
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -179,7 +163,6 @@ export function DashboardCanvas({
   const [connectingTarget, setConnectingTarget] = useState<string | null>(null);
   const [mouseCanvasPos, setMouseCanvasPos] = useState<{ x: number; y: number } | null>(null);
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const fitToContent = useCallback((): boolean => {
     if (services.length === 0) return false;
 
@@ -253,7 +236,6 @@ export function DashboardCanvas({
 
   // Keyboard handling
   const handleKeyDown = useCallback(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (e: KeyboardEvent) => {
       if (e.key === "Delete" && selectedId) {
         e.preventDefault();
@@ -271,7 +253,6 @@ export function DashboardCanvas({
 
   // Node click — select/deselect
   const handleNodeClick = useCallback(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (id: string) => {
       setSelectedId(selectedId === id ? null : id);
     },
@@ -694,7 +675,6 @@ export function DashboardCanvas({
 
   // Wheel zoom
   const handleWheel = useCallback(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (e: WheelEvent) => {
       e.preventDefault();
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -742,7 +722,6 @@ export function DashboardCanvas({
 
   // Canvas panning
   const handleCanvasMouseDown = useCallback(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest(".draggable-node")) return;
 
@@ -826,52 +805,7 @@ export function DashboardCanvas({
           {servicesWithUpdates.length > 0 && (
             <>
               <span className="text-border">·</span>
-              <div ref={updatesPopoverRef} className="relative flex items-center gap-1.5">
-                <button
-                  onClick={() => setShowUpdatesPopover((v) => !v)}
-                  className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
-                >
-                  <span className="text-[0.85rem] text-warning font-semibold">
-                    {servicesWithUpdates.length}
-                  </span>
-                  <span className="text-[0.75rem] text-muted-foreground">
-                    {t("dashboard.updates")}
-                  </span>
-                </button>
-                {showUpdatesPopover && (
-                  <div className="absolute top-full left-0 mt-2 z-50 min-w-64 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
-                    <div className="px-3 py-2 border-b border-border">
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                        {t("dashboard.availableUpdates")}
-                      </span>
-                    </div>
-                    <ul className="py-1 max-h-72 overflow-y-auto">
-                      {servicesWithUpdates.map((s) => (
-                        <li key={s.id}>
-                          <button
-                            className="w-full flex items-center justify-between gap-4 px-3 py-2 text-left hover:bg-primary/5 transition-colors cursor-pointer"
-                            onClick={() => {
-                              setEditingNode(s);
-                              setShowUpdatesPopover(false);
-                            }}
-                          >
-                            <span className="text-sm font-medium text-foreground truncate">
-                              {s.name}
-                            </span>
-                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-                              <span className="font-mono">{s.metadata?.imageTag ?? "—"}</span>
-                              <Icons.ArrowRight size={11} />
-                              <span className="font-mono text-warning">
-                                {s.metadata?.latestVersion ?? "—"}
-                              </span>
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              <UpdatesPopover services={servicesWithUpdates} onSelect={setEditingNode} />
             </>
           )}
         </div>
