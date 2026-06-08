@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 
 import { useAuth } from "../context/AuthContext";
+import { discoveryApi } from "../services/api";
 import { Icons } from "./Icons";
 
 interface LayoutProps {
@@ -38,6 +40,22 @@ function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { t } = useTranslation();
   const { enabled, user, logout } = useAuth();
+  const [updateInfo, setUpdateInfo] = useState<{
+    latestVersion: string;
+    releaseUrl: string;
+  } | null>(null);
+
+  useEffect(() => {
+    discoveryApi.checkAppUpdate().then(({ data }) => {
+      if (!data.hasUpdate || !data.latestVersion || !data.releaseUrl) return;
+
+      const dismissKey = `app-update-dismissed-${data.latestVersion}`;
+
+      if (!localStorage.getItem(dismissKey)) {
+        setUpdateInfo({ latestVersion: data.latestVersion, releaseUrl: data.releaseUrl });
+      }
+    });
+  }, []);
 
   return (
     <>
@@ -87,7 +105,32 @@ function Layout({ children }: LayoutProps) {
           </div>
         )}
       </nav>
-      <main className="pt-14 min-h-screen">{children}</main>
+      <main className="pt-14 min-h-screen">
+        {updateInfo && (
+          <div className="flex items-center justify-center gap-3 px-4 py-1.5 bg-warning/10 border-b border-warning/20 text-xs text-warning">
+            <span>{t("nav.updateAvailable", { version: updateInfo.latestVersion })}</span>
+            <a
+              href={updateInfo.releaseUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline text-warning hover:opacity-80 transition-opacity"
+            >
+              {t("nav.releaseNotes")} ↗
+            </a>
+            <button
+              onClick={() => {
+                localStorage.setItem(`app-update-dismissed-${updateInfo.latestVersion}`, "true");
+                setUpdateInfo(null);
+              }}
+              className="ml-1 text-warning/70 hover:text-warning transition-colors"
+              aria-label="Dismiss"
+            >
+              <Icons.X size={13} />
+            </button>
+          </div>
+        )}
+        {children}
+      </main>
     </>
   );
 }

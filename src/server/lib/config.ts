@@ -100,6 +100,10 @@ class Config {
     return process.env.GITHUB_TOKEN || null;
   }
 
+  get appRepo(): string | null {
+    return process.env.APP_REPO || null;
+  }
+
   get containerControlsEnabled(): boolean {
     return process.env.DISABLE_CONTAINER_CONTROLS !== "true";
   }

@@ -22,6 +22,7 @@ import type {
   UpdateLinkRequest,
   UpdateServiceRequest,
 } from "@shared";
+import type { AppUpdateInfo } from "@shared/api";
 
 const api = axios.create({
   baseURL: "/api",
@@ -42,6 +43,7 @@ api.interceptors.response.use(
 export const discoveryApi = {
   dockerHealth: () => api.get<DockerHostHealth[]>("/docker/health"),
   testNotification: () => api.post<ApiSuccess>("/notifications/test"),
+  checkAppUpdate: () => api.get<AppUpdateInfo>("/app-update"),
 };
 
 // Service management APIs

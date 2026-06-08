@@ -1,14 +1,8 @@
 import { Router } from "express";
 
-import type {
-  DashboardConfig,
-  DockerHostHealth,
-  SseScanDonePayload,
-  SseScanErrorPayload,
-} from "@shared/api";
+import type { DockerHostHealth, SseScanDonePayload, SseScanErrorPayload } from "@shared/api";
 import { SSE_EVENT } from "@shared/api";
 
-import { config } from "../lib/config.js";
 import { dockerService } from "../services/dockerService.js";
 import { networkScanner } from "../services/networkScanner.js";
 
@@ -141,25 +135,6 @@ router.get("/network/scan/stream", async (req, res) => {
     res.write(`event: ${SSE_EVENT.DONE}\ndata: ${JSON.stringify(donePayload)}\n\n`);
     res.end();
   }
-});
-
-// Get configuration
-router.get("/config", (_req, res) => {
-  const cfg: DashboardConfig = {
-    version: config.appVersion,
-    dockerHosts: config.dockerHosts,
-    networkCidrs: config.networkCidrs,
-    scanPorts: config.scanPorts,
-    refreshInterval: config.refreshInterval,
-    healthCheckInterval: config.healthCheckInterval,
-    updateCheckInterval: config.updateCheckInterval,
-    appriseConfigured: config.appriseConfigured,
-    containerControlsEnabled: config.containerControlsEnabled,
-    fileExplorerEnabled: config.fileExplorerEnabled,
-    terminalEnabled: config.terminalEnabled,
-  };
-
-  res.json(cfg);
 });
 
 export default router;

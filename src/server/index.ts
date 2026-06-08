@@ -18,6 +18,7 @@ import fileRoutes from "./routes/files.js";
 import linkRoutes from "./routes/links.js";
 import notificationRoutes from "./routes/notifications.js";
 import serviceRoutes from "./routes/services.js";
+import systemRoutes from "./routes/system.js";
 import terminalRoutes from "./routes/terminal.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -52,6 +53,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api", requireAuth);
 
 // API Routes
+app.use("/api", systemRoutes);
 app.use("/api", discoveryRoutes);
 app.use("/api", serviceRoutes);
 app.use("/api", linkRoutes);

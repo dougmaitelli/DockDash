@@ -3,7 +3,9 @@
     "dashboard": "Dashboard",
     "discovery": "Discovery",
     "settings": "Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "updateAvailable": "{{version}} is available",
+    "releaseNotes": "Release notes"
   },
   "dashboard": {
     "online": "Online",

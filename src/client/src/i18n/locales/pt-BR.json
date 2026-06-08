@@ -3,7 +3,9 @@
     "dashboard": "Painel",
     "discovery": "Descoberta",
     "settings": "Configurações",
-    "logout": "Sair"
+    "logout": "Sair",
+    "updateAvailable": "{{version}} disponível",
+    "releaseNotes": "Notas de versão"
   },
   "dashboard": {
     "online": "Online",
