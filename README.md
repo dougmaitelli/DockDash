@@ -17,6 +17,24 @@ A self-hosted dashboard for visualizing Docker containers and network services. 
 - **Themes** — multiple built-in UI themes selectable from the Settings page
 - **OIDC authentication** — optional SSO via any standard OpenID Connect provider (Keycloak, Authentik, Authelia, Google, etc.)
 
+## Screenshots
+
+![Dashboard canvas showing discovered services with health status badges](screenshots/1.png)
+
+*Interactive canvas — services are auto-grouped by Docker network, connected by drawn links, and annotated with live health badges.*
+
+![Service drawer open on the Changelog tab showing GitHub release notes and Docker image update info](screenshots/2.png)
+
+*Service drawer (Changelog tab) — GitHub release notes fetched automatically for the running image version, including dependency and Docker image changes.*
+
+![Service drawer open on the Terminal tab with an interactive shell inside the container](screenshots/3.png)
+
+*Service drawer (Terminal tab) — interactive shell inside any container, themed to match the active UI theme.*
+
+![Service drawer open on the Files tab showing the container filesystem browser](screenshots/4.png)
+
+*Service drawer (Files tab) — browse a container's filesystem and view or edit text files directly in the UI.*
+
 ## Running with Docker Compose
 
 ```yaml
