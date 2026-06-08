@@ -19,6 +19,8 @@ RUN yarn install --production --ignore-scripts
 
 # Stage 2: Production
 FROM node:20-alpine AS runner
+ARG APP_REPO
+ARG APP_VERSION=dev
 
 WORKDIR /app
 
