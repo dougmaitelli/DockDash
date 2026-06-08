@@ -98,50 +98,46 @@ export function LinkLayer({
       return { link, exitSide, entrySide };
     });
 
-    // -- Build per-side ordered lists so source and target links never share a position --
-    // Each node side collects all links touching it (as src or tgt) into subgroups,
-    // then flattens them in a stable order: src links first, then tgt links sorted by
-    // targetPort ascending, then no-port tgt links last.
-    // The flat index in this combined list is what drives getSpreadPortPosition.
-    type SubgroupMap = Map<string, string[]>; // subgroup key → link ids
-    const nodeSideSubgroups = new Map<string, SubgroupMap>(); // "nodeId:side" → subgroups
+    // -- Group links per node side; each group shares one spread position --
+    // Groups: "src" (all outgoing), "port:N" (incoming by target port), "no-port" (incoming, no port).
+    // The GROUP is what gets a spread slot — links within the same group connect at the same point.
+    type GroupMap = Map<string, string[]>; // subgroup key → link ids
+    const nodeSideGroups = new Map<string, GroupMap>(); // "nodeId:side" → groups
 
-    const ensure = (nodeSide: string, sg: string) => {
-      if (!nodeSideSubgroups.has(nodeSide)) nodeSideSubgroups.set(nodeSide, new Map());
+    const ensureGroup = (nodeSide: string, sg: string) => {
+      if (!nodeSideGroups.has(nodeSide)) nodeSideGroups.set(nodeSide, new Map());
 
-      const m = nodeSideSubgroups.get(nodeSide)!;
+      const m = nodeSideGroups.get(nodeSide)!;
 
       if (!m.has(sg)) m.set(sg, []);
 
       return m.get(sg)!;
     };
 
+    const portGroup = (link: ServiceLink) =>
+      link.targetPort != null ? `port:${link.targetPort}` : "no-port";
+
     for (const a of assignments) {
       if (!a) continue;
 
-      ensure(`${a.link.sourceId}:${a.exitSide}`, "src").push(a.link.id);
-
-      const pg = a.link.targetPort != null ? `port:${a.link.targetPort}` : "no-port";
-
-      ensure(`${a.link.targetId}:${a.entrySide}`, pg).push(a.link.id);
+      ensureGroup(`${a.link.sourceId}:${a.exitSide}`, "src").push(a.link.id);
+      ensureGroup(`${a.link.targetId}:${a.entrySide}`, portGroup(a.link)).push(a.link.id);
     }
 
-    // Flatten each node side's subgroups into a stable ordered list.
+    // Assign each group a spread index within its node side.
+    // Sort order: src first, then port groups ascending, no-port last.
     const sgSortKey = (sg: string) =>
       sg === "src" ? -1 : sg === "no-port" ? Infinity : parseInt(sg.slice(5), 10);
 
-    const sideOrder = new Map<string, string[]>();
+    // "nodeId:side:subgroup" → { index, total } within that side
+    const groupPos = new Map<string, { index: number; total: number }>();
 
-    for (const [nodeSide, subgroups] of nodeSideSubgroups) {
-      const order: string[] = [];
+    for (const [nodeSide, groups] of nodeSideGroups) {
+      const sorted = [...groups.keys()].sort((a, b) => sgSortKey(a) - sgSortKey(b));
 
-      for (const [, ids] of [...subgroups.entries()].sort(
-        (a, b) => sgSortKey(a[0]) - sgSortKey(b[0]),
-      )) {
-        order.push(...ids);
-      }
-
-      sideOrder.set(nodeSide, order);
+      sorted.forEach((sg, idx) =>
+        groupPos.set(`${nodeSide}:${sg}`, { index: idx, total: sorted.length }),
+      );
     }
 
     // -- Pass 2: compute spread port positions and build paths --
@@ -150,24 +146,24 @@ export function LinkLayer({
         if (!a) return null;
 
         const { link, exitSide, entrySide } = a;
-        const srcOrder = sideOrder.get(`${link.sourceId}:${exitSide}`)!;
-        const tgtOrder = sideOrder.get(`${link.targetId}:${entrySide}`)!;
+        const srcGp = groupPos.get(`${link.sourceId}:${exitSide}:src`)!;
+        const tgtGp = groupPos.get(`${link.targetId}:${entrySide}:${portGroup(link)}`)!;
 
         const srcPort = getSpreadPortPosition(
           link.sourceId,
           exitSide,
           services,
           dragOffsets,
-          srcOrder.indexOf(link.id),
-          srcOrder.length,
+          srcGp.index,
+          srcGp.total,
         );
         const tgtPort = getSpreadPortPosition(
           link.targetId,
           entrySide,
           services,
           dragOffsets,
-          tgtOrder.indexOf(link.id),
-          tgtOrder.length,
+          tgtGp.index,
+          tgtGp.total,
         );
 
         if (!srcPort || !tgtPort) return null;
