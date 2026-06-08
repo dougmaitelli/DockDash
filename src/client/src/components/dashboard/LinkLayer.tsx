@@ -98,21 +98,50 @@ export function LinkLayer({
       return { link, exitSide, entrySide };
     });
 
-    // -- Build spread-index maps: "(nodeId:side)" → ordered list of link ids --
-    const sideLinks = new Map<string, string[]>();
+    // -- Build per-side ordered lists so source and target links never share a position --
+    // Each node side collects all links touching it (as src or tgt) into subgroups,
+    // then flattens them in a stable order: src links first, then tgt links sorted by
+    // targetPort ascending, then no-port tgt links last.
+    // The flat index in this combined list is what drives getSpreadPortPosition.
+    type SubgroupMap = Map<string, string[]>; // subgroup key → link ids
+    const nodeSideSubgroups = new Map<string, SubgroupMap>(); // "nodeId:side" → subgroups
+
+    const ensure = (nodeSide: string, sg: string) => {
+      if (!nodeSideSubgroups.has(nodeSide)) nodeSideSubgroups.set(nodeSide, new Map());
+
+      const m = nodeSideSubgroups.get(nodeSide)!;
+
+      if (!m.has(sg)) m.set(sg, []);
+
+      return m.get(sg)!;
+    };
 
     for (const a of assignments) {
       if (!a) continue;
 
-      const srcKey = `${a.link.sourceId}:${a.exitSide}`;
-      const tgtKey = `${a.link.targetId}:${a.entrySide}`;
+      ensure(`${a.link.sourceId}:${a.exitSide}`, "src").push(a.link.id);
 
-      if (!sideLinks.has(srcKey)) sideLinks.set(srcKey, []);
+      const pg = a.link.targetPort != null ? `port:${a.link.targetPort}` : "no-port";
 
-      if (!sideLinks.has(tgtKey)) sideLinks.set(tgtKey, []);
+      ensure(`${a.link.targetId}:${a.entrySide}`, pg).push(a.link.id);
+    }
 
-      sideLinks.get(srcKey)!.push(a.link.id);
-      sideLinks.get(tgtKey)!.push(a.link.id);
+    // Flatten each node side's subgroups into a stable ordered list.
+    const sgSortKey = (sg: string) =>
+      sg === "src" ? -1 : sg === "no-port" ? Infinity : parseInt(sg.slice(5), 10);
+
+    const sideOrder = new Map<string, string[]>();
+
+    for (const [nodeSide, subgroups] of nodeSideSubgroups) {
+      const order: string[] = [];
+
+      for (const [, ids] of [...subgroups.entries()].sort(
+        (a, b) => sgSortKey(a[0]) - sgSortKey(b[0]),
+      )) {
+        order.push(...ids);
+      }
+
+      sideOrder.set(nodeSide, order);
     }
 
     // -- Pass 2: compute spread port positions and build paths --
@@ -121,24 +150,24 @@ export function LinkLayer({
         if (!a) return null;
 
         const { link, exitSide, entrySide } = a;
-        const srcGroup = sideLinks.get(`${link.sourceId}:${exitSide}`)!;
-        const tgtGroup = sideLinks.get(`${link.targetId}:${entrySide}`)!;
+        const srcOrder = sideOrder.get(`${link.sourceId}:${exitSide}`)!;
+        const tgtOrder = sideOrder.get(`${link.targetId}:${entrySide}`)!;
 
         const srcPort = getSpreadPortPosition(
           link.sourceId,
           exitSide,
           services,
           dragOffsets,
-          srcGroup.indexOf(link.id),
-          srcGroup.length,
+          srcOrder.indexOf(link.id),
+          srcOrder.length,
         );
         const tgtPort = getSpreadPortPosition(
           link.targetId,
           entrySide,
           services,
           dragOffsets,
-          tgtGroup.indexOf(link.id),
-          tgtGroup.length,
+          tgtOrder.indexOf(link.id),
+          tgtOrder.length,
         );
 
         if (!srcPort || !tgtPort) return null;
