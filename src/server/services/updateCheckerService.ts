@@ -1,10 +1,11 @@
-import { db } from "../db/databaseService.js";
 import { ServiceSource } from "@shared";
-import { registryClient } from "./registryClient.js";
-import { notificationService } from "./notificationService.js";
+
+import { db } from "../db/databaseService.js";
+import { t } from "../i18n/index.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 import { TagParser } from "../lib/tagParser.js";
-import { t } from "../i18n/index.js";
+import { notificationService } from "./notificationService.js";
+import { registryClient } from "./registryClient.js";
 
 type Service = ReturnType<typeof db.getServices>[number];
 

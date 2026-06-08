@@ -1,0 +1,48 @@
+/* Rendered markdown content in Changelog */
+.changelog-body {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  overflow-y: auto;
+  flex: 1;
+}
+.changelog-body h1,
+.changelog-body h2,
+.changelog-body h3,
+.changelog-body h4 {
+  color: var(--text-primary);
+  margin: 14px 0 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.changelog-body p {
+  margin: 4px 0;
+}
+.changelog-body ul,
+.changelog-body ol {
+  padding-left: 18px;
+  margin: 4px 0;
+}
+.changelog-body code {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.78rem;
+  background: var(--bg-primary);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+.changelog-body pre code {
+  display: block;
+  padding: 10px;
+  overflow-x: auto;
+}
+.changelog-body a {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+.changelog-body a:hover {
+  text-decoration: underline;
+}
+.changelog-body hr {
+  border-color: var(--border-color);
+  margin: 10px 0;
+}

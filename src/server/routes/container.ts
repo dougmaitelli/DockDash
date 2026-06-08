@@ -1,10 +1,12 @@
 import { Router } from "express";
+
+import { ContainerAction } from "@shared";
+import type { ApiSuccess } from "@shared/api";
+import { SSE_EVENT } from "@shared/api";
+
+import { config } from "../lib/config.js";
 import { dockerService } from "../services/dockerService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
-import { ContainerAction } from "@shared";
-import { config } from "../lib/config.js";
-import { SSE_EVENT } from "@shared/api";
-import type { ApiSuccess } from "@shared/api";
 
 const router = Router();
 

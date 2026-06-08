@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { notificationService } from "../services/notificationService.js";
+
+import type { ApiSuccess } from "@shared/api";
+
+import { t } from "../i18n/index.js";
 import { config } from "../lib/config.js";
 import { APP_NAME } from "../lib/constants.js";
-import { t } from "../i18n/index.js";
-import type { ApiSuccess } from "@shared/api";
+import { notificationService } from "../services/notificationService.js";
 
 const router = Router();
 

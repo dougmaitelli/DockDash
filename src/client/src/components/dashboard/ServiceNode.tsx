@@ -1,9 +1,14 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
-import { cn } from "@/lib/utils";
+
 import { Service, ServiceSource, ServiceStatus } from "@shared";
-import { CONTAINER_PADDING, PortSide } from "./nodeGeometry";
+
 import { Icons } from "@/components/Icons";
 import { PortTag } from "@/components/PortTag";
+import { cn } from "@/lib/utils";
+
+import { CONTAINER_PADDING, PortSide } from "./nodeGeometry";
+
+import "./ServiceNode.css";
 
 export type ResizeDirection = "se";
 

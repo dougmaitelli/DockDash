@@ -1,6 +1,6 @@
-import { BackgroundJob } from "./BackgroundJob.js";
-import { healthCheckService } from "../services/healthCheckService.js";
 import { config } from "../lib/config.js";
+import { healthCheckService } from "../services/healthCheckService.js";
+import { BackgroundJob } from "./BackgroundJob.js";
 
 export class HealthCheckJob extends BackgroundJob {
   readonly name = "HealthCheckJob";

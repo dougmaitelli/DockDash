@@ -1,5 +1,5 @@
-import { v4 as uuidv4 } from "uuid";
 import type Docker from "dockerode";
+import { v4 as uuidv4 } from "uuid";
 
 const TERMINAL_SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes of inactivity
 

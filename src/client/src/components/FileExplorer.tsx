@@ -1,10 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
-import { serviceApi } from "@/services/api";
+
+import type { FileEntry } from "@shared";
+
 import { Icons } from "@/components/Icons";
 import { Button } from "@/components/ui/Button";
-import type { FileEntry } from "@shared";
+import { cn } from "@/lib/utils";
+import { serviceApi } from "@/services/api";
 
 interface FileExplorerProps {
   serviceId: string;

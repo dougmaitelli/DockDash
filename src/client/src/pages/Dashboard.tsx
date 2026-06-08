@@ -1,5 +1,5 @@
-import { useDashboard } from "../hooks/useData";
 import { DashboardCanvas } from "../components/dashboard/DashboardCanvas";
+import { useDashboard } from "../hooks/useData";
 
 export default function Dashboard() {
   const {

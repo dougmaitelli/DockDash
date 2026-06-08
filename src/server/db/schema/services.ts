@@ -1,7 +1,8 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
 import type { ServiceMetadata } from "@shared";
-import { ServiceStatus, ServiceSource } from "@shared";
+import { ServiceSource, ServiceStatus } from "@shared";
 
 export const services = sqliteTable("services", {
   id: text("id").primaryKey(),

@@ -1,12 +1,14 @@
 import { createHash } from "crypto";
-import { PassThrough } from "stream";
 import Docker from "dockerode";
+import { PassThrough } from "stream";
 import { v4 as uuidv4 } from "uuid";
+
 import { Service, ServiceSource, ServiceStatus } from "@shared";
-import type { FileEntry, FileContentResponse } from "@shared/api";
+import type { FileContentResponse, FileEntry } from "@shared/api";
+
+import { db } from "../db/databaseService.js";
 import { config } from "../lib/config.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
-import { db } from "../db/databaseService.js";
 import { fileService } from "./fileService.js";
 import { terminalService } from "./terminalService.js";
 

@@ -1,5 +1,6 @@
-import { Issuer, generators } from "openid-client";
 import type { Client } from "openid-client";
+import { generators, Issuer } from "openid-client";
+
 import { config } from "../lib/config.js";
 
 class OidcService {

@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
+
 import type { ServiceHealthHistoryItem } from "@shared";
 import { ServiceStatus } from "@shared";
+
+import { cn } from "@/lib/utils";
 import { serviceApi } from "@/services/api";
 
 const BUCKETS = 80;

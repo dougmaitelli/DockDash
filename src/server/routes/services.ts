@@ -1,16 +1,18 @@
 import { Router } from "express";
-import { db } from "../db/databaseService.js";
-import { healthCheckService } from "../services/healthCheckService.js";
-import { changelogService } from "../services/changelogService.js";
+
 import { ServiceSource } from "@shared";
-import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
 import type {
   ApiSuccess,
   CreateServiceRequest,
-  UpdateServiceRequest,
   SavePositionsRequest,
   SavePositionsResponse,
+  UpdateServiceRequest,
 } from "@shared/api";
+
+import { db } from "../db/databaseService.js";
+import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
+import { changelogService } from "../services/changelogService.js";
+import { healthCheckService } from "../services/healthCheckService.js";
 
 const router = Router();
 

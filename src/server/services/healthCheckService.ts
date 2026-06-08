@@ -1,17 +1,19 @@
-import net from "net";
 import axios from "axios";
-import { db } from "../db/databaseService.js";
+import net from "net";
+
 import { Service, ServiceSource, ServiceStatus } from "@shared";
-import { USER_AGENT, HTTP_PROTOCOLS, detectProtocolByPort } from "../lib/constants.js";
+
+import { db } from "../db/databaseService.js";
+import { t } from "../i18n/index.js";
+import { detectProtocolByPort, HTTP_PROTOCOLS, USER_AGENT } from "../lib/constants.js";
+import { TagParser } from "../lib/tagParser.js";
 import {
-  dockerService,
-  DOCKER_CONTAINER_STATE,
-  DOCKER_CONTAINER_DOWN_STATES,
   type ContainerStateMap,
+  DOCKER_CONTAINER_DOWN_STATES,
+  DOCKER_CONTAINER_STATE,
+  dockerService,
 } from "./dockerService.js";
 import { notificationService } from "./notificationService.js";
-import { TagParser } from "../lib/tagParser.js";
-import { t } from "../i18n/index.js";
 
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;

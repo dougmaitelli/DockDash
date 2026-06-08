@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
+
 import { SSE_EVENT } from "@shared";
+
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 
 const MAX_LINES = 1000;
 

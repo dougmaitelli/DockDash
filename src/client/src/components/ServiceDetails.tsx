@@ -1,14 +1,17 @@
-import { useState, Fragment } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
+
 import type { Service, UpdateServiceRequest } from "@shared";
 import { ServiceSource } from "@shared";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+
 import { NumberInput } from "@/components/NumberInput";
 import { NumberTagArrayInput } from "@/components/TagArrayInput";
-import { FormGroup, Label } from "./modals/BaseModal";
-import { HealthHistoryGraph } from "./HealthHistoryGraph";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { useFormValidation } from "@/hooks/useFormValidation";
+
+import { HealthHistoryGraph } from "./HealthHistoryGraph";
+import { FormGroup, Label } from "./modals/BaseModal";
 
 interface ServiceDetailsProps {
   service: Service;

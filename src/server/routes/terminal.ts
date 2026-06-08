@@ -1,9 +1,11 @@
 import { Router } from "express";
+
+import type { ApiSuccess, SseTerminalSessionPayload, TerminalInputRequest } from "@shared/api";
+import { SSE_EVENT } from "@shared/api";
+
+import { config } from "../lib/config.js";
 import { dockerService } from "../services/dockerService.js";
 import { terminalService } from "../services/terminalService.js";
-import { config } from "../lib/config.js";
-import { SSE_EVENT } from "@shared/api";
-import type { ApiSuccess, TerminalInputRequest, SseTerminalSessionPayload } from "@shared/api";
 
 const router = Router();
 

@@ -1,4 +1,5 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
+
 import { config } from "../lib/config.js";
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {

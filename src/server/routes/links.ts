@@ -1,8 +1,10 @@
 import { Router } from "express";
-import { db } from "../db/databaseService.js";
+
 import { ServiceLinkType, ServiceProtocol } from "@shared";
-import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
 import type { ApiSuccess, CreateLinkRequest, UpdateLinkRequest } from "@shared/api";
+
+import { db } from "../db/databaseService.js";
+import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
 
 const router = Router();
 

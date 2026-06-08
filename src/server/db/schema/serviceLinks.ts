@@ -1,8 +1,10 @@
-import { sqliteTable, text, integer, index, uniqueIndex, check } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
-import { services } from "./services.js";
+import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+
 import type { ServiceProtocol } from "@shared";
 import { ServiceLinkType } from "@shared";
+
+import { services } from "./services.js";
 
 export const serviceLinks = sqliteTable(
   "service_links",

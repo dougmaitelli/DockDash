@@ -1,17 +1,20 @@
-import { useState, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+import { Service, ServiceSource, ServiceStatus } from "@shared";
+
 import { Icons } from "@/components/Icons";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/Button";
 import { PortTag } from "@/components/PortTag";
-import { Input } from "@/components/ui/Input";
-import { Card, CardContent } from "@/components/ui/Card";
 import { TagArrayInput } from "@/components/TagArrayInput";
+import { Button } from "@/components/ui/Button";
+import { Card, CardContent } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+import { cn } from "@/lib/utils";
+
+import { useConfig } from "../context/ConfigContext";
 import { useDiscovery, useDockerHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
-import { useConfig } from "../context/ConfigContext";
-import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 function StatusDot({ status }: { status: string }) {
   return (

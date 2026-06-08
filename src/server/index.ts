@@ -1,23 +1,24 @@
-import express from "express";
 import cors from "cors";
+import express from "express";
 import session from "express-session";
 import path from "path";
 import { fileURLToPath } from "url";
-import discoveryRoutes from "./routes/discovery.js";
-import serviceRoutes from "./routes/services.js";
-import linkRoutes from "./routes/links.js";
-import dashboardRoutes from "./routes/dashboard.js";
-import containerRoutes from "./routes/container.js";
-import fileRoutes from "./routes/files.js";
-import terminalRoutes from "./routes/terminal.js";
-import notificationRoutes from "./routes/notifications.js";
-import authRoutes from "./routes/auth.js";
-import { requireAuth } from "./middleware/auth.js";
+
+import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
+import { HistoryCleanupJob } from "./jobs/HistoryCleanupJob.js";
+import { UpdateCheckJob } from "./jobs/UpdateCheckJob.js";
 import { config } from "./lib/config.js";
 import { APP_NAME } from "./lib/constants.js";
-import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
-import { UpdateCheckJob } from "./jobs/UpdateCheckJob.js";
-import { HistoryCleanupJob } from "./jobs/HistoryCleanupJob.js";
+import { requireAuth } from "./middleware/auth.js";
+import authRoutes from "./routes/auth.js";
+import containerRoutes from "./routes/container.js";
+import dashboardRoutes from "./routes/dashboard.js";
+import discoveryRoutes from "./routes/discovery.js";
+import fileRoutes from "./routes/files.js";
+import linkRoutes from "./routes/links.js";
+import notificationRoutes from "./routes/notifications.js";
+import serviceRoutes from "./routes/services.js";
+import terminalRoutes from "./routes/terminal.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

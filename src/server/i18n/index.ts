@@ -1,7 +1,8 @@
 import fs from "fs";
+import i18next, { type ParseKeys, type Resource } from "i18next";
 import path from "path";
 import { fileURLToPath } from "url";
-import i18next, { type ParseKeys, type Resource } from "i18next";
+
 import { config } from "../lib/config.js";
 
 // In dev, import.meta.url points to src/server/i18n/index.ts → locales/ is a sibling subdir.

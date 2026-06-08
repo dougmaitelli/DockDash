@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+
 import { Icons } from "../components/Icons";
+import { useAuth } from "../context/AuthContext";
 
 function Login() {
   const { enabled, user, isLoading } = useAuth();

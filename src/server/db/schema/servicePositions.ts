@@ -1,4 +1,5 @@
-import { sqliteTable, text, real } from "drizzle-orm/sqlite-core";
+import { real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
 import { services } from "./services.js";
 
 export const servicePositions = sqliteTable("service_positions", {

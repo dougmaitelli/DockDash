@@ -1,6 +1,8 @@
-import "dotenv/config";
 import fs from "fs";
+
 import { PORT_INFO_MAP } from "./constants.js";
+
+import "dotenv/config";
 
 export const DEFAULT_PORT = 3001;
 export const DEFAULT_DOCKER_SOCKET = "unix:///var/run/docker.sock";

@@ -1,5 +1,6 @@
-import { LINK_TYPES } from "../../types";
 import type { ServiceLink } from "@shared";
+
+import { LINK_TYPES } from "../../types";
 import { PortSide } from "./nodeGeometry";
 
 export interface LinkPath {

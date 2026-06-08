@@ -1,14 +1,16 @@
-import { useMemo } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
+import { useMemo } from "react";
+
 import type { ServiceWithPosition } from "@shared";
-import { ServiceNode, type ResizeDirection } from "./ServiceNode";
+
 import {
-  NODE_WIDTH,
-  NODE_HEIGHT,
-  DEFAULT_CONTAINER_WIDTH,
   DEFAULT_CONTAINER_HEIGHT,
+  DEFAULT_CONTAINER_WIDTH,
+  NODE_HEIGHT,
+  NODE_WIDTH,
   PortSide,
 } from "./nodeGeometry";
+import { type ResizeDirection, ServiceNode } from "./ServiceNode";
 
 interface NodeLayerProps {
   services: ServiceWithPosition[];

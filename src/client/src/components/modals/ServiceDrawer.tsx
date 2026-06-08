@@ -1,18 +1,23 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
+
 import type { Service, UpdateServiceRequest } from "@shared";
-import { ServiceSource, ContainerAction } from "@shared";
-import { cn } from "@/lib/utils";
+import { ContainerAction, ServiceSource } from "@shared";
+
 import { Icons } from "@/components/Icons";
-import { ConfirmDialog } from "./ConfirmDialog";
-import { DockerLogs } from "../DockerLogs";
-import { Changelog } from "../Changelog";
-import { FileExplorer } from "../FileExplorer";
-import { Terminal } from "../Terminal";
-import { ServiceDetails } from "../ServiceDetails";
-import { ContainerControls } from "../ContainerControls";
+import { cn } from "@/lib/utils";
+
 import { useConfig } from "../../context/ConfigContext";
+import { Changelog } from "../Changelog";
+import { ContainerControls } from "../ContainerControls";
+import { DockerLogs } from "../DockerLogs";
+import { FileExplorer } from "../FileExplorer";
+import { ServiceDetails } from "../ServiceDetails";
+import { Terminal } from "../Terminal";
+import { ConfirmDialog } from "./ConfirmDialog";
+
+import "./ServiceDrawer.css";
 
 const ANIM_MS = 220;
 

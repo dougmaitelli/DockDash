@@ -1,9 +1,9 @@
 import type {
-  ServicePosition,
-  ServiceSource,
-  ServiceMetadata,
   ServiceLinkType,
+  ServiceMetadata,
+  ServicePosition,
   ServiceProtocol,
+  ServiceSource,
 } from "./types.js";
 
 // ---------------------------------------------------------------------------

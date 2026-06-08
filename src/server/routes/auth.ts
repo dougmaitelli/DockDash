@@ -1,7 +1,8 @@
-import { Router } from "express";
 import type { Request } from "express";
-import { oidcService, generators } from "../services/oidcService.js";
+import { Router } from "express";
+
 import { config } from "../lib/config.js";
+import { generators, oidcService } from "../services/oidcService.js";
 
 function callbackUrl(req: Request): string {
   // Explicit override takes precedence for unusual proxy setups

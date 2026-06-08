@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
-import { ServiceSource, ServiceStatus, ServiceMetadata } from "./types.js";
+
+import { ServiceMetadata, ServiceSource, ServiceStatus } from "./types.js";
 
 export class Service {
   id!: string;

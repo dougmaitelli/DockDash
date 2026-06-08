@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { discoveryApi } from "../services/api";
-import { useTheme } from "../context/ThemeContext";
-import { useConfig } from "../context/ConfigContext";
-import { themeSelections } from "../styles/themes";
-import type { ThemeSelection } from "../styles/themes";
-import { Button } from "@/components/ui/Button";
+
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Label } from "@/components/ui/Label";
-import { Separator } from "@/components/ui/Separator";
 import {
   Select,
   SelectContent,
@@ -17,6 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
+import { Separator } from "@/components/ui/Separator";
+
+import { useConfig } from "../context/ConfigContext";
+import { useTheme } from "../context/ThemeContext";
+import { discoveryApi } from "../services/api";
+import type { ThemeSelection } from "../styles/themes";
+import { themeSelections } from "../styles/themes";
 
 type TestState = "idle" | "sending" | "sent" | "failed";
 

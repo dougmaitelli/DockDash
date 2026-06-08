@@ -1,4 +1,5 @@
 import axios from "axios";
+
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 
 // Accept header that prefers manifest lists (multi-arch) over single-platform manifests.

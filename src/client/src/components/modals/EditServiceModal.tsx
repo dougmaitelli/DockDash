@@ -1,14 +1,17 @@
-import { useState, Fragment } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
+
 import type { Service } from "@shared";
 import { ServiceSource } from "@shared";
-import { Button } from "@/components/ui/Button";
-import { NumberInput } from "@/components/NumberInput";
-import { Input } from "@/components/ui/Input";
-import { NumberTagArrayInput } from "@/components/TagArrayInput";
-import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
+
 import { Icons } from "@/components/Icons";
+import { NumberInput } from "@/components/NumberInput";
+import { NumberTagArrayInput } from "@/components/TagArrayInput";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { useFormValidation } from "@/hooks/useFormValidation";
+
+import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
 
 interface EditServiceModalProps {
   service?: Service;

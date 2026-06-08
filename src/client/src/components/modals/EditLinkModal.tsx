@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { ConfirmDialog } from "./ConfirmDialog";
 import { useTranslation } from "react-i18next";
+
 import type { ServiceLink } from "@shared";
 import { ServiceLinkType, ServiceProtocol } from "@shared";
 import type { UpdateLinkRequest } from "@shared/api";
-import { LINK_TYPES } from "../../types";
-import { Button } from "@/components/ui/Button";
+
+import { Icons } from "@/components/Icons";
 import { NumberInput } from "@/components/NumberInput";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import {
   Select,
@@ -15,9 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
-import { Icons } from "@/components/Icons";
-import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
 import { useFormValidation } from "@/hooks/useFormValidation";
+
+import { LINK_TYPES } from "../../types";
+import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 function getLinkColor(type: string): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);

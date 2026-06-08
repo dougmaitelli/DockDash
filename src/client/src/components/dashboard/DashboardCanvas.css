@@ -1,0 +1,5 @@
+/* Canvas dot-grid background — radial-gradient can't use Tailwind opacity modifiers */
+.canvas-dot-grid {
+  background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
+  background-size: 24px 24px;
+}

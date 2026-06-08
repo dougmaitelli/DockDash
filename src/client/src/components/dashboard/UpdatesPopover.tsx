@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
 import type { Service } from "@shared";
+
 import { Icons } from "@/components/Icons";
 
 interface UpdatesPopoverProps {

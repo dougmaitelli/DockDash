@@ -1,7 +1,9 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
+
 import type { Service } from "@shared";
-import { ServiceStatus, ContainerAction } from "@shared";
+import { ContainerAction, ServiceStatus } from "@shared";
+
 import { Icons } from "@/components/Icons";
 import { Button } from "@/components/ui/Button";
 import { serviceApi } from "@/services/api";

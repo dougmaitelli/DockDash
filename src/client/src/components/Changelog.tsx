@@ -3,8 +3,12 @@ import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import remarkEmoji from "remark-emoji";
-import { serviceApi } from "@/services/api";
+
 import type { ChangelogResponse } from "@shared";
+
+import { serviceApi } from "@/services/api";
+
+import "./Changelog.css";
 
 interface ChangelogProps {
   serviceId: string;

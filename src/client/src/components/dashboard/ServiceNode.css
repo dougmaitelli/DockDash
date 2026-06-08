@@ -1,0 +1,60 @@
+/*
+  Port dot positioning classes for ServiceNode connection ports.
+  These can't be expressed as static Tailwind utilities because they rely on
+  class-based hover transforms that differ per side.
+*/
+.port-left {
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.port-left:hover {
+  transform: translateY(-50%) scale(1.4);
+}
+
+.port-right {
+  right: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.port-right:hover {
+  transform: translateY(-50%) scale(1.4);
+}
+
+.port-top {
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.port-top:hover {
+  transform: translateX(-50%) scale(1.4);
+}
+
+.port-bottom {
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.port-bottom:hover {
+  transform: translateX(-50%) scale(1.4);
+}
+
+.port-container-bottom {
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.port-container-bottom:hover {
+  transform: translateX(-50%) scale(1.4);
+}
+
+/* Port pulse animation used by ServiceNode when a connection drag is active */
+@keyframes pulse-port {
+  0%,
+  100% {
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    transform: translateY(-50%) scale(1.2);
+  }
+}

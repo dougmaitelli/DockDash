@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect, useLayoutEffect } from "react";
 import type { ReactNode } from "react";
-import { themes, SYSTEM_THEME, applyTheme } from "../styles/themes";
+import { createContext, useContext, useEffect, useLayoutEffect, useState } from "react";
+
 import type { RawColors, ThemeName, ThemeSelection } from "../styles/themes";
+import { applyTheme, SYSTEM_THEME, themes } from "../styles/themes";
 
 const STORAGE_KEY = "dockdash-theme";
 

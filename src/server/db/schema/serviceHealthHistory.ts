@@ -1,7 +1,9 @@
-import { sqliteTable, text, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
-import { services } from "./services.js";
+import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
 import type { ServiceStatus } from "@shared";
+
+import { services } from "./services.js";
 
 export const serviceHealthHistory = sqliteTable(
   "service_health_history",

@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import type { DashboardConfig } from "@shared";
+import { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
+
+import type { DashboardConfig } from "@shared";
 
 const ConfigContext = createContext<DashboardConfig | null>(null);
 

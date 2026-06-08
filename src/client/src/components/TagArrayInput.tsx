@@ -1,8 +1,10 @@
-import { useState, type KeyboardEvent } from "react";
+import { type KeyboardEvent, useState } from "react";
+
 import { Button } from "@/components/ui/Button";
-import { isNonDigitKey } from "./NumberInput";
-import { Icons } from "./Icons";
 import { cn } from "@/lib/utils";
+
+import { Icons } from "./Icons";
+import { isNonDigitKey } from "./NumberInput";
 
 export interface TagArrayInputProps {
   values: string[];

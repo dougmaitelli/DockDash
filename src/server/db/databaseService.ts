@@ -1,28 +1,30 @@
 import Database from "better-sqlite3";
+import { asc, desc, eq, getTableColumns, lt, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { eq, or, asc, desc, getTableColumns, lt, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
-import { services, serviceLinks, servicePositions, serviceHealthHistory } from "./schema/index.js";
+
 import type {
-  ServicePosition,
-  Service,
-  ServiceLink,
   DashboardData,
-  ServiceStatusItem,
-  ServiceMetadata,
+  Service,
   ServiceHealthHistoryItem,
+  ServiceLink,
+  ServiceMetadata,
+  ServicePosition,
+  ServiceStatusItem,
 } from "@shared";
-import { ServiceStatus, ServiceLinkType } from "@shared";
+import { ServiceLinkType, ServiceStatus } from "@shared";
 import type {
-  CreateServiceRequest,
   CreateLinkRequest,
+  CreateServiceRequest,
+  PositionUpdate,
   UpdateLinkRequest,
   UpdateServiceRequest,
-  PositionUpdate,
 } from "@shared/api";
+
+import { serviceHealthHistory, serviceLinks, servicePositions, services } from "./schema/index.js";
 
 const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 

@@ -1,6 +1,8 @@
-import { Readable } from "stream";
 import type Docker from "dockerode";
-import type { FileEntry, FileContentResponse } from "@shared/api";
+import { Readable } from "stream";
+
+import type { FileContentResponse, FileEntry } from "@shared/api";
+
 import { DOCKER_STREAM_HEADER_SIZE } from "./dockerService.js";
 
 class FileService {

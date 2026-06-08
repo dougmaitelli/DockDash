@@ -1,15 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
-import { serviceApi, linkApi, positionApi, discoveryApi, dashboardApi } from "../services/api";
+import { useCallback, useEffect, useState } from "react";
+
 import {
+  CreateLinkRequest,
+  CreateServiceRequest,
   DashboardData,
+  DockerHostHealth,
   Service,
   ServiceStatusItem,
-  DockerHostHealth,
-  CreateServiceRequest,
-  UpdateServiceRequest,
-  CreateLinkRequest,
   UpdateLinkRequest,
+  UpdateServiceRequest,
 } from "@shared";
+
+import { dashboardApi, discoveryApi, linkApi, positionApi, serviceApi } from "../services/api";
 
 export function useDiscovery() {
   const [services, setServices] = useState<Service[]>([]);

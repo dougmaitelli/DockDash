@@ -1,12 +1,14 @@
 import { useMemo, useState } from "react";
+
 import type { ServiceLink, ServiceWithPosition } from "@shared";
-import { orthogonalPath, getLinkColor, SIDE_VEC } from "./linkUtils";
+
 import type { LinkPath } from "./linkUtils";
+import { getLinkColor, orthogonalPath, SIDE_VEC } from "./linkUtils";
 import {
   getNodeCenter,
+  getNodeSize,
   getPortPosition,
   getSpreadPortPosition,
-  getNodeSize,
   NODE_HEIGHT,
   PortSide,
 } from "./nodeGeometry";

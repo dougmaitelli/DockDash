@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Terminal as XTerm } from "@xterm/xterm";
-import type { ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { cn } from "@/lib/utils";
+import type { ITheme } from "@xterm/xterm";
+import { Terminal as XTerm } from "@xterm/xterm";
+
 import { SSE_EVENT } from "@shared";
-import { serviceApi } from "@/services/api";
+
 import { useTheme } from "@/context/ThemeContext";
+import { cn } from "@/lib/utils";
+import { serviceApi } from "@/services/api";
 import type { RawColors } from "@/styles/themes";
+
 import "@xterm/xterm/css/xterm.css";
 
 type ConnStatus = "connecting" | "connected" | "disconnected";

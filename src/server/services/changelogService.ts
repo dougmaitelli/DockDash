@@ -1,10 +1,12 @@
 import axios from "axios";
 import Docker from "dockerode";
-import { config } from "../lib/config.js";
-import { dockerService } from "./dockerService.js";
-import { TagParser } from "../lib/tagParser.js";
+
 import type { Service } from "@shared";
-import type { ChangelogResponse, ChangelogRelease } from "@shared";
+import type { ChangelogRelease, ChangelogResponse } from "@shared";
+
+import { config } from "../lib/config.js";
+import { TagParser } from "../lib/tagParser.js";
+import { dockerService } from "./dockerService.js";
 
 const GITHUB_API = "https://api.github.com";
 const OCI_SOURCE_LABEL = "org.opencontainers.image.source";

@@ -1,13 +1,14 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "./context/ThemeContext";
-import { ConfigProvider } from "./context/ConfigContext";
-import { AuthProvider } from "./context/AuthContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
 import Layout from "./components/Layout";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
+import { ConfigProvider } from "./context/ConfigContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import Dashboard from "./pages/Dashboard";
 import Discovery from "./pages/Discovery";
-import Settings from "./pages/Settings";
 import Login from "./pages/Login";
+import Settings from "./pages/Settings";
 
 function App() {
   return (

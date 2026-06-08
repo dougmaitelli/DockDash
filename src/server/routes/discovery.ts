@@ -1,14 +1,16 @@
 import { Router } from "express";
-import { dockerService } from "../services/dockerService.js";
-import { networkScanner } from "../services/networkScanner.js";
-import { config } from "../lib/config.js";
+
 import type {
-  DockerHostHealth,
   DashboardConfig,
+  DockerHostHealth,
   SseScanDonePayload,
   SseScanErrorPayload,
 } from "@shared/api";
 import { SSE_EVENT } from "@shared/api";
+
+import { config } from "../lib/config.js";
+import { dockerService } from "../services/dockerService.js";
+import { networkScanner } from "../services/networkScanner.js";
 
 const router = Router();
 

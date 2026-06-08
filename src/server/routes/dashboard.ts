@@ -1,7 +1,9 @@
 import { Router } from "express";
+
+import type { CheckAllServicesResponse } from "@shared/api";
+
 import { db } from "../db/databaseService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
-import type { CheckAllServicesResponse } from "@shared/api";
 
 const router = Router();
 

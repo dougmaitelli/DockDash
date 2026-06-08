@@ -1,41 +1,46 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { EditLinkModal } from "../modals/EditLinkModal";
-import { EditServiceModal } from "../modals/EditServiceModal";
-import { ConfirmDialog } from "../modals/ConfirmDialog";
-import { ServiceDrawer } from "../modals/ServiceDrawer";
-import { dashboardApi } from "../../services/api";
-import { ErrorOverlay } from "./ErrorOverlay";
-import { EmptyOverlay } from "./EmptyOverlay";
+
 import type { Service, ServiceLink, ServiceWithPosition } from "@shared";
 import { ServiceLinkType, ServiceSource, ServiceStatus } from "@shared";
 import type {
-  CreateServiceRequest,
-  UpdateServiceRequest,
   CreateLinkRequest,
+  CreateServiceRequest,
   UpdateLinkRequest,
+  UpdateServiceRequest,
 } from "@shared/api";
+
+import { Icons } from "@/components/Icons";
+import { Button } from "@/components/ui/Button";
+
+import { dashboardApi } from "../../services/api";
+import { ConfirmDialog } from "../modals/ConfirmDialog";
+import { EditLinkModal } from "../modals/EditLinkModal";
+import { EditServiceModal } from "../modals/EditServiceModal";
+import { ServiceDrawer } from "../modals/ServiceDrawer";
+import { EmptyOverlay } from "./EmptyOverlay";
+import { ErrorOverlay } from "./ErrorOverlay";
+import { LinkLayer } from "./LinkLayer";
 import {
-  getNodeSize,
-  getPortPosition,
+  CARD_BORDER_WIDTH,
+  CONTAINER_PADDING,
+  DEFAULT_CONTAINER_HEIGHT,
+  DEFAULT_CONTAINER_WIDTH,
   getAbsoluteNodePosition,
   getInfoSectionHeight,
   getMinContainerDimensions,
-  NODE_WIDTH,
+  getNodeSize,
+  getPortPosition,
   NODE_HEIGHT,
-  CARD_BORDER_WIDTH,
-  DEFAULT_CONTAINER_WIDTH,
-  DEFAULT_CONTAINER_HEIGHT,
-  CONTAINER_PADDING,
+  NODE_WIDTH,
   PortSide,
 } from "./nodeGeometry";
-import type { ResizeDirection } from "./ServiceNode";
-import { LinkLayer } from "./LinkLayer";
 import { NodeLayer } from "./NodeLayer";
-import { ZoomControls } from "./ZoomControls";
+import type { ResizeDirection } from "./ServiceNode";
 import { UpdatesPopover } from "./UpdatesPopover";
-import { Icons } from "@/components/Icons";
-import { Button } from "@/components/ui/Button";
+import { ZoomControls } from "./ZoomControls";
+
+import "./DashboardCanvas.css";
 
 interface DashboardCanvasProps {
   services: ServiceWithPosition[];

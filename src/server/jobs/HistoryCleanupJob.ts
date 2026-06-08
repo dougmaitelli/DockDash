@@ -1,6 +1,6 @@
-import { BackgroundJob } from "./BackgroundJob.js";
 import { db } from "../db/databaseService.js";
 import { config } from "../lib/config.js";
+import { BackgroundJob } from "./BackgroundJob.js";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
