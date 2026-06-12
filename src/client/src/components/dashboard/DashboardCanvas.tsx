@@ -120,6 +120,9 @@ export function DashboardCanvas({
 }: DashboardCanvasProps) {
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 3;
+  const GRID_SIZE = 24;
+  const MOUSE_BUTTON_LEFT = 0;
+  const MOUSE_BUTTON_MIDDLE = 1;
 
   const { t } = useTranslation();
 
@@ -147,6 +150,21 @@ export function DashboardCanvas({
   const [dragOffsets, setDragOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
   const [nestingTarget, setNestingTarget] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  const [snapToGrid, setSnapToGrid] = useState(() => {
+    const stored = localStorage.getItem("dockdash.snapToGrid");
+
+    return stored === null ? true : stored === "true";
+  });
+  const snapToGridRef = useRef(snapToGrid);
+
+  useEffect(() => {
+    snapToGridRef.current = snapToGrid;
+    localStorage.setItem("dockdash.snapToGrid", String(snapToGrid));
+  }, [snapToGrid]);
+
+  const snapCoord = (v: number) =>
+    snapToGridRef.current ? Math.round(v / GRID_SIZE) * GRID_SIZE : v;
 
   const resizeState = useRef<{
     nodeId: string | null;
@@ -280,6 +298,8 @@ export function DashboardCanvas({
       if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a"))
         return;
 
+      if (e.button !== MOUSE_BUTTON_LEFT) return;
+
       e.stopPropagation();
       const canvas = canvasRef.current;
 
@@ -344,8 +364,8 @@ export function DashboardCanvas({
 
       dragState.current.hasMoved = true;
 
-      const dx = mouseX - nodeX - grabOffsetX;
-      const dy = mouseY - nodeY - grabOffsetY;
+      const dx = snapCoord(mouseX - grabOffsetX) - nodeX;
+      const dy = snapCoord(mouseY - grabOffsetY) - nodeY;
 
       setDragOffsets((prev) => ({ ...prev, [draggedId]: { dx, dy } }));
 
@@ -376,8 +396,8 @@ export function DashboardCanvas({
       const rect = canvasRef.current.getBoundingClientRect();
       const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
       const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-      const finalAbsX = mouseX - grabOffsetX;
-      const finalAbsY = mouseY - grabOffsetY;
+      const finalAbsX = snapCoord(mouseX - grabOffsetX);
+      const finalAbsY = snapCoord(mouseY - grabOffsetY);
 
       setNestingTarget(null);
 
@@ -575,6 +595,8 @@ export function DashboardCanvas({
   // Port mouse down — start connecting
   const handlePortMouseDown = useCallback(
     (e: React.MouseEvent, serviceId: string, side: PortSide) => {
+      if (e.button !== MOUSE_BUTTON_LEFT) return;
+
       e.stopPropagation();
       e.preventDefault();
 
@@ -728,11 +750,17 @@ export function DashboardCanvas({
   // Canvas panning
   const handleCanvasMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest(".draggable-node")) return;
+      if (e.button === MOUSE_BUTTON_LEFT) {
+        if ((e.target as HTMLElement).closest(".draggable-node")) return;
 
-      if (e.button !== 0) return;
+        setSelectedId(null);
 
-      setSelectedId(null);
+        return;
+      }
+
+      if (e.button !== MOUSE_BUTTON_MIDDLE) return;
+
+      e.preventDefault(); // suppress browser auto-scroll on middle click
       setIsPanning(true);
       setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
     },
@@ -834,6 +862,14 @@ export function DashboardCanvas({
             onClick={() => dashboardApi.checkAllServices()}
           >
             <Icons.CheckCircle size={14} />
+          </Button>
+          <Button
+            variant={snapToGrid ? "default" : "outline"}
+            size="icon"
+            title={t("dashboard.snapToGrid")}
+            onClick={() => setSnapToGrid((v) => !v)}
+          >
+            <Icons.Grid size={14} />
           </Button>
         </div>
       </div>

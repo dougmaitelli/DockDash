@@ -19,6 +19,7 @@
     "retry": "Retry",
     "emptyMessage": "No services yet. Go to Discovery to find services.",
     "goToDiscovery": "Go to Discovery",
+    "snapToGrid": "Snap to grid",
     "zoom": {
       "in": "Zoom in",
       "out": "Zoom out",

@@ -57,6 +57,14 @@ export const Icons = {
       <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
     </svg>
   ),
+  Grid: ({ size = 14, ...props }: IconProps) => (
+    <svg {...defaults(size, 2)} {...props}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </svg>
+  ),
   X: ({ size = 14, ...props }: IconProps) => (
     <svg {...defaults(size, 2.5)} {...props}>
       <line x1="18" y1="6" x2="6" y2="18" />

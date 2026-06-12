@@ -19,6 +19,7 @@
     "retry": "Tentar novamente",
     "emptyMessage": "Nenhum serviço ainda. Vá para Descoberta para encontrar serviços.",
     "goToDiscovery": "Ir para Descoberta",
+    "snapToGrid": "Alinhar à grade",
     "zoom": {
       "in": "Ampliar",
       "out": "Reduzir",
