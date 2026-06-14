@@ -62,6 +62,11 @@
   }
 }
 
+.is-panning,
+.is-panning * {
+  cursor: grabbing !important;
+}
+
 /*
   Bridge our existing runtime CSS variables (set by GlobalStyles / theme switching)
   into the names shadcn components expect. Fallback hex values ensure colors are

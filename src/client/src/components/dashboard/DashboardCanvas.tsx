@@ -771,6 +771,8 @@ export function DashboardCanvas({
   useEffect(() => {
     if (!isPanning) return;
 
+    document.documentElement.classList.add("is-panning");
+
     const handleMouseMove = (e: MouseEvent) => {
       setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
     };
@@ -780,6 +782,7 @@ export function DashboardCanvas({
     window.addEventListener("mouseup", handleMouseUp);
 
     return () => {
+      document.documentElement.classList.remove("is-panning");
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
@@ -877,7 +880,7 @@ export function DashboardCanvas({
       <div
         ref={canvasRef}
         className="w-full h-full relative overflow-hidden canvas-dot-grid"
-        style={{ cursor: isPanning ? "grabbing" : "grab" }}
+        style={{ cursor: isPanning ? "grabbing" : "default" }}
         onMouseDown={handleCanvasMouseDown}
       >
         <div
