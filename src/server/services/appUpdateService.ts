@@ -1,25 +1,22 @@
 import axios from "axios";
 
+import type { ChangelogRelease } from "@shared";
+import type { AppUpdateInfo } from "@shared/api";
+
 import { config } from "../lib/config.js";
 import { TagParser } from "../lib/tagParser.js";
 
 const GITHUB_API = "https://api.github.com";
 
-interface UpdateCheckResult {
-  hasUpdate: boolean;
-  latestVersion: string;
-  releaseUrl: string;
-}
-
 class AppUpdateService {
-  private cached: UpdateCheckResult | null = null;
+  private cached: AppUpdateInfo | null = null;
   private lastCheckAt = 0;
 
   private authHeaders(): Record<string, string> {
     return config.githubToken ? { Authorization: `Bearer ${config.githubToken}` } : {};
   }
 
-  async check(): Promise<UpdateCheckResult | null> {
+  async check(): Promise<AppUpdateInfo | null> {
     if (!config.appRepo || config.appVersion === "dev") return null;
 
     const now = Date.now();
@@ -34,15 +31,20 @@ class AppUpdateService {
       });
 
       const latestTag = data.tag_name as string;
-      const releaseUrl = data.html_url as string;
       const currentParsed = TagParser.extractSemVer(config.appVersion);
       const latestParsed = TagParser.extractSemVer(latestTag);
 
       if (!currentParsed || !latestParsed) return null;
 
       const hasUpdate = TagParser.compareSemVer(latestParsed.parts, currentParsed.parts) > 0;
+      const release: ChangelogRelease = {
+        version: latestTag,
+        publishedAt: data.published_at as string,
+        body: (data.body as string) ?? "",
+        htmlUrl: data.html_url as string,
+      };
 
-      this.cached = { hasUpdate, latestVersion: latestTag, releaseUrl };
+      this.cached = { hasUpdate, release };
       this.lastCheckAt = now;
 
       return this.cached;

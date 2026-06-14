@@ -27,7 +27,7 @@ router.get("/config", (_req, res) => {
 
 router.get("/app-update", async (_req, res) => {
   const result = await appUpdateService.check();
-  const info: AppUpdateInfo = result ?? { hasUpdate: false, latestVersion: null, releaseUrl: null };
+  const info: AppUpdateInfo = result ?? { hasUpdate: false };
 
   res.json(info);
 });

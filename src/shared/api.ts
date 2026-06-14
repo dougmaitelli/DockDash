@@ -1,4 +1,5 @@
 import type {
+  ChangelogRelease,
   ServiceLinkType,
   ServiceMetadata,
   ServicePosition,
@@ -55,8 +56,7 @@ export interface DockerHostHealth {
 
 export interface AppUpdateInfo {
   hasUpdate: boolean;
-  latestVersion: string | null;
-  releaseUrl: string | null;
+  release?: ChangelogRelease;
 }
 
 // ---------------------------------------------------------------------------

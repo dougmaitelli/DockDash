@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
 
+import type { ChangelogRelease } from "@shared";
+
 import { cn } from "@/lib/utils";
 
 import { useAuth } from "../context/AuthContext";
 import { discoveryApi } from "../services/api";
 import { Icons } from "./Icons";
+import { AppChangelogModal } from "./modals/AppChangelogModal";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -40,19 +43,17 @@ function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { t } = useTranslation();
   const { enabled, user, logout } = useAuth();
-  const [updateInfo, setUpdateInfo] = useState<{
-    latestVersion: string;
-    releaseUrl: string;
-  } | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<ChangelogRelease | null>(null);
+  const [changelogOpen, setChangelogOpen] = useState(false);
 
   useEffect(() => {
     discoveryApi.checkAppUpdate().then(({ data }) => {
-      if (!data.hasUpdate || !data.latestVersion || !data.releaseUrl) return;
+      if (!data.hasUpdate || !data.release) return;
 
-      const dismissKey = `app-update-dismissed-${data.latestVersion}`;
+      const dismissKey = `app-update-dismissed-${data.release.version}`;
 
       if (!localStorage.getItem(dismissKey)) {
-        setUpdateInfo({ latestVersion: data.latestVersion, releaseUrl: data.releaseUrl });
+        setUpdateInfo(data.release);
       }
     });
   }, []);
@@ -107,27 +108,28 @@ function Layout({ children }: LayoutProps) {
       </nav>
       <main className="pt-14 min-h-screen">
         {updateInfo && (
-          <div className="flex items-center justify-center gap-3 px-4 py-1.5 bg-warning/10 border-b border-warning/20 text-xs text-warning">
-            <span>{t("nav.updateAvailable", { version: updateInfo.latestVersion })}</span>
-            <a
-              href={updateInfo.releaseUrl}
-              target="_blank"
-              rel="noreferrer"
+          <div className="relative flex items-center justify-center gap-3 px-4 py-2 bg-warning/10 border-b border-warning/20 text-xs text-warning">
+            <span>{t("nav.updateAvailable", { version: updateInfo.version })}</span>
+            <button
+              onClick={() => setChangelogOpen(true)}
               className="underline text-warning hover:opacity-80 transition-opacity"
             >
-              {t("nav.releaseNotes")} ↗
-            </a>
+              {t("nav.releaseNotes")}
+            </button>
             <button
               onClick={() => {
-                localStorage.setItem(`app-update-dismissed-${updateInfo.latestVersion}`, "true");
+                localStorage.setItem(`app-update-dismissed-${updateInfo.version}`, "true");
                 setUpdateInfo(null);
               }}
-              className="ml-1 text-warning/70 hover:text-warning transition-colors"
+              className="absolute right-4 text-warning/70 hover:text-warning transition-colors"
               aria-label="Dismiss"
             >
               <Icons.X size={13} />
             </button>
           </div>
+        )}
+        {changelogOpen && updateInfo && (
+          <AppChangelogModal release={updateInfo} onClose={() => setChangelogOpen(false)} />
         )}
         {children}
       </main>
