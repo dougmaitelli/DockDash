@@ -1,5 +1,6 @@
 import axios from "axios";
 
+import { config } from "../lib/config.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 
 // Accept header that prefers manifest lists (multi-arch) over single-platform manifests.
@@ -13,6 +14,11 @@ const MANIFEST_ACCEPT = [
 
 const REQUEST_TIMEOUT = 8_000;
 
+const DOCKER_HUB_REGISTRY = "registry-1.docker.io";
+const DOCKER_HUB_AUTH_URL = "https://auth.docker.io/token?service=registry.docker.io";
+const DOCKER_HUB_API_BASE = "https://hub.docker.com/v2/repositories";
+const GHCR_REGISTRY = "ghcr.io";
+
 export interface ImageRef {
   registry: string;
   repository: string;
@@ -25,8 +31,8 @@ export class RegistryClient {
    * into its registry, repository, and tag components.
    *
    * Docker Hub short-names are expanded:
-   *   "nginx"      → registry-1.docker.io / library/nginx
-   *   "user/app"   → registry-1.docker.io / user/app
+   *   "nginx"      → DOCKER_HUB_REGISTRY / library/nginx
+   *   "user/app"   → DOCKER_HUB_REGISTRY / user/app
    */
   parseImageRef(image: string): ImageRef {
     // Drop digest suffix (sha256:...)
@@ -53,7 +59,7 @@ export class RegistryClient {
     if (!isExplicitRegistry) {
       const repository = segments.length === 1 ? `library/${nameWithoutTag}` : nameWithoutTag;
 
-      return { registry: "registry-1.docker.io", repository, tag };
+      return { registry: DOCKER_HUB_REGISTRY, repository, tag };
     }
 
     const registry = firstSegment;
@@ -98,7 +104,12 @@ export class RegistryClient {
       if (resp.status !== 200) return null;
 
       return (resp.headers["docker-content-digest"] as string) ?? null;
-    } catch {
+    } catch (err) {
+      console.warn(
+        `Registry: failed to fetch manifest digest for ${ref.registry}/${ref.repository}:${ref.tag} —`,
+        err instanceof Error ? err.message : String(err),
+      );
+
       return null;
     }
   }
@@ -106,7 +117,7 @@ export class RegistryClient {
   /**
    * Returns tags for the given repository relevant to the given tag prefix.
    *
-   * - Docker Hub (`registry-1.docker.io`): uses the hub.docker.com API with a
+   * - Docker Hub (`DOCKER_HUB_REGISTRY`): uses the Docker Hub API with a
    *   `name` prefix filter, fetching the first and last pages to cover both ends
    *   of the ascending last_updated ordering.
    * - Other registries: uses the standard Registry API v2 tags/list endpoint,
@@ -114,7 +125,7 @@ export class RegistryClient {
    */
   async getRepositoryTags(ref: ImageRef, prefix = ""): Promise<string[]> {
     try {
-      if (ref.registry === "registry-1.docker.io") {
+      if (ref.registry === DOCKER_HUB_REGISTRY) {
         return await this.getDockerHubTags(ref.repository, prefix);
       }
 
@@ -135,7 +146,13 @@ export class RegistryClient {
           validateStatus: (s) => s < 500,
         });
 
-        if (resp.status !== 200) break;
+        if (resp.status !== 200) {
+          console.warn(
+            `Registry: tags list for ${ref.registry}/${ref.repository} returned HTTP ${resp.status}`,
+          );
+
+          break;
+        }
 
         allTags.push(...((resp.data?.tags as string[]) ?? []));
 
@@ -149,7 +166,12 @@ export class RegistryClient {
       }
 
       return allTags;
-    } catch {
+    } catch (err) {
+      console.warn(
+        `Registry: failed to fetch tags for ${ref.registry}/${ref.repository} —`,
+        err instanceof Error ? err.message : String(err),
+      );
+
       return [];
     }
   }
@@ -177,11 +199,10 @@ export class RegistryClient {
 
   private async fetchToken(registry: string, repository: string): Promise<string | null> {
     try {
-      if (registry === "registry-1.docker.io") {
-        const resp = await axios.get(
-          `https://auth.docker.io/token?service=registry.docker.io&scope=repository:${repository}:pull`,
-          { timeout: REQUEST_TIMEOUT },
-        );
+      if (registry === DOCKER_HUB_REGISTRY) {
+        const resp = await axios.get(`${DOCKER_HUB_AUTH_URL}&scope=repository:${repository}:pull`, {
+          timeout: REQUEST_TIMEOUT,
+        });
 
         return (resp.data?.token as string) ?? null;
       }
@@ -202,13 +223,26 @@ export class RegistryClient {
 
       if (!parsed) return null;
 
+      // For private GHCR packages, supply the PAT as Basic auth credentials
+      // during the token exchange (the same mechanism Docker CLI uses).
+      const basicAuth =
+        registry === GHCR_REGISTRY && config.githubToken
+          ? { auth: { username: "token", password: config.githubToken } }
+          : {};
+
       const tokenResp = await axios.get(parsed.realm, {
         params: { ...parsed.params, scope: `repository:${repository}:pull` },
+        ...basicAuth,
         timeout: REQUEST_TIMEOUT,
       });
 
       return (tokenResp.data?.token ?? tokenResp.data?.access_token ?? null) as string | null;
-    } catch {
+    } catch (err) {
+      console.warn(
+        `Registry: failed to fetch auth token for ${registry}/${repository} —`,
+        err instanceof Error ? err.message : String(err),
+      );
+
       return null;
     }
   }
@@ -223,7 +257,7 @@ export class RegistryClient {
    */
   private async getDockerHubTags(repository: string, prefix: string): Promise<string[]> {
     const nameParam = prefix ? `&name=${encodeURIComponent(prefix)}` : "";
-    const baseUrl = `https://hub.docker.com/v2/repositories/${repository}/tags?page_size=100${nameParam}`;
+    const baseUrl = `${DOCKER_HUB_API_BASE}/${repository}/tags?page_size=100${nameParam}`;
 
     const firstResp = await axios.get(baseUrl, {
       timeout: REQUEST_TIMEOUT,
