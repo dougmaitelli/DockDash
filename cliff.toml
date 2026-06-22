@@ -1,0 +1,27 @@
+[changelog]
+header = ""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+{% for commit in commits %}
+- {{ commit.message | split(pat="\n") | first | trim }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/{{ remote.github.owner }}/{{ remote.github.repo }}/commit/{{ commit.id }}))
+{%- endfor %}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = false
+filter_unconventional = false
+split_commits = false
+
+commit_parsers = [
+  { message = "^[Ff]ix|^[Bb]ug|^[Pp]atch", group = "Bug Fixes" },
+  { message = "^[Aa]dd|^[Ii]mplement|^[Ii]ntroduce|^[Nn]ew", group = "Features" },
+  { message = "^[Uu]pdate|^[Ii]mprove|^[Ee]nhance|^[Cc]hange", group = "Improvements" },
+  { message = "^[Rr]efactor|^[Cc]lean|^[Rr]emove|^[Dd]elete", group = "Chores" },
+  { message = ".*", group = "Other Changes" },
+]
+
+filter_commits = false
+tag_pattern = "v[0-9].*"
