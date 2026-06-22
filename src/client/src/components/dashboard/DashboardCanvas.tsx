@@ -17,7 +17,7 @@ import { dashboardApi } from "../../services/api";
 import { ConfirmDialog } from "../modals/ConfirmDialog";
 import { EditLinkModal } from "../modals/EditLinkModal";
 import { EditServiceModal } from "../modals/EditServiceModal";
-import { ServiceDrawer } from "../modals/ServiceDrawer";
+import { ServiceDrawer, Tab as DrawerTab } from "../modals/ServiceDrawer";
 import { EmptyOverlay } from "./EmptyOverlay";
 import { ErrorOverlay } from "./ErrorOverlay";
 import { LinkLayer } from "./LinkLayer";
@@ -145,6 +145,7 @@ export function DashboardCanvas({
   const [addingService, setAddingService] = useState(false);
   const [editingLink, setEditingLink] = useState<ServiceLink | null>(null);
   const [editingNode, setEditingNode] = useState<Service | null>(null);
+  const [drawerInitialTab, setDrawerInitialTab] = useState<DrawerTab | undefined>(undefined);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const [dragOffsets, setDragOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
@@ -811,6 +812,7 @@ export function DashboardCanvas({
 
   // Edit node
   const openEditNodeModal = (service: Service) => {
+    setDrawerInitialTab(undefined);
     setEditingNode(service);
   };
 
@@ -841,7 +843,13 @@ export function DashboardCanvas({
           {servicesWithUpdates.length > 0 && (
             <>
               <span className="text-border">·</span>
-              <UpdatesPopover services={servicesWithUpdates} onSelect={setEditingNode} />
+              <UpdatesPopover
+                services={servicesWithUpdates}
+                onSelect={(s) => {
+                  setDrawerInitialTab(DrawerTab.CHANGELOG);
+                  setEditingNode(s);
+                }}
+              />
             </>
           )}
         </div>
@@ -959,9 +967,13 @@ export function DashboardCanvas({
       {editingNode && (
         <ServiceDrawer
           service={editingNode}
+          initialTab={drawerInitialTab}
           onSave={handleEditNodeConfirm}
           onDelete={handleEditNodeDelete}
-          onClose={() => setEditingNode(null)}
+          onClose={() => {
+            setEditingNode(null);
+            setDrawerInitialTab(undefined);
+          }}
         />
       )}
 

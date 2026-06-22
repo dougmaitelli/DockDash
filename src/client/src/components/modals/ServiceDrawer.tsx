@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -21,18 +21,33 @@ import "./ServiceDrawer.css";
 
 const ANIM_MS = 220;
 
+export enum Tab {
+  DETAILS = "details",
+  CHANGELOG = "changelog",
+  LOGS = "logs",
+  FILES = "files",
+  TERMINAL = "terminal",
+}
+
 interface ServiceDrawerProps {
   service: Service;
+  initialTab?: Tab;
   onSave: (data: UpdateServiceRequest) => void;
   onDelete: () => void;
   onClose: () => void;
 }
 
-export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDrawerProps) {
+export function ServiceDrawer({
+  service,
+  initialTab,
+  onSave,
+  onDelete,
+  onClose,
+}: ServiceDrawerProps) {
   const { t } = useTranslation();
   const [closing, setClosing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [currentTab, setCurrentTab] = useState<Tab>("details");
+  const [currentTab, setCurrentTab] = useState<Tab>(initialTab ?? Tab.DETAILS);
   const [logsReconnectTrigger, setLogsReconnectTrigger] = useState(0);
 
   const config = useConfig();
@@ -49,8 +64,11 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
     setTimeout(onClose, ANIM_MS);
   };
 
-  const tabs = {
-    details: {
+  const tabs: Record<
+    Tab,
+    { label: string; dockerOnly: boolean; enabled: boolean; content: ReactNode }
+  > = {
+    [Tab.DETAILS]: {
       label: t("modals.tabDetails"),
       dockerOnly: false,
       enabled: true,
@@ -63,25 +81,25 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
         />
       ),
     },
-    changelog: {
+    [Tab.CHANGELOG]: {
       label: t("modals.tabChangelog"),
       dockerOnly: true,
       enabled: true,
       content: <Changelog serviceId={service.id!} />,
     },
-    logs: {
+    [Tab.LOGS]: {
       label: t("modals.tabLogs"),
       dockerOnly: true,
       enabled: true,
       content: <DockerLogs serviceId={service.id!} reconnectTrigger={logsReconnectTrigger} />,
     },
-    files: {
+    [Tab.FILES]: {
       label: t("modals.tabFiles"),
       dockerOnly: true,
       enabled: config?.fileExplorerEnabled ?? false,
       content: <FileExplorer serviceId={service.id!} />,
     },
-    terminal: {
+    [Tab.TERMINAL]: {
       label: t("modals.tabTerminal"),
       dockerOnly: true,
       enabled: config?.terminalEnabled ?? false,
@@ -89,12 +107,10 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
     },
   };
 
-  type Tab = keyof typeof tabs;
-
-  const visibleTabIds = (Object.keys(tabs) as Tab[]).filter(
+  const visibleTabIds = (Object.values(Tab) as Tab[]).filter(
     (id) => (!tabs[id].dockerOnly || isDocker) && tabs[id].enabled,
   );
-  const tab = (visibleTabIds.includes(currentTab as Tab) ? currentTab : visibleTabIds[0]) as Tab;
+  const tab = visibleTabIds.includes(currentTab) ? currentTab : visibleTabIds[0];
 
   const tabButtonClass = (active: boolean) =>
     cn(
@@ -120,7 +136,7 @@ export function ServiceDrawer({ service, onSave, onDelete, onClose }: ServiceDra
       <div
         className="fixed left-0 top-0 h-full flex flex-col border-r border-border z-[101] bg-muted"
         style={{
-          width: tab !== "details" ? 900 : 600,
+          width: tab !== Tab.DETAILS ? 900 : 600,
           animation: `${closing ? "slideOutDrawer" : "slideInDrawer"} ${ANIM_MS}ms ease both`,
           transition: `width ${ANIM_MS}ms ease`,
           boxShadow: "6px 0 32px rgba(0, 0, 0, 0.4)",
