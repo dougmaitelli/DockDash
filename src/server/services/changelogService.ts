@@ -11,7 +11,7 @@ import { dockerService } from "./dockerService.js";
 const GITHUB_API = "https://api.github.com";
 const OCI_SOURCE_LABEL = "org.opencontainers.image.source";
 
-// In-memory cache: serviceId+tag → result
+// In-memory cache: serviceId+tag → result (only successful lookups are cached)
 const cache = new Map<string, ChangelogResponse>();
 
 export class ChangelogService {
@@ -34,7 +34,7 @@ export class ChangelogService {
         const source = labels[OCI_SOURCE_LABEL];
 
         if (source) {
-          const match = /github\.com\/([^/]+\/[^/]+?)(?:\.git)?$/.exec(source);
+          const match = /github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/.exec(source);
 
           if (match) return match[1];
         }
@@ -44,9 +44,12 @@ export class ChangelogService {
     }
 
     // 2. GHCR: ghcr.io/owner/repo
-    const image = service.metadata?.image;
+    const rawImage = service.metadata?.image as string | undefined;
 
-    if (!image) return null;
+    if (!rawImage) return null;
+
+    // Strip docker.io / index.docker.io registry prefix before hub matching
+    const image = rawImage.replace(/^(?:docker\.io|index\.docker\.io)\//, "");
 
     const ghcrMatch = /^ghcr\.io\/([^/]+\/[^/]+)/.exec(image);
 
@@ -89,7 +92,27 @@ export class ChangelogService {
           body: data.body ?? "",
           htmlUrl: data.html_url,
         };
-      } catch {
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          const status = err.response?.status;
+
+          if (status === 403 || status === 429) {
+            console.warn(
+              `Changelog: GitHub API rate limit hit for ${repo} (HTTP ${status}). Set GITHUB_TOKEN to increase the limit.`,
+            );
+
+            return null;
+          }
+
+          if (status !== 404) {
+            console.warn(
+              `Changelog: unexpected HTTP ${status} fetching release tag "${candidate}" for ${repo} —`,
+              err.message,
+            );
+          }
+        } else {
+          console.warn(`Changelog: error fetching release tag "${candidate}" for ${repo} —`, err);
+        }
         // try next candidate
       }
     }
@@ -112,27 +135,20 @@ export class ChangelogService {
     const repo = await this.resolveGithubRepo(service);
 
     if (!repo) {
-      const result: ChangelogResponse = {
-        available: false,
-        reason: "Could not resolve GitHub repository",
-      };
+      console.warn(
+        `Changelog: could not resolve GitHub repo for service "${service.name}" (image: ${service.metadata?.image ?? "unknown"})`,
+      );
 
-      cache.set(cacheKey, result);
-
-      return result;
+      return { available: false, reason: "Could not resolve GitHub repository" };
     }
 
     const release = await this.fetchRelease(repo, tag);
 
     if (!release) {
-      const result: ChangelogResponse = {
+      return {
         available: false,
         reason: `No release found for tag "${tag}" in ${repo}`,
       };
-
-      cache.set(cacheKey, result);
-
-      return result;
     }
 
     const result: ChangelogResponse = { available: true, release };
