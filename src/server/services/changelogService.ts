@@ -37,9 +37,20 @@ export class ChangelogService {
           const match = /github\.com\/([^/]+\/[^/]+?)(?:\.git)?\/?$/.exec(source);
 
           if (match) return match[1];
+
+          console.warn(
+            `Changelog: "${service.name}" has OCI source label "${source}" but it is not a recognized GitHub URL`,
+          );
+        } else {
+          console.warn(
+            `Changelog: "${service.name}" image has no ${OCI_SOURCE_LABEL} label — falling back to image name resolution`,
+          );
         }
-      } catch {
-        // fall through to name-based resolution
+      } catch (err) {
+        console.warn(
+          `Changelog: failed to inspect image for "${service.name}" — falling back to image name resolution:`,
+          err,
+        );
       }
     }
 
