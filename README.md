@@ -47,7 +47,6 @@ services:
       - "3001:3001"
     environment:
       - NETWORK_CIDRS=192.168.0.1/24
-      - SCAN_PORTS=80,443,3000,8080,8443
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - dockdash-data:/app/data
@@ -73,7 +72,6 @@ All configuration is done via environment variables. Changes require a container
 | `PORT` | `3001` | Port the server listens on |
 | `DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker daemon socket or TCP address |
 | `NETWORK_CIDRS` | `192.168.0.1/24` | Comma-separated CIDR ranges to scan |
-| `SCAN_PORTS` | *(see [default scan ports](#default-scan-ports))* | Ports checked during network scans |
 | `DB_PATH` | `/app/data/dockdash.db` | Path to the SQLite database file |
 | `REFRESH_INTERVAL` | `30000` | Discovery refresh interval in milliseconds |
 | `HEALTH_CHECK_INTERVAL` | `30000` | How often the server re-checks service health (ms) |
@@ -115,16 +113,11 @@ TLS is supported via the standard `DOCKER_TLS_CERTDIR` variable.
 
 ### Network scanning
 
-Set `NETWORK_CIDRS` to one or more comma-separated CIDR ranges. DockDash will probe every address in those ranges on the ports listed in `SCAN_PORTS`:
+Set `NETWORK_CIDRS` to one or more comma-separated CIDR ranges. DockDash uses nmap to first discover live hosts via a ping sweep, then scans all 65535 TCP ports on each host:
 
 ```
 NETWORK_CIDRS=192.168.0.1/24,10.0.0.0/16
-SCAN_PORTS=80,443,3000,8080,9090
 ```
-
-#### Default scan ports
-
-22, 80, 443, 3000, 3001, 3306, 5432, 6379, 8080, 8443, 9090, 27017
 
 ### Notifications (Apprise)
 

@@ -9,7 +9,7 @@ import { PortTag } from "@/components/PortTag";
 import { TagArrayInput } from "@/components/TagArrayInput";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
+import { Switch } from "@/components/ui/Switch";
 import { cn } from "@/lib/utils";
 
 import { useConfig } from "../context/ConfigContext";
@@ -55,7 +55,7 @@ export default function Discovery() {
   const [dockerResults, setDockerResults] = useState<Service[]>([]);
   const [networkResults, setNetworkResults] = useState<Service[]>([]);
   const [cidrs, setCidrs] = useState<string[]>([]);
-  const [scanPorts, setScanPorts] = useState("");
+  const [deepScan, setDeepScan] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const dockerScanRef = useRef<EventSource | null>(null);
   const networkScanRef = useRef<EventSource | null>(null);
@@ -99,9 +99,7 @@ export default function Discovery() {
     setScanningNetwork(true);
     setNetworkResults([]);
 
-    const params = new URLSearchParams({ cidrs: cidrs.join(",") });
-
-    if (scanPorts) params.set("ports", scanPorts);
+    const params = new URLSearchParams({ cidrs: cidrs.join(","), deepScan: String(deepScan) });
 
     networkScanRef.current = startScanStream({
       url: `/api/network/scan/stream?${params}`,
@@ -304,15 +302,17 @@ export default function Discovery() {
               placeholder={t("discovery.cidrPlaceholder")}
             />
           </div>
-          <div className="mb-4">
-            <label className="text-xs text-muted-foreground mb-1 block">
-              {t("discovery.scanPortsLabel")}
+          <div className="flex items-center gap-2.5 mb-4">
+            <Switch id="deep-scan" checked={deepScan} onChange={setDeepScan} />
+            <label
+              htmlFor="deep-scan"
+              className="text-sm text-foreground cursor-pointer select-none"
+            >
+              {t("discovery.deepScanLabel")}
+              <span className="ml-1.5 text-xs text-muted-foreground">
+                {t("discovery.deepScanDesc")}
+              </span>
             </label>
-            <Input
-              value={scanPorts}
-              onChange={(e) => setScanPorts(e.target.value)}
-              placeholder={t("discovery.portsPlaceholder")}
-            />
           </div>
           <div className="flex gap-2.5 flex-wrap">
             <Button variant="default" onClick={handleNetworkScan} disabled={scanningNetwork}>

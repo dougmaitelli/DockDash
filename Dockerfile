@@ -29,6 +29,8 @@ COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/drizzle ./drizzle
 
+RUN apk add --no-cache nmap
+
 RUN mkdir -p /app/data
 
 VOLUME ["/app/data"]
@@ -40,7 +42,6 @@ ENV APP_VERSION=$APP_VERSION
 ENV PORT=3001
 ENV DOCKER_HOST=unix:///var/run/docker.sock
 ENV NETWORK_CIDRS=192.168.0.1/24
-ENV SCAN_PORTS=
 ENV DB_PATH=/app/data/dockdash.db
 ENV REFRESH_INTERVAL=30000
 ENV HEALTH_CHECK_INTERVAL=30000

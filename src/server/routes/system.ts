@@ -12,7 +12,6 @@ router.get("/config", (_req, res) => {
     version: config.appVersion,
     dockerHosts: config.dockerHosts,
     networkCidrs: config.networkCidrs,
-    scanPorts: config.scanPorts,
     refreshInterval: config.refreshInterval,
     healthCheckInterval: config.healthCheckInterval,
     updateCheckInterval: config.updateCheckInterval,

@@ -1,5 +1,6 @@
 import axios from "axios";
-import net from "net";
+import { spawn } from "child_process";
+import { createInterface } from "readline";
 import { v4 as uuidv4 } from "uuid";
 
 import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
@@ -12,9 +13,11 @@ import {
   USER_AGENT,
 } from "../lib/constants.js";
 
+const SCAN_CONCURRENCY = 15;
+const DEEP_SCAN_CONCURRENCY = 5;
+
 interface CIDRConfig {
   cidr: string;
-  ports: number[];
 }
 
 interface PortInfo {
@@ -23,106 +26,172 @@ interface PortInfo {
   serviceName?: string;
 }
 
-const PORT_SCAN_TIMEOUT_MS = 1000;
-
 export class NetworkScanner {
   parseCIDRConfig(): CIDRConfig[] {
-    const portList = config.scanPorts;
-    const cidrList = config.networkCidrs;
-
-    return cidrList.map((cidr) => ({ cidr, ports: portList }));
+    return config.networkCidrs.map((cidr) => ({ cidr }));
   }
 
-  async *scanNetworkStream(cidr: string, ports: number[]): AsyncGenerator<Service[]> {
-    const [network, mask] = cidr.split("/");
-    const maskBits = parseInt(mask, 10);
-    const networkNum = this.ipToNumber(network);
-    const hostCount = Math.pow(2, 32 - maskBits) - 2;
-    const maxHosts = Math.min(hostCount, 254);
-    const now = new Date().toISOString();
+  async *scanNetworkStream(cidr: string, deepScan = false): AsyncGenerator<Service[]> {
+    console.log(`[NetworkScanner] Starting ${deepScan ? "deep" : "standard"} scan for ${cidr}`);
 
-    for (let i = 1; i <= maxHosts && i <= 254; i++) {
-      const ip = this.numberToIp(networkNum + i);
+    // Queue for completed results + a notify handle to wake the generator
+    const queue: Service[] = [];
+    let pingSweepDone = false;
+    let pendingScans = 0;
+    let notify: (() => void) | null = null;
+    const wake = () => {
+      const fn = notify;
 
-      const portPromises = ports.map(async (port) => {
-        const isOpen = await this.portScan(ip, port);
+      notify = null;
+      fn?.();
+    };
 
-        if (isOpen) {
-          const protocol = [...HTTP_PROTOCOLS, ServiceProtocol.SSH].includes(
-            detectProtocolByPort(port),
-          )
-            ? detectProtocolByPort(port)
-            : ServiceProtocol.TCP;
-
-          return { port, protocol } as PortInfo;
+    // Semaphore to cap concurrent nmap port-scan processes and avoid exhausting
+    // file descriptors. Deep scan (-p-) is much heavier so gets a tighter limit.
+    const maxConcurrent = deepScan ? DEEP_SCAN_CONCURRENCY : SCAN_CONCURRENCY;
+    let running = 0;
+    const semQueue: (() => void)[] = [];
+    const acquire = () =>
+      new Promise<void>((resolve) => {
+        if (running < maxConcurrent) {
+          running++;
+          resolve();
+        } else {
+          semQueue.push(resolve);
         }
-
-        return null;
       });
+    const release = () => {
+      const next = semQueue.shift();
 
-      const portResults = await Promise.all(portPromises);
-      const validPorts = portResults.filter((p): p is PortInfo => p !== null);
+      if (next) {
+        next();
+      } else {
+        running--;
+      }
+    };
 
-      if (validPorts.length === 0) continue;
+    // Stream the ping sweep line-by-line, firing a port scan for each live host
+    // immediately rather than waiting for the full sweep to finish.
+    const pingProc = spawn("nmap", ["-sn", "-T4", cidr, "-oG", "-"]);
+    const pingRl = createInterface({ input: pingProc.stdout, crlfDelay: Infinity });
+    let pingSweepStderr = "";
 
-      const detectedPorts = await Promise.all(
-        validPorts.map(async (p) => {
-          const name = await this.detectService(ip, p.port, p.protocol);
+    pingProc.stderr.on("data", (d: Buffer) => (pingSweepStderr += d.toString()));
 
-          return { ...p, serviceName: name || p.protocol };
-        }),
-      );
+    void (async () => {
+      for await (const line of pingRl) {
+        const match = line.match(/Host:\s+(\S+)\s+\(([^)]*)\)\s+Status:\s+Up/);
 
-      // One service per host: pick the most meaningful name and protocol from
-      // the detected ports (prefer HTTP services, fall back to the first port).
-      const primary =
-        detectedPorts.find((p) => HTTP_PROTOCOLS.includes(p.protocol)) ?? detectedPorts[0];
+        if (!match) continue;
 
-      yield [
-        {
-          id: `net-${uuidv4()}`,
-          name: primary?.serviceName || ip,
-          host: ip,
-          ports: detectedPorts.map((p) => p.port).sort((a, b) => a - b),
-          checkPort: primary?.port,
-          source: ServiceSource.NETWORK,
-          status: ServiceStatus.UP,
-          createdAt: now,
-          updatedAt: now,
-        },
-      ];
+        pendingScans++;
+        void (async () => {
+          await acquire();
+          const service = await this.scanHost(match[1], match[2] || undefined, deepScan);
+
+          release();
+
+          if (service) queue.push(service);
+
+          pendingScans--;
+          wake();
+        })();
+      }
+
+      if (pingSweepStderr) console.log(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
+
+      pingSweepDone = true;
+      wake();
+    })();
+
+    // Yield results as they arrive while work is still in progress
+    while (!pingSweepDone || pendingScans > 0 || queue.length > 0) {
+      while (queue.length > 0) yield [queue.shift()!];
+
+      if (!pingSweepDone || pendingScans > 0) {
+        await new Promise<void>((resolve) => {
+          notify = resolve;
+        });
+      }
     }
   }
 
-  private ipToNumber(ip: string): number {
-    return ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+  private async scanHost(
+    ip: string,
+    hostname: string | undefined,
+    deepScan: boolean,
+  ): Promise<Service | null> {
+    const now = new Date().toISOString();
+    const openPorts = await this.nmapPortScan(ip, deepScan);
+
+    console.log(`[NetworkScanner] ${ip} open ports:`, openPorts);
+
+    const detectedPorts = await Promise.all(
+      openPorts.map(async (port): Promise<PortInfo> => {
+        const protocol = [...HTTP_PROTOCOLS, ServiceProtocol.SSH].includes(
+          detectProtocolByPort(port),
+        )
+          ? detectProtocolByPort(port)
+          : ServiceProtocol.TCP;
+        const name = await this.detectService(ip, port, protocol);
+
+        return { port, protocol, serviceName: name || protocol };
+      }),
+    );
+
+    // One service per host: prefer HTTP, fall back to first detected port
+    const primary =
+      detectedPorts.find((p) => HTTP_PROTOCOLS.includes(p.protocol)) ?? detectedPorts[0];
+
+    return {
+      id: `net-${uuidv4()}`,
+      name: hostname || primary?.serviceName || ip,
+      host: ip,
+      ports: detectedPorts.map((p) => p.port).sort((a, b) => a - b),
+      checkPort: primary?.port,
+      source: ServiceSource.NETWORK,
+      status: ServiceStatus.UP,
+      createdAt: now,
+      updatedAt: now,
+    };
   }
 
-  private numberToIp(num: number): string {
-    return [(num >>> 24) & 255, (num >>> 16) & 255, (num >>> 8) & 255, num & 255].join(".");
-  }
+  private nmapPortScan(ip: string, deepScan: boolean): Promise<number[]> {
+    return new Promise((resolve, reject) => {
+      let stdout = "";
+      let stderr = "";
+      const args = ["-sT", "-T4", ...(deepScan ? ["-p-"] : []), "--open", ip, "-oG", "-"];
+      const proc = spawn("nmap", args);
 
-  private portScan(ip: string, port: number): Promise<boolean> {
-    return new Promise((resolve) => {
-      const socket = new net.Socket();
-      const timer = setTimeout(() => {
-        socket.destroy();
-        resolve(false);
-      }, PORT_SCAN_TIMEOUT_MS);
+      proc.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
+      proc.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
+      proc.on("close", () => {
+        if (stderr) console.log(`[NetworkScanner] port scan ${ip} stderr:\n${stderr}`);
 
-      socket.once("connect", () => {
-        clearTimeout(timer);
-        socket.destroy();
-        resolve(true);
+        resolve(this.parseNmapOpenPorts(stdout));
       });
-
-      socket.once("error", () => {
-        clearTimeout(timer);
-        resolve(false);
-      });
-
-      socket.connect(port, ip);
+      proc.on("error", reject);
     });
+  }
+
+  private parseNmapOpenPorts(output: string): number[] {
+    const ports: number[] = [];
+
+    for (const line of output.split("\n")) {
+      if (!line.startsWith("Host:")) continue;
+
+      const portsSection = line.match(/Ports:\s+([^\t]+)/);
+
+      if (!portsSection) continue;
+
+      for (const portEntry of portsSection[1].trim().split(", ")) {
+        const parts = portEntry.split("/");
+
+        if (parts[1] === "open") ports.push(parseInt(parts[0], 10));
+      }
+    }
+
+    return ports;
   }
 
   private async detectService(

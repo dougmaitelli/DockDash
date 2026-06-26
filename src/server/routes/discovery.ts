@@ -87,16 +87,9 @@ router.get("/network/scan/stream", async (req, res) => {
   res.flushHeaders();
 
   const cidrParam = req.query.cidrs as string | undefined;
-  const portsParam = req.query.ports as string | undefined;
-  const config = networkScanner.parseCIDRConfig();
-  const cidrList = cidrParam?.split(",").filter(Boolean) ?? config.map((c) => c.cidr);
-  const portList =
-    portsParam
-      ?.split(",")
-      .map(Number)
-      .filter((n) => !isNaN(n)) ??
-    config[0]?.ports ??
-    [];
+  const cidrList =
+    cidrParam?.split(",").filter(Boolean) ?? networkScanner.parseCIDRConfig().map((c) => c.cidr);
+  const deepScan = req.query.deepScan === "true";
 
   let closed = false;
 
@@ -110,7 +103,7 @@ router.get("/network/scan/stream", async (req, res) => {
     for (const cidr of cidrList) {
       if (closed) break;
 
-      for await (const services of networkScanner.scanNetworkStream(cidr, portList)) {
+      for await (const services of networkScanner.scanNetworkStream(cidr, deepScan)) {
         if (closed) break;
 
         for (const svc of services) {
