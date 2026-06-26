@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import type { ChangelogRelease } from "@shared";
 
@@ -15,6 +16,22 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
+function useTransitionNavigate() {
+  const navigate = useNavigate();
+
+  return (to: string) => {
+    if (!document.startViewTransition) {
+      navigate(to);
+
+      return;
+    }
+
+    document.startViewTransition(() => {
+      flushSync(() => navigate(to));
+    });
+  };
+}
+
 function NavLink({
   to,
   active,
@@ -24,9 +41,15 @@ function NavLink({
   active: boolean;
   children: React.ReactNode;
 }) {
+  const navigate = useTransitionNavigate();
+
   return (
     <Link
       to={to}
+      onClick={(e) => {
+        e.preventDefault();
+        navigate(to);
+      }}
       className={cn(
         "px-4 py-2 text-sm font-medium rounded-md transition-all no-underline",
         active
@@ -58,10 +81,19 @@ function Layout({ children }: LayoutProps) {
     });
   }, []);
 
+  const navigate = useTransitionNavigate();
+
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 h-14 bg-muted/95 backdrop-blur-[12px] border-b border-border flex items-center px-6 z-[100]">
-        <Link to="/" className="flex items-center gap-2 mr-10 text-xl font-bold no-underline">
+        <Link
+          to="/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate("/");
+          }}
+          className="flex items-center gap-2 mr-10 text-xl font-bold no-underline"
+        >
           <Icons.Logo stroke="var(--primary)" />
           <span
             className="bg-gradient-to-br from-primary to-primary/70 bg-clip-text"

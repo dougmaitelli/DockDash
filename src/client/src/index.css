@@ -67,6 +67,40 @@
   cursor: grabbing !important;
 }
 
+@keyframes vt-slide-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes vt-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+main {
+  view-transition-name: page-content;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Suppress the default full-page crossfade so the nav stays still */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+
+  ::view-transition-old(page-content) {
+    animation: vt-slide-out 120ms ease forwards;
+  }
+
+  ::view-transition-new(page-content) {
+    animation: vt-slide-in 180ms ease forwards;
+  }
+}
+
 /*
   Bridge our existing runtime CSS variables (set by GlobalStyles / theme switching)
   into the names shadcn components expect. Fallback hex values ensure colors are
