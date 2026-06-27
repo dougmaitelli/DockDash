@@ -89,6 +89,12 @@ router.get("/callback", async (req, res) => {
 
     const claims = tokenSet.claims();
 
+    // Regenerate the session ID on login to prevent session fixation, then
+    // explicitly save before redirecting so the new cookie reaches the client.
+    await new Promise<void>((resolve, reject) => {
+      req.session.regenerate((err) => (err ? reject(err) : resolve()));
+    });
+
     req.session.user = {
       sub: claims.sub,
       name: typeof claims.name === "string" ? claims.name : undefined,
@@ -96,8 +102,9 @@ router.get("/callback", async (req, res) => {
       picture: typeof claims.picture === "string" ? claims.picture : undefined,
     };
 
-    delete req.session.oidcCodeVerifier;
-    delete req.session.oidcState;
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => (err ? reject(err) : resolve()));
+    });
 
     res.redirect("/");
   } catch (err) {
