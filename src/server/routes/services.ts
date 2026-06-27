@@ -56,7 +56,7 @@ router.post("/services", (req, res) => {
     metadata: metadata || {},
   });
 
-  healthCheckService.checkSingleService(service.id!);
+  void healthCheckService.checkSingleService(service.id!).catch(console.error);
 
   res.json(service);
 });
@@ -80,7 +80,7 @@ router.put("/services/:id", (req, res) => {
       checkPort,
     });
 
-    healthCheckService.checkSingleService(req.params.id);
+    void healthCheckService.checkSingleService(req.params.id).catch(console.error);
 
     res.json(service);
   } catch (err) {
