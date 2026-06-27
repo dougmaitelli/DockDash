@@ -54,6 +54,39 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// CSRF defense: reject browser requests initiated from a different site so
+// cross-origin GETs with side effects (e.g. opening a terminal/log SSE stream)
+// can't piggyback on an admin's session. Modern browsers are caught by
+// Sec-Fetch-Site; legacy browsers without that header are caught by the
+// Origin check below. Non-browser clients send neither header and pass
+// through — they have no ambient cookie to abuse anyway.
+app.use("/api", (req, res, next) => {
+  const site = req.get("sec-fetch-site");
+
+  if (site === "cross-site") {
+    res.status(403).json({ error: "Cross-site request blocked" });
+
+    return;
+  }
+
+  if (site === undefined) {
+    const origin = req.get("origin");
+
+    if (origin !== undefined) {
+      const expectedHost = req.get("x-forwarded-host") ?? req.get("host");
+      const expected = `${req.protocol}://${expectedHost}`;
+
+      if (origin !== expected) {
+        res.status(403).json({ error: "Cross-origin request blocked" });
+
+        return;
+      }
+    }
+  }
+
+  next();
+});
+
 // Protect all other API routes
 app.use("/api", requireAuth);
 
