@@ -79,29 +79,36 @@ export class NetworkScanner {
     pingProc.stderr.on("data", (d: Buffer) => (pingSweepStderr += d.toString()));
 
     void (async () => {
-      for await (const line of pingRl) {
-        const match = line.match(/Host:\s+(\S+)\s+\(([^)]*)\)\s+Status:\s+Up/);
+      try {
+        for await (const line of pingRl) {
+          const match = line.match(/Host:\s+(\S+)\s+\(([^)]*)\)\s+Status:\s+Up/);
 
-        if (!match) continue;
+          if (!match) continue;
 
-        pendingScans++;
-        void (async () => {
-          await acquire();
-          const service = await this.scanHost(match[1], match[2] || undefined, deepScan);
+          pendingScans++;
+          void (async () => {
+            try {
+              await acquire();
+              const service = await this.scanHost(match[1], match[2] || undefined, deepScan);
 
-          release();
+              if (service) queue.push(service);
+            } catch (err) {
+              console.error(`[NetworkScanner] Failed to scan host ${match[1]}:`, err);
+            } finally {
+              release();
+              pendingScans--;
+              wake();
+            }
+          })();
+        }
 
-          if (service) queue.push(service);
-
-          pendingScans--;
-          wake();
-        })();
+        if (pingSweepStderr) console.log(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
+      } catch (err) {
+        console.error("[NetworkScanner] Ping sweep failed:", err);
+      } finally {
+        pingSweepDone = true;
+        wake();
       }
-
-      if (pingSweepStderr) console.log(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
-
-      pingSweepDone = true;
-      wake();
     })();
 
     // Yield results as they arrive while work is still in progress
