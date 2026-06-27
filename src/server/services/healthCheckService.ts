@@ -263,21 +263,27 @@ export class HealthCheckService {
     if (oldStatus === newStatus) return;
 
     if (newStatus === ServiceStatus.DOWN) {
-      notificationService
+      void notificationService
         .notify(
           t("notifications.serviceDown", { name }),
           t("notifications.serviceDownBody", { name }),
           "failure",
         )
-        .catch(() => {});
+        .catch(() => {
+          // notify() already logs the error before rethrowing; swallow here to
+          // avoid an unhandled rejection blocking the health-check cycle
+        });
     } else if (newStatus === ServiceStatus.UP && oldStatus === ServiceStatus.DOWN) {
-      notificationService
+      void notificationService
         .notify(
           t("notifications.serviceRecovered", { name }),
           t("notifications.serviceRecoveredBody", { name }),
           "success",
         )
-        .catch(() => {});
+        .catch(() => {
+          // notify() already logs the error before rethrowing; swallow here to
+          // avoid an unhandled rejection blocking the health-check cycle
+        });
     }
   }
 }
