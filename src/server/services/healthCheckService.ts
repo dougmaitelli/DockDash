@@ -20,13 +20,9 @@ const TCP_TIMEOUT = 1000;
 
 export class HealthCheckService {
   private async checkSingleDockerService(
-    serviceId: string,
+    service: Service,
     stateMap?: ContainerStateMap,
   ): Promise<ServiceStatus | null> {
-    const service = db.getService(serviceId);
-
-    if (!service) return null;
-
     const dockerHostId = service.metadata?.dockerHostId as string | undefined;
     const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
     const containerName = service.metadata?.containerName as string | undefined;
@@ -84,7 +80,7 @@ export class HealthCheckService {
       return status;
     } catch (err) {
       console.error(
-        `Health check failed for Docker service "${service.name}" (${serviceId}):`,
+        `Health check failed for Docker service "${service.name}" (${service.id}):`,
         err,
       );
 
@@ -92,11 +88,7 @@ export class HealthCheckService {
     }
   }
 
-  private async checkSingleNetworkService(serviceId: string): Promise<ServiceStatus | null> {
-    const service = db.getService(serviceId);
-
-    if (!service) return null;
-
+  private async checkSingleNetworkService(service: Service): Promise<ServiceStatus | null> {
     try {
       const status = await this.checkNetworkService(service);
 
@@ -108,7 +100,7 @@ export class HealthCheckService {
       return status;
     } catch (err) {
       console.error(
-        `Health check failed for network service "${service.name}" (${serviceId}):`,
+        `Health check failed for network service "${service.name}" (${service.id}):`,
         err,
       );
 
@@ -122,8 +114,8 @@ export class HealthCheckService {
     if (!service) return null;
 
     return service.source === ServiceSource.DOCKER
-      ? this.checkSingleDockerService(serviceId)
-      : this.checkSingleNetworkService(serviceId);
+      ? this.checkSingleDockerService(service)
+      : this.checkSingleNetworkService(service);
   }
 
   async checkAllServices(): Promise<{ updated: number; errors: number }> {
@@ -166,11 +158,11 @@ export class HealthCheckService {
         const dockerHostId = service.metadata?.dockerHostId as string | undefined;
 
         status = await this.checkSingleDockerService(
-          service.id!,
+          service,
           dockerHostId ? stateMapByHostId.get(dockerHostId) : undefined,
         );
       } else {
-        status = await this.checkSingleNetworkService(service.id!);
+        status = await this.checkSingleNetworkService(service);
       }
 
       if (status === null) {
