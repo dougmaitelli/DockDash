@@ -1,8 +1,10 @@
 import Database from "better-sqlite3";
+import SqliteStoreFactory from "better-sqlite3-session-store";
 import { asc, desc, eq, getTableColumns, lt, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { alias } from "drizzle-orm/sqlite-core";
+import session from "express-session";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
@@ -31,22 +33,29 @@ const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 export class DatabaseService {
   private static instance: DatabaseService | null = null;
   private readonly orm: ReturnType<typeof drizzle>;
+  private readonly sqlite: Database.Database;
 
   constructor() {
     if (DatabaseService.instance) {
       throw new Error("DatabaseService is a singleton — use the exported db instance");
     }
 
-    const sqlite = new Database(process.env.DB_PATH || path.join(process.cwd(), "dockdash.db"));
+    this.sqlite = new Database(process.env.DB_PATH || path.join(process.cwd(), "dockdash.db"));
 
-    sqlite.pragma("journal_mode = WAL");
-    sqlite.pragma("foreign_keys = ON");
+    this.sqlite.pragma("journal_mode = WAL");
+    this.sqlite.pragma("foreign_keys = ON");
 
-    this.orm = drizzle(sqlite);
+    this.orm = drizzle(this.sqlite);
 
     migrate(this.orm, { migrationsFolder: MIGRATIONS_FOLDER });
 
     DatabaseService.instance = this;
+  }
+
+  createSessionStore(): session.Store {
+    const SqliteStore = SqliteStoreFactory(session);
+
+    return new SqliteStore({ client: this.sqlite });
   }
 
   saveService(data: CreateServiceRequest): Service {

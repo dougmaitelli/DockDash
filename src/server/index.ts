@@ -3,6 +3,7 @@ import session from "express-session";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import { db } from "./db/databaseService.js";
 import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
 import { HistoryCleanupJob } from "./jobs/HistoryCleanupJob.js";
 import { UpdateCheckJob } from "./jobs/UpdateCheckJob.js";
@@ -32,6 +33,7 @@ app.set("trust proxy", config.trustProxy);
 app.use(express.json({ limit: "100kb" }));
 app.use(
   session({
+    store: db.createSessionStore(),
     secret: config.sessionSecret,
     resave: false,
     saveUninitialized: false,

@@ -1762,6 +1762,13 @@ bcrypt-pbkdf@^1.0.2:
   dependencies:
     tweetnacl "^0.14.3"
 
+better-sqlite3-session-store@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/better-sqlite3-session-store/-/better-sqlite3-session-store-0.1.0.tgz#0b512cb061a3ad0ddfef7bc1e6b46597056eaa1f"
+  integrity sha512-O4EO5jOGTEa/c1DbZpP3C7VTDLSWe5lrOu1S/j86ipdGZxrSb8bSUVuRgWCgl/SCgEGmyeEqvlMY9HtyOSMOWA==
+  dependencies:
+    date-fns "2.16.1"
+
 better-sqlite3@^12.10.0:
   version "12.10.0"
   resolved "https://registry.yarnpkg.com/better-sqlite3/-/better-sqlite3-12.10.0.tgz#bde622d14a18008583a53bc53501ae98f1a12221"
@@ -2082,6 +2089,11 @@ data-view-byte-offset@^1.0.1:
     call-bound "^1.0.2"
     es-errors "^1.3.0"
     is-data-view "^1.0.1"
+
+date-fns@2.16.1:
+  version "2.16.1"
+  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.16.1.tgz#05775792c3f3331da812af253e1a935851d3834b"
+  integrity sha512-sAJVKx/FqrLYHAQeN7VpJrPhagZc9R4ImZIWYRFZaaohR3KzmuK88touwsSwSVT8Qcbd4zoDsnGfX4GFB4imyQ==
 
 debug@4, debug@^4.0.0, debug@^4.1.0, debug@^4.1.1, debug@^4.3.1, debug@^4.3.2, debug@^4.4.0, debug@^4.4.3:
   version "4.4.3"
