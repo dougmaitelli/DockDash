@@ -32,6 +32,22 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
     const container = dockerService.getContainerForServiceId(req.params.id);
     const { sessionId, stream } = await dockerService.openTerminal(container, cols, rows);
 
+    // Guard so closeSession is only ever called once regardless of which event fires first
+    let sessionClosed = false;
+    const safeClose = () => {
+      if (!sessionClosed) {
+        sessionClosed = true;
+        terminalService.closeSession(sessionId);
+      }
+    };
+
+    // Connection may have dropped while the terminal was opening asynchronously
+    if (closed) {
+      safeClose();
+
+      return;
+    }
+
     const sessionPayload: SseTerminalSessionPayload = { sessionId };
 
     res.write(`event: ${SSE_EVENT.TERMINAL_SESSION}\ndata: ${JSON.stringify(sessionPayload)}\n\n`);
@@ -44,7 +60,7 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
     });
 
     stream.on("end", () => {
-      terminalService.closeSession(sessionId);
+      safeClose();
 
       if (!closed) {
         res.write(`event: ${SSE_EVENT.DONE}\ndata: {}\n\n`);
@@ -53,7 +69,7 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
     });
 
     stream.on("error", (err: Error) => {
-      terminalService.closeSession(sessionId);
+      safeClose();
 
       if (!closed) {
         res.write(
@@ -64,7 +80,7 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
     });
 
     req.on("close", () => {
-      terminalService.closeSession(sessionId);
+      safeClose();
     });
   } catch (err) {
     if (!closed) {
