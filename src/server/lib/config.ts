@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import fs from "fs";
 
 import "dotenv/config";
@@ -12,6 +13,7 @@ export const DEFAULT_HEALTH_HISTORY_TTL_DAYS = 30;
 export const DEFAULT_SESSION_MAX_AGE = 8 * 60 * 60 * 1000; // 8 hours
 
 class Config {
+  private _sessionSecret: string | undefined;
   get port(): number {
     return process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;
   }
@@ -144,7 +146,17 @@ class Config {
   }
 
   get sessionSecret(): string {
-    return process.env.SESSION_SECRET || "change-me-in-production";
+    if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+
+    if (!this._sessionSecret) {
+      this._sessionSecret = crypto.randomBytes(32).toString("hex");
+      console.warn(
+        "\n⚠️  WARNING: SESSION_SECRET is not set. A random secret was generated for this process." +
+          " Sessions will be invalidated on every restart. Set SESSION_SECRET in production.\n",
+      );
+    }
+
+    return this._sessionSecret;
   }
 
   get secureCookies(): boolean {
