@@ -1,4 +1,3 @@
-import cors from "cors";
 import express from "express";
 import session from "express-session";
 import path from "path";
@@ -30,7 +29,6 @@ const PORT = config.port;
 app.set("trust proxy", config.trustProxy);
 
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(
   session({
