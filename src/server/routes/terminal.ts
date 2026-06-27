@@ -30,7 +30,12 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
 
   try {
     const container = dockerService.getContainerForServiceId(req.params.id);
-    const { sessionId, stream } = await dockerService.openTerminal(container, cols, rows);
+    const { sessionId, stream } = await dockerService.openTerminal(
+      req.sessionID,
+      container,
+      cols,
+      rows,
+    );
 
     // Guard so closeSession is only ever called once regardless of which event fires first
     let sessionClosed = false;
@@ -103,7 +108,7 @@ router.post("/services/:id/terminal/input", (req, res) => {
     return res.status(400).json({ error: "sessionId and data are required" });
   }
 
-  const session = terminalService.getSession(sessionId);
+  const session = terminalService.getSession(req.sessionID, sessionId);
 
   if (!session) {
     return res.status(404).json({ error: "Session not found" });

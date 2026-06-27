@@ -6,6 +6,7 @@ const TERMINAL_SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes of inactivity
 interface TerminalSession {
   stream: NodeJS.ReadWriteStream;
   lastActivity: number;
+  ownerSessionId: string;
 }
 
 class TerminalService {
@@ -16,6 +17,7 @@ class TerminalService {
   }
 
   async openSession(
+    userSessionId: string,
     container: Docker.Container,
     cols: number,
     rows: number,
@@ -36,13 +38,26 @@ class TerminalService {
     const stream = await exec.start({ hijack: true, stdin: true, Tty: true });
     const sessionId = uuidv4();
 
-    this.sessions.set(sessionId, { stream, lastActivity: Date.now() });
+    this.sessions.set(sessionId, {
+      stream,
+      lastActivity: Date.now(),
+      ownerSessionId: userSessionId,
+    });
 
     return { sessionId, stream };
   }
 
-  getSession(sessionId: string): TerminalSession | undefined {
-    return this.sessions.get(sessionId);
+  // Returns the session only when the caller's express-session ID matches
+  // what was recorded at open time, so a leaked sessionId UUID alone can't
+  // be used to write input.
+  getSession(userSessionId: string, sessionId: string): TerminalSession | undefined {
+    const session = this.sessions.get(sessionId);
+
+    if (!session) return undefined;
+
+    if (session.ownerSessionId !== userSessionId) return undefined;
+
+    return session;
   }
 
   touch(sessionId: string): void {

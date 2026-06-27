@@ -289,11 +289,12 @@ export class DockerService {
   }
 
   async openTerminal(
+    userSessionId: string,
     container: Docker.Container,
     cols: number,
     rows: number,
   ): Promise<{ sessionId: string; stream: NodeJS.ReadWriteStream }> {
-    return terminalService.openSession(container, cols, rows);
+    return terminalService.openSession(userSessionId, container, cols, rows);
   }
 }
 
