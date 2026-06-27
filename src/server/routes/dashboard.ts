@@ -14,12 +14,12 @@ router.get("/dashboard", (_req, res) => {
 });
 
 router.post("/checkAllServices", (_req, res) => {
-  healthCheckService
+  void healthCheckService
     .checkAllServices()
     .then((result) => {
       console.log(`Health check: ${result.updated} updated, ${result.errors} errors`);
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error("Health check failed:", err instanceof Error ? err.message : String(err));
     });
 
