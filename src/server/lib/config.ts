@@ -147,6 +147,10 @@ class Config {
     return process.env.SESSION_SECRET || "change-me-in-production";
   }
 
+  get secureCookies(): boolean {
+    return process.env.NODE_ENV === "production";
+  }
+
   get sessionMaxAge(): number {
     return process.env.SESSION_MAX_AGE
       ? parseInt(process.env.SESSION_MAX_AGE, 10)
