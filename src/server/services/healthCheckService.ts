@@ -190,6 +190,7 @@ export class HealthCheckService {
     return new Promise((resolve) => {
       const socket = new net.Socket();
       const timer = setTimeout(() => {
+        socket.removeAllListeners();
         socket.destroy();
         resolve(false);
       }, TCP_TIMEOUT);
