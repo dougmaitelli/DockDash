@@ -72,6 +72,12 @@ router.get("/login", async (req, res) => {
 
 // Handle redirect back from OIDC provider
 router.get("/callback", async (req, res) => {
+  if (!req.session.oidcCodeVerifier || !req.session.oidcState) {
+    res.redirect("/login?error=invalid_state");
+
+    return;
+  }
+
   try {
     const client = await oidcService.getClient();
     const params = client.callbackParams(req);
