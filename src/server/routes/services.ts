@@ -10,7 +10,7 @@ import type {
 } from "@shared/api";
 
 import { db } from "../db/databaseService.js";
-import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
+import { isNonEmptyString, isValidEnumValue, isValidPort } from "../lib/validate.js";
 import { changelogService } from "../services/changelogService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
 
@@ -47,6 +47,14 @@ router.post("/services", (req, res) => {
     return res.status(400).json({ error: "invalid source" });
   }
 
+  if (Array.isArray(ports) && !ports.every(isValidPort)) {
+    return res.status(400).json({ error: "ports must be integers between 1 and 65535" });
+  }
+
+  if (checkPort !== undefined && !isValidPort(checkPort)) {
+    return res.status(400).json({ error: "checkPort must be an integer between 1 and 65535" });
+  }
+
   const service = db.saveService({
     name,
     host,
@@ -70,6 +78,14 @@ router.put("/services/:id", (req, res) => {
 
   if (host !== undefined && !isNonEmptyString(host)) {
     return res.status(400).json({ error: "host cannot be empty" });
+  }
+
+  if (Array.isArray(ports) && !ports.every(isValidPort)) {
+    return res.status(400).json({ error: "ports must be integers between 1 and 65535" });
+  }
+
+  if (checkPort != null && !isValidPort(checkPort)) {
+    return res.status(400).json({ error: "checkPort must be an integer between 1 and 65535" });
   }
 
   try {
