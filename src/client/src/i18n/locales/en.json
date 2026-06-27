@@ -1,11 +1,38 @@
 {
   "nav": {
     "dashboard": "Dashboard",
+    "services": "Services",
     "discovery": "Discovery",
     "settings": "Settings",
     "logout": "Logout",
     "updateAvailable": "{{version}} is available",
     "releaseNotes": "Release notes"
+  },
+  "services": {
+    "title": "Services",
+    "count": "{{count}} service",
+    "count_other": "{{count}} services",
+    "searchPlaceholder": "Search by name, host, or port…",
+    "filterSource": "Source",
+    "filterStatus": "Status",
+    "filterUpdates": "Updates",
+    "filterAll": "All",
+    "filterHasUpdate": "Update available",
+    "colSource": "Source",
+    "colName": "Name",
+    "colHost": "Host",
+    "colPorts": "Ports",
+    "colStatus": "Status",
+    "colVersion": "Version",
+    "statusUp": "Up",
+    "statusDown": "Down",
+    "statusUnknown": "Unknown",
+    "sourceDocker": "Docker",
+    "sourceNetwork": "Network",
+    "emptyTitle": "No services",
+    "emptyMessage": "Add a service manually or go to Discovery to find services on your network.",
+    "noResults": "No services match the current filters.",
+    "updateBadge": "Update"
   },
   "dashboard": {
     "online": "Online",
@@ -77,7 +104,6 @@
     "notificationsTestFailed": "Failed"
   },
   "modals": {
-    "editServiceTitle": "Edit Service",
     "addServiceTitle": "Add Service",
     "editLinkTitle": "Edit Link",
     "name": "Name",

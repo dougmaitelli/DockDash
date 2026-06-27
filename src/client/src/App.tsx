@@ -8,6 +8,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import Dashboard from "./pages/Dashboard";
 import Discovery from "./pages/Discovery";
 import Login from "./pages/Login";
+import Services from "./pages/Services";
 import Settings from "./pages/Settings";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
                     <Layout>
                       <Routes>
                         <Route path="/" element={<Dashboard />} />
+                        <Route path="/services" element={<Services />} />
                         <Route path="/discover" element={<Discovery />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="*" element={<Navigate to="/" replace />} />

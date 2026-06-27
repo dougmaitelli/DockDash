@@ -83,7 +83,7 @@ export function useDockerHealth() {
   return { health, loading, refresh: check };
 }
 
-export function useDashboard() {
+export function useServices() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [serviceStatuses, setServiceStatuses] = useState<Record<string, ServiceStatusItem>>({});
   const [loading, setLoading] = useState(false);

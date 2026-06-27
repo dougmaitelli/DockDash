@@ -1,11 +1,38 @@
 {
   "nav": {
     "dashboard": "Painel",
+    "services": "Serviços",
     "discovery": "Descoberta",
     "settings": "Configurações",
     "logout": "Sair",
     "updateAvailable": "{{version}} disponível",
     "releaseNotes": "Notas de versão"
+  },
+  "services": {
+    "title": "Serviços",
+    "count": "{{count}} serviço",
+    "count_other": "{{count}} serviços",
+    "searchPlaceholder": "Pesquisar por nome, host ou porta…",
+    "filterSource": "Origem",
+    "filterStatus": "Status",
+    "filterUpdates": "Atualizações",
+    "filterAll": "Todos",
+    "filterHasUpdate": "Atualização disponível",
+    "colSource": "Origem",
+    "colName": "Nome",
+    "colHost": "Host",
+    "colPorts": "Portas",
+    "colStatus": "Status",
+    "colVersion": "Versão",
+    "statusUp": "Ativo",
+    "statusDown": "Inativo",
+    "statusUnknown": "Desconhecido",
+    "sourceDocker": "Docker",
+    "sourceNetwork": "Rede",
+    "emptyTitle": "Nenhum serviço",
+    "emptyMessage": "Adicione um serviço manualmente ou vá em Descoberta para encontrar serviços na sua rede.",
+    "noResults": "Nenhum serviço corresponde aos filtros atuais.",
+    "updateBadge": "Atualização"
   },
   "dashboard": {
     "online": "Online",
@@ -77,7 +104,6 @@
     "notificationsTestFailed": "Falhou"
   },
   "modals": {
-    "editServiceTitle": "Editar Serviço",
     "addServiceTitle": "Adicionar Serviço",
     "editLinkTitle": "Editar Conexão",
     "name": "Nome",

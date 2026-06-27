@@ -14,9 +14,9 @@ import { Icons } from "@/components/Icons";
 import { Button } from "@/components/ui/Button";
 
 import { dashboardApi } from "../../services/api";
+import { AddServiceModal } from "../modals/AddServiceModal";
 import { ConfirmDialog } from "../modals/ConfirmDialog";
 import { EditLinkModal } from "../modals/EditLinkModal";
-import { EditServiceModal } from "../modals/EditServiceModal";
 import { ServiceDrawer, Tab as DrawerTab } from "../modals/ServiceDrawer";
 import { EmptyOverlay } from "./EmptyOverlay";
 import { ErrorOverlay } from "./ErrorOverlay";
@@ -942,7 +942,7 @@ export function DashboardCanvas({
       />
 
       {addingService && (
-        <EditServiceModal
+        <AddServiceModal
           onSave={async (data) => {
             await addService({
               ...data,
