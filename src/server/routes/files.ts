@@ -1,4 +1,4 @@
-import { Router } from "express";
+import express, { Router } from "express";
 
 import type { ApiSuccess, FileContentResponse } from "@shared/api";
 
@@ -50,7 +50,7 @@ router.get("/services/:id/files/content", async (req, res) => {
   }
 });
 
-router.put("/services/:id/files/content", async (req, res) => {
+router.put("/services/:id/files/content", express.json({ limit: "10mb" }), async (req, res) => {
   if (!config.fileExplorerEnabled) {
     return res.status(403).json({ error: "File explorer is disabled" });
   }

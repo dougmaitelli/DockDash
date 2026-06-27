@@ -29,7 +29,7 @@ const PORT = config.port;
 app.set("trust proxy", config.trustProxy);
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 app.use(
   session({
     secret: config.sessionSecret,
