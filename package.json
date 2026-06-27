@@ -9,8 +9,8 @@
     "dev": "concurrently \"tsx --watch --tsconfig tsconfig.server.json src/server/index.ts\" \"vite\"",
     "build": "esbuild src/server/index.ts --bundle --platform=node --format=esm --outfile=dist/server/index.js --packages=external --alias:@shared=./src/shared --sourcemap && mkdir -p dist/server/i18n/locales && cp src/server/i18n/locales/*.json dist/server/i18n/locales/ && vite build",
     "start": "node dist/server/index.js",
-    "lint": "eslint src/ && prettier --check \"src/\" \"*.{js,ts,json}\"",
-    "lint:fix": "eslint --fix src/ && prettier --write \"src/\" \"*.{js,ts,json}\"",
+    "lint": "eslint src/ *.ts *.js && prettier --check \"src/\" \"*.{js,ts,json}\"",
+    "lint:fix": "eslint --fix src/ *.ts *.js && prettier --write \"src/\" \"*.{js,ts,json}\"",
     "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio"
