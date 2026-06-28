@@ -209,24 +209,16 @@ export function DashboardCanvas({
       maxX = -Infinity,
       maxY = -Infinity;
 
-    services.forEach((service, idx) => {
+    services.forEach((service) => {
       // Child services have parent-relative positions, not canvas coordinates.
       // Their bounds are already covered by the parent container's DOM size.
       if (service.position?.parentId) return;
 
-      let x: number, y: number;
+      // Skip services whose position hasn't loaded yet — the effect will
+      // retry once positions arrive from /api/dashboard.
+      if (!service.position) return;
 
-      if (service.position) {
-        x = service.position.x;
-        y = service.position.y;
-      } else {
-        const cols = Math.max(3, Math.ceil(Math.sqrt(services.length)));
-        const row = Math.floor(idx / cols);
-        const col = idx % cols;
-
-        x = 100 + col * (NODE_WIDTH + 60);
-        y = 120 + row * (NODE_HEIGHT + 80);
-      }
+      const { x, y } = service.position;
 
       const domSize = service.id ? getNodeSize(service.id) : null;
       const isContainer = services.some((s) => s.position?.parentId === service.id);
