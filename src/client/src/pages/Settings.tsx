@@ -1,17 +1,11 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { Select } from "@/components/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Label } from "@/components/ui/Label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
 import { Separator } from "@/components/ui/Separator";
 
 import { useConfig } from "../context/ConfigContext";
@@ -64,18 +58,13 @@ export default function Settings() {
             <Label htmlFor="theme-select" className="text-secondary-foreground whitespace-nowrap">
               {t("settings.colorTheme")}
             </Label>
-            <Select value={theme} onValueChange={(v) => setTheme(v as ThemeSelection)}>
-              <SelectTrigger id="theme-select" className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {themeSelections.map(({ key, label }) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Select
+              id="theme-select"
+              className="w-48"
+              value={theme}
+              onValueChange={(v) => setTheme(v as ThemeSelection)}
+              options={themeSelections.map(({ key, label }) => ({ value: key, label }))}
+            />
           </div>
         </CardContent>
       </Card>

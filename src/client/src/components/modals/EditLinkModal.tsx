@@ -7,15 +7,9 @@ import type { UpdateLinkRequest } from "@shared/api";
 
 import { Icons } from "@/components/Icons";
 import { NumberInput } from "@/components/NumberInput";
+import { Select } from "@/components/Select";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
 import { useFormValidation } from "@/hooks/useFormValidation";
 
 import { LINK_TYPES } from "../../types";
@@ -112,18 +106,14 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
         </div>
         <FormGroup>
           <Label>{t("modals.linkType")}</Label>
-          <Select value={editType} onValueChange={(v) => setEditType(v as ServiceLinkType)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LINK_TYPES.map((lt) => (
-                <SelectItem key={lt.value} value={lt.value}>
-                  {t(`dashboard.linkTypes.${lt.value}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Select
+            value={editType}
+            onValueChange={(v) => setEditType(v as ServiceLinkType)}
+            options={LINK_TYPES.map((lt) => ({
+              value: lt.value,
+              label: t(`dashboard.linkTypes.${lt.value}`),
+            }))}
+          />
         </FormGroup>
         <FormGroup>
           <Label>{t("modals.linkLabel")}</Label>
@@ -151,19 +141,11 @@ export function EditLinkModal({ link, onSave, onDelete, onCancel }: EditLinkModa
           <Select
             value={editProtocol || "__none__"}
             onValueChange={(v) => setEditProtocol(v === "__none__" ? "" : (v as ServiceProtocol))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">{t("modals.linkProtocolNone")}</SelectItem>
-              {Object.values(ServiceProtocol).map((p) => (
-                <SelectItem key={p} value={p}>
-                  {p}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={[
+              { value: "__none__", label: t("modals.linkProtocolNone") },
+              ...Object.values(ServiceProtocol).map((p) => ({ value: p, label: p })),
+            ]}
+          />
         </FormGroup>
         <FormGroup>
           <Label>{t("modals.linkDescription")}</Label>
