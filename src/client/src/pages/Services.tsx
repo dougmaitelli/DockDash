@@ -6,6 +6,8 @@ import { ServiceSource, ServiceStatus } from "@shared";
 
 import { Icons } from "@/components/Icons";
 import { PortTag } from "@/components/PortTag";
+import type { SortState } from "@/components/Table";
+import { FilterHeader, SortHeader } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -16,11 +18,11 @@ import { AddServiceModal } from "../components/modals/AddServiceModal";
 import { ServiceDrawer } from "../components/modals/ServiceDrawer";
 import { useServices } from "../hooks/useData";
 
+type SourceFilter = "all" | ServiceSource;
 type StatusFilter = "all" | ServiceStatus;
 type UpdateFilter = "all" | "hasUpdate";
 
-type SortColumn = "source" | "name" | "host";
-type SortDirection = "asc" | "desc";
+type SortColumn = "name" | "host";
 
 function statusVariant(status: ServiceStatus): "success" | "destructive" | "secondary" {
   if (status === ServiceStatus.UP) return "success";
@@ -30,103 +32,8 @@ function statusVariant(status: ServiceStatus): "success" | "destructive" | "seco
   return "secondary";
 }
 
-const STATUS_FILTER_CYCLE: StatusFilter[] = [
-  "all",
-  ServiceStatus.UP,
-  ServiceStatus.DOWN,
-  ServiceStatus.UNKNOWN,
-];
-
-function statusDotClass(status: ServiceStatus): string {
-  if (status === ServiceStatus.UP) return "bg-success";
-
-  if (status === ServiceStatus.DOWN) return "bg-destructive";
-
-  return "bg-muted-foreground";
-}
-
-function statusTextClass(status: ServiceStatus): string {
-  if (status === ServiceStatus.UP) return "text-success hover:text-success/80";
-
-  if (status === ServiceStatus.DOWN) return "text-destructive hover:text-destructive/80";
-
-  return "text-muted-foreground hover:text-secondary-foreground";
-}
-
-function SortHeader({
-  col,
-  label,
-  width,
-  active,
-  direction,
-  onToggle,
-}: {
-  col: SortColumn;
-  label: string;
-  width?: string;
-  active: SortColumn;
-  direction: SortDirection;
-  onToggle: (col: SortColumn) => void;
-}) {
-  const isActive = active === col;
-
-  return (
-    <th
-      className={cn(
-        "px-4 py-2.5 font-medium cursor-pointer select-none hover:text-foreground transition-colors",
-        width,
-      )}
-      onClick={() => onToggle(col)}
-    >
-      <span className="inline-flex items-center gap-1">
-        {label}
-        <span className={cn("text-[0.65rem]", isActive ? "opacity-100" : "opacity-30")}>
-          {isActive ? (direction === "asc" ? "▲" : "▼") : "▲"}
-        </span>
-      </span>
-    </th>
-  );
-}
-
-function FilterHeader({
-  label,
-  width,
-  active,
-  activeClass,
-  dotClass,
-  title,
-  onClick,
-}: {
-  label: string;
-  width?: string;
-  active: boolean;
-  activeClass?: string;
-  dotClass?: string;
-  title?: string;
-  onClick: () => void;
-}) {
-  return (
-    <th
-      className={cn(
-        "px-4 py-2.5 font-medium cursor-pointer select-none transition-colors",
-        width,
-        active ? activeClass : "hover:text-foreground",
-      )}
-      title={title}
-      onClick={onClick}
-    >
-      <span className="inline-flex items-center gap-1">
-        {label}
-        {active && <span className={cn("inline-block w-1.5 h-1.5 rounded-full", dotClass)} />}
-      </span>
-    </th>
-  );
-}
-
 function compareServices(a: Service, b: Service, column: SortColumn): number {
   switch (column) {
-    case "source":
-      return a.source.localeCompare(b.source);
     case "name":
       return a.name.localeCompare(b.name);
     case "host":
@@ -149,25 +56,18 @@ export default function Services() {
   } = useServices();
 
   const [search, setSearch] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [updateFilter, setUpdateFilter] = useState<UpdateFilter>("all");
-  const [sortColumn, setSortColumn] = useState<SortColumn>("name");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [sort, setSort] = useState<SortState<SortColumn>>({ column: "name", direction: "asc" });
   const [drawerService, setDrawerService] = useState<Service | null>(null);
   const [addingService, setAddingService] = useState(false);
-
-  const toggleSort = (col: SortColumn) => {
-    if (sortColumn === col) {
-      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortColumn(col);
-      setSortDirection("asc");
-    }
-  };
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     const visible = services.filter((s) => {
+      if (sourceFilter !== "all" && s.source !== sourceFilter) return false;
+
       if (statusFilter !== "all" && s.status !== statusFilter) return false;
 
       if (updateFilter === "hasUpdate" && !s.metadata?.hasUpdate) return false;
@@ -183,10 +83,10 @@ export default function Services() {
 
       return true;
     });
-    const sign = sortDirection === "asc" ? 1 : -1;
+    const sign = sort.direction === "asc" ? 1 : -1;
 
-    return [...visible].sort((a, b) => sign * compareServices(a, b, sortColumn));
-  }, [services, search, statusFilter, updateFilter, sortColumn, sortDirection]);
+    return [...visible].sort((a, b) => sign * compareServices(a, b, sort.column));
+  }, [services, search, sourceFilter, statusFilter, updateFilter, sort]);
 
   const handleDrawerSave = async (data: UpdateServiceRequest) => {
     if (!drawerService) return;
@@ -238,50 +138,71 @@ export default function Services() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <SortHeader
-                col="source"
+              <FilterHeader
                 label={t("services.colSource")}
                 width="w-32"
-                active={sortColumn}
-                direction={sortDirection}
-                onToggle={toggleSort}
+                value={sourceFilter}
+                onChange={setSourceFilter}
+                filterCycle={[
+                  { value: "all" },
+                  {
+                    value: ServiceSource.DOCKER,
+                    title: t("services.filterSourceDocker"),
+                  },
+                  {
+                    value: ServiceSource.NETWORK,
+                    title: t("services.filterSourceNetwork"),
+                  },
+                ]}
               />
               <SortHeader
                 col="name"
                 label={t("services.colName")}
-                active={sortColumn}
-                direction={sortDirection}
-                onToggle={toggleSort}
+                value={sort}
+                onChange={setSort}
               />
               <SortHeader
                 col="host"
                 label={t("services.colHost")}
-                active={sortColumn}
-                direction={sortDirection}
-                onToggle={toggleSort}
+                value={sort}
+                onChange={setSort}
               />
               <th className="px-4 py-2.5 font-medium">{t("services.colPorts")}</th>
               <FilterHeader
                 label={t("services.colStatus")}
                 width="w-28"
-                active={statusFilter !== "all"}
-                activeClass={statusFilter !== "all" ? statusTextClass(statusFilter) : undefined}
-                dotClass={statusFilter !== "all" ? statusDotClass(statusFilter) : undefined}
-                onClick={() =>
-                  setStatusFilter((curr) => {
-                    const i = STATUS_FILTER_CYCLE.indexOf(curr);
-
-                    return STATUS_FILTER_CYCLE[(i + 1) % STATUS_FILTER_CYCLE.length];
-                  })
-                }
+                value={statusFilter}
+                onChange={setStatusFilter}
+                filterCycle={[
+                  { value: "all" },
+                  {
+                    value: ServiceStatus.UP,
+                    activeClass: "text-success hover:text-success/80",
+                    dotClass: "bg-success",
+                  },
+                  {
+                    value: ServiceStatus.DOWN,
+                    activeClass: "text-destructive hover:text-destructive/80",
+                    dotClass: "bg-destructive",
+                  },
+                  {
+                    value: ServiceStatus.UNKNOWN,
+                    activeClass: "text-muted-foreground hover:text-secondary-foreground",
+                    dotClass: "bg-muted-foreground",
+                  },
+                ]}
               />
               <FilterHeader
                 label={t("services.colVersion")}
-                active={updateFilter === "hasUpdate"}
-                activeClass="text-warning hover:text-warning/80"
-                dotClass="bg-warning"
-                title={t("services.filterHasUpdate")}
-                onClick={() => setUpdateFilter((v) => (v === "hasUpdate" ? "all" : "hasUpdate"))}
+                value={updateFilter}
+                onChange={setUpdateFilter}
+                filterCycle={[
+                  { value: "all" },
+                  {
+                    value: "hasUpdate",
+                    title: t("services.filterHasUpdate"),
+                  },
+                ]}
               />
               <th
                 className="px-4 py-2.5 font-medium w-32"
