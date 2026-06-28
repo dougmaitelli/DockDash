@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 
 import { AddServiceModal } from "../components/modals/AddServiceModal";
-import { ConfirmDialog } from "../components/modals/ConfirmDialog";
 import { ServiceDrawer } from "../components/modals/ServiceDrawer";
 import { useServices } from "../hooks/useData";
 
@@ -156,7 +155,6 @@ export default function Services() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [drawerService, setDrawerService] = useState<Service | null>(null);
   const [addingService, setAddingService] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const toggleSort = (col: SortColumn) => {
     if (sortColumn === col) {
@@ -198,10 +196,11 @@ export default function Services() {
     await refresh();
   };
 
-  const handleDrawerDelete = () => {
+  const handleDrawerDelete = async () => {
     if (!drawerService) return;
 
-    setPendingDeleteId(drawerService.id!);
+    await removeService(drawerService.id!);
+    setDrawerService(null);
   };
 
   return (
@@ -420,18 +419,6 @@ export default function Services() {
             setAddingService(false);
           }}
           onCancel={() => setAddingService(false)}
-        />
-      )}
-
-      {pendingDeleteId && (
-        <ConfirmDialog
-          message={t("modals.confirmDeleteService")}
-          onConfirm={async () => {
-            await removeService(pendingDeleteId);
-            setPendingDeleteId(null);
-            setDrawerService(null);
-          }}
-          onCancel={() => setPendingDeleteId(null)}
         />
       )}
     </div>
