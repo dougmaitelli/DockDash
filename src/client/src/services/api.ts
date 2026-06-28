@@ -56,6 +56,8 @@ export const serviceApi = {
   getHealthHistory: (id: string, days: number) =>
     api.get<ServiceHealthHistoryItem[]>(`/services/${id}/health-history`, { params: { days } }),
   getChangelog: (id: string) => api.get<ChangelogResponse>(`/services/${id}/changelog`),
+  addToDashboard: (id: string) => api.post<ApiSuccess>(`/services/${id}/dashboard`),
+  removeFromDashboard: (id: string) => api.delete<ApiSuccess>(`/services/${id}/dashboard`),
   containerAction: (id: string, action: ContainerAction) =>
     api.post<ApiSuccess>(`/services/${id}/container/${action}`),
   listFiles: (id: string, path: string) =>

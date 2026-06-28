@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   CreateLinkRequest,
   CreateServiceRequest,
-  DashboardData,
   DockerHostHealth,
   Service,
+  ServiceLink,
+  ServicePosition,
   ServiceStatusItem,
   UpdateLinkRequest,
   UpdateServiceRequest,
@@ -84,8 +85,7 @@ export function useDockerHealth() {
 }
 
 export function useServices() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [serviceStatuses, setServiceStatuses] = useState<Record<string, ServiceStatusItem>>({});
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,17 +93,9 @@ export function useServices() {
     try {
       setLoading(true);
       setError(null);
-      const res = await dashboardApi.get();
+      const res = await serviceApi.getAll();
 
-      setData(res.data);
-      const statuses = await dashboardApi.serviceStatuses();
-      const statusObj: Record<string, ServiceStatusItem> = {};
-
-      for (const s of statuses.data) {
-        statusObj[s.id] = s;
-      }
-
-      setServiceStatuses(statusObj);
+      setServices(res.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -125,7 +117,15 @@ export function useServices() {
           statusObj[s.id] = s;
         }
 
-        setServiceStatuses(statusObj);
+        setServices((prev) =>
+          prev.map((s) => {
+            const item = statusObj[s.id!];
+
+            if (!item) return s;
+
+            return { ...s, status: item.status, metadata: { ...s.metadata, ...item.metadata } };
+          }),
+        );
       } catch {
         // ignore
       }
@@ -137,11 +137,7 @@ export function useServices() {
   const addService = useCallback(async (data: CreateServiceRequest) => {
     const res = await serviceApi.importService(data);
 
-    setData((prev) => {
-      if (!prev) return prev;
-
-      return { ...prev, services: [...prev.services, { ...res.data, position: null }] };
-    });
+    setServices((prev) => [...prev, res.data]);
 
     return res.data;
   }, []);
@@ -149,15 +145,61 @@ export function useServices() {
   const updateService = useCallback(async (id: string, data: UpdateServiceRequest) => {
     const res = await serviceApi.update(id, data);
 
-    setData((prev) => {
-      if (!prev) return prev;
-
-      return {
-        ...prev,
-        services: prev.services.map((s) => (s.id === id ? { ...s, ...res.data } : s)),
-      };
-    });
+    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, ...res.data } : s)));
   }, []);
+
+  const removeService = useCallback(async (id: string) => {
+    await serviceApi.delete(id);
+    setServices((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  const addToDashboard = useCallback(async (id: string) => {
+    await serviceApi.addToDashboard(id);
+    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, onDashboard: true } : s)));
+  }, []);
+
+  const removeFromDashboard = useCallback(async (id: string) => {
+    await serviceApi.removeFromDashboard(id);
+    setServices((prev) => prev.map((s) => (s.id === id ? { ...s, onDashboard: false } : s)));
+  }, []);
+
+  return {
+    services,
+    loading,
+    error,
+    refresh,
+    addService,
+    updateService,
+    removeService,
+    addToDashboard,
+    removeFromDashboard,
+  };
+}
+
+export function useDashboard() {
+  const base = useServices();
+  const [positionsById, setPositionsById] = useState<Record<string, ServicePosition>>({});
+  const [links, setLinks] = useState<ServiceLink[]>([]);
+
+  const refreshDashboardExtras = useCallback(async () => {
+    const res = await dashboardApi.get();
+    const positions: Record<string, ServicePosition> = {};
+
+    for (const s of res.data.services) {
+      if (s.position) positions[s.id!] = s.position;
+    }
+
+    setPositionsById(positions);
+    setLinks(res.data.links);
+  }, []);
+
+  useEffect(() => {
+    refreshDashboardExtras();
+  }, [refreshDashboardExtras]);
+
+  const refresh = useCallback(async () => {
+    await Promise.all([base.refresh(), refreshDashboardExtras()]);
+  }, [base, refreshDashboardExtras]);
 
   const updatePosition = useCallback(
     async (
@@ -169,92 +211,59 @@ export function useServices() {
       h?: number | null,
     ) => {
       await positionApi.save([{ serviceId, x, y, parentId, w, h }]);
-      setData((prev) => {
-        if (!prev) return prev;
-
-        return {
-          ...prev,
-          services: prev.services.map((s) =>
-            s.id === serviceId
-              ? {
-                  ...s,
-                  position: {
-                    serviceId,
-                    x,
-                    y,
-                    parentId: parentId ?? undefined,
-                    w: w ?? undefined,
-                    h: h ?? undefined,
-                  },
-                }
-              : s,
-          ),
-        };
-      });
+      setPositionsById((prev) => ({
+        ...prev,
+        [serviceId]: {
+          serviceId,
+          x,
+          y,
+          parentId: parentId ?? undefined,
+          w: w ?? undefined,
+          h: h ?? undefined,
+        },
+      }));
     },
     [],
   );
 
-  const removeService = useCallback(async (id: string) => {
-    await serviceApi.delete(id);
-    setData((prev) => {
-      if (!prev) return prev;
-
-      return { ...prev, services: prev.services.filter((s) => s.id !== id) };
-    });
-  }, []);
-
   const addLink = useCallback(async (data: CreateLinkRequest) => {
     const res = await linkApi.create(data);
 
-    setData((prev) => {
-      if (!prev) return prev;
-
-      return { ...prev, links: [...prev.links, res.data] };
-    });
+    setLinks((prev) => [...prev, res.data]);
   }, []);
 
   const updateLink = useCallback(async (id: string, data: UpdateLinkRequest) => {
     const res = await linkApi.update(id, data);
 
-    setData((prev) => {
-      if (!prev) return prev;
-
-      return { ...prev, links: prev.links.map((l) => (l.id === id ? res.data : l)) };
-    });
+    setLinks((prev) => prev.map((l) => (l.id === id ? res.data : l)));
   }, []);
 
   const removeLink = useCallback(async (id: string) => {
     await linkApi.delete(id);
-    setData((prev) => {
-      if (!prev) return prev;
-
-      return { ...prev, links: prev.links.filter((l) => l.id !== id) };
-    });
+    setLinks((prev) => prev.filter((l) => l.id !== id));
   }, []);
 
-  const servicesWithStatus = (data?.services ?? []).map((s) => {
-    const item = serviceStatuses[s.id!];
-
-    if (!item) return s;
-
-    const { id: _id, ...updates } = item;
-
-    return { ...s, ...updates, metadata: { ...s.metadata, ...updates.metadata } };
-  });
+  const services = useMemo(
+    () =>
+      base.services
+        .filter((s) => s.onDashboard)
+        .map((s) => ({ ...s, position: positionsById[s.id!] ?? null })),
+    [base.services, positionsById],
+  );
 
   return {
-    services: servicesWithStatus,
-    links: data?.links ?? [],
-    loading,
-    error,
+    services,
+    links,
+    loading: base.loading,
+    error: base.error,
     refresh,
     updatePosition,
-    addService,
-    updateService,
+    addService: base.addService,
+    updateService: base.updateService,
     addLink,
     updateLink,
     removeLink,
-    removeService,
+    removeService: base.removeService,
+    removeFromDashboard: base.removeFromDashboard,
   };
 }

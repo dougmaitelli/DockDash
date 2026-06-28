@@ -121,7 +121,20 @@ export class DatabaseService {
   }
 
   getServices(): Service[] {
-    return this.orm.select().from(services).orderBy(asc(services.name)).all();
+    const onDashboardIds = new Set(
+      this.orm
+        .select({ serviceId: servicePositions.serviceId })
+        .from(servicePositions)
+        .all()
+        .map((r) => r.serviceId),
+    );
+
+    return this.orm
+      .select()
+      .from(services)
+      .orderBy(asc(services.name))
+      .all()
+      .map((s) => ({ ...s, onDashboard: onDashboardIds.has(s.id) }));
   }
 
   getService(id: string): Service | undefined {
@@ -156,6 +169,20 @@ export class DatabaseService {
         },
       })
       .run();
+  }
+
+  // Adds a service to the dashboard by creating a default position. No-op if
+  // the service already has one (preserves existing coords).
+  addServiceToDashboard(serviceId: string): void {
+    this.orm
+      .insert(servicePositions)
+      .values({ serviceId, x: 0, y: 0, parentId: null, w: null, h: null })
+      .onConflictDoNothing()
+      .run();
+  }
+
+  removeServiceFromDashboard(serviceId: string): void {
+    this.orm.delete(servicePositions).where(eq(servicePositions.serviceId, serviceId)).run();
   }
 
   getServicePositions(): ServicePosition[] {
@@ -260,15 +287,14 @@ export class DatabaseService {
   }
 
   getDashboardData(): DashboardData {
-    const allServices = this.getServices();
     const positionMap = new Map(this.getServicePositions().map((p) => [p.serviceId, p]));
     const links = this.getLinks();
 
+    // Only services explicitly added to the dashboard (i.e. that have a position) are returned.
     return {
-      services: allServices.map((service) => ({
-        ...service,
-        position: positionMap.get(service.id ?? "") ?? null,
-      })),
+      services: this.getServices()
+        .filter((s) => positionMap.has(s.id ?? ""))
+        .map((service) => ({ ...service, position: positionMap.get(service.id ?? "") ?? null })),
       links,
     };
   }

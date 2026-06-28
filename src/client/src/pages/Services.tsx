@@ -96,8 +96,17 @@ function compareServices(a: Service, b: Service, column: SortColumn): number {
 
 export default function Services() {
   const { t } = useTranslation();
-  const { services, loading, error, refresh, addService, updateService, removeService } =
-    useServices();
+  const {
+    services,
+    loading,
+    error,
+    refresh,
+    addService,
+    updateService,
+    removeService,
+    addToDashboard,
+    removeFromDashboard,
+  } = useServices();
 
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
@@ -254,6 +263,10 @@ export default function Services() {
                 onToggle={toggleSort}
               />
               <th className="px-4 py-2.5 font-medium">{t("services.colVersion")}</th>
+              <th
+                className="px-4 py-2.5 font-medium w-32"
+                aria-label={t("services.colDashboard")}
+              />
             </tr>
           </thead>
           <tbody>
@@ -321,6 +334,27 @@ export default function Services() {
                       <span className="font-mono text-xs text-muted-foreground">—</span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    {service.onDashboard ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Icons.Check size={12} />
+                        {t("services.onDashboard")}
+                      </span>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        title={t("services.addToDashboard")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void addToDashboard(service.id!);
+                        }}
+                      >
+                        <Icons.Plus size={12} />
+                        {t("services.addToDashboard")}
+                      </Button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -346,6 +380,10 @@ export default function Services() {
           service={drawerService}
           onSave={handleDrawerSave}
           onDelete={handleDrawerDelete}
+          onRemoveFromDashboard={async () => {
+            await removeFromDashboard(drawerService.id!);
+            setDrawerService(null);
+          }}
           onClose={() => setDrawerService(null)}
         />
       )}

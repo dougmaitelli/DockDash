@@ -11,6 +11,7 @@ export class Service {
   source!: ServiceSource;
   status: ServiceStatus = ServiceStatus.UNKNOWN;
   metadata?: ServiceMetadata;
+  onDashboard?: boolean;
   createdAt: string;
   updatedAt: string;
 

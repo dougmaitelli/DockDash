@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/Button";
 
 import { dashboardApi } from "../../services/api";
 import { AddServiceModal } from "../modals/AddServiceModal";
-import { ConfirmDialog } from "../modals/ConfirmDialog";
 import { EditLinkModal } from "../modals/EditLinkModal";
 import { ServiceDrawer, Tab as DrawerTab } from "../modals/ServiceDrawer";
 import { EmptyOverlay } from "./EmptyOverlay";
@@ -61,6 +60,7 @@ interface DashboardCanvasProps {
   addLink: (data: CreateLinkRequest) => Promise<void>;
   updateLink: (id: string, data: UpdateLinkRequest) => Promise<void>;
   removeService: (id: string) => Promise<void>;
+  removeFromDashboard: (id: string) => Promise<void>;
   removeLink: (id: string) => Promise<void>;
 }
 
@@ -117,6 +117,7 @@ export function DashboardCanvas({
   updateLink,
   removeLink,
   removeService,
+  removeFromDashboard,
 }: DashboardCanvasProps) {
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 3;
@@ -146,7 +147,17 @@ export function DashboardCanvas({
   const [editingLink, setEditingLink] = useState<ServiceLink | null>(null);
   const [editingNode, setEditingNode] = useState<Service | null>(null);
   const [drawerInitialTab, setDrawerInitialTab] = useState<DrawerTab | undefined>(undefined);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const handleRemoveFromDashboard = useCallback(
+    async (id: string) => {
+      await removeFromDashboard(id);
+
+      if (selectedId === id) setSelectedId(null);
+
+      if (editingNode?.id === id) setEditingNode(null);
+    },
+    [removeFromDashboard, selectedId, editingNode],
+  );
 
   const [dragOffsets, setDragOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
   const [nestingTarget, setNestingTarget] = useState<string | null>(null);
@@ -263,10 +274,10 @@ export function DashboardCanvas({
     (e: KeyboardEvent) => {
       if (e.key === "Delete" && selectedId) {
         e.preventDefault();
-        setPendingDeleteId(selectedId);
+        void handleRemoveFromDashboard(selectedId);
       }
     },
-    [selectedId],
+    [selectedId, handleRemoveFromDashboard],
   );
 
   useEffect(() => {
@@ -859,9 +870,12 @@ export function DashboardCanvas({
             {t("dashboard.addService")}
           </Button>
           {selectedService && (
-            <Button variant="destructive" onClick={() => setPendingDeleteId(selectedService.id!)}>
+            <Button
+              variant="outline"
+              onClick={() => void handleRemoveFromDashboard(selectedService.id!)}
+            >
               <Icons.Trash size={14} />
-              {t("dashboard.remove")}
+              {t("services.removeFromDashboard")}
             </Button>
           )}
           <Button variant="outline" title={t("dashboard.refresh")} onClick={() => refresh()}>
@@ -970,26 +984,11 @@ export function DashboardCanvas({
           initialTab={drawerInitialTab}
           onSave={handleEditNodeConfirm}
           onDelete={handleEditNodeDelete}
+          onRemoveFromDashboard={() => void handleRemoveFromDashboard(editingNode.id!)}
           onClose={() => {
             setEditingNode(null);
             setDrawerInitialTab(undefined);
           }}
-        />
-      )}
-
-      {pendingDeleteId && (
-        <ConfirmDialog
-          message={t("modals.confirmDeleteService")}
-          onConfirm={async () => {
-            await removeService(pendingDeleteId);
-
-            if (selectedId === pendingDeleteId) setSelectedId(null);
-
-            if (editingNode?.id === pendingDeleteId) setEditingNode(null);
-
-            setPendingDeleteId(null);
-          }}
-          onCancel={() => setPendingDeleteId(null)}
         />
       )}
 

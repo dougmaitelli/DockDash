@@ -112,6 +112,26 @@ router.delete("/services/:id", (req, res) => {
   res.json(response);
 });
 
+router.post("/services/:id/dashboard", (req, res) => {
+  if (!db.getService(req.params.id)) {
+    return res.status(404).json({ error: "Service not found" });
+  }
+
+  db.addServiceToDashboard(req.params.id);
+
+  const response: ApiSuccess = { success: true };
+
+  res.json(response);
+});
+
+router.delete("/services/:id/dashboard", (req, res) => {
+  db.removeServiceFromDashboard(req.params.id);
+
+  const response: ApiSuccess = { success: true };
+
+  res.json(response);
+});
+
 router.post("/positions", (req, res) => {
   const { positions } = req.body as SavePositionsRequest;
 

@@ -1,5 +1,5 @@
 import { DashboardCanvas } from "../components/dashboard/DashboardCanvas";
-import { useServices } from "../hooks/useData";
+import { useDashboard } from "../hooks/useData";
 
 export default function Dashboard() {
   const {
@@ -15,7 +15,8 @@ export default function Dashboard() {
     updateLink,
     removeLink,
     removeService,
-  } = useServices();
+    removeFromDashboard,
+  } = useDashboard();
 
   return (
     <div className="p-6 h-[calc(100vh-56px)] flex flex-col gap-5">
@@ -32,6 +33,7 @@ export default function Dashboard() {
         updateLink={updateLink}
         removeLink={removeLink}
         removeService={removeService}
+        removeFromDashboard={removeFromDashboard}
       />
     </div>
   );

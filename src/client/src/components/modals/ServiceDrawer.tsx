@@ -34,6 +34,7 @@ interface ServiceDrawerProps {
   initialTab?: Tab;
   onSave: (data: UpdateServiceRequest) => void;
   onDelete: () => void;
+  onRemoveFromDashboard?: () => void;
   onClose: () => void;
 }
 
@@ -42,6 +43,7 @@ export function ServiceDrawer({
   initialTab,
   onSave,
   onDelete,
+  onRemoveFromDashboard,
   onClose,
 }: ServiceDrawerProps) {
   const { t } = useTranslation();
@@ -77,6 +79,14 @@ export function ServiceDrawer({
           service={service}
           onSave={onSave}
           onDelete={() => setConfirmingDelete(true)}
+          onRemoveFromDashboard={
+            onRemoveFromDashboard
+              ? () => {
+                  dismiss();
+                  setTimeout(onRemoveFromDashboard, ANIM_MS);
+                }
+              : undefined
+          }
           onCancel={dismiss}
         />
       ),

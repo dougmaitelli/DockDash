@@ -17,10 +17,17 @@ interface ServiceDetailsProps {
   service: Service;
   onSave: (data: UpdateServiceRequest) => void;
   onDelete: () => void;
+  onRemoveFromDashboard?: () => void;
   onCancel: () => void;
 }
 
-export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceDetailsProps) {
+export function ServiceDetails({
+  service,
+  onSave,
+  onDelete,
+  onRemoveFromDashboard,
+  onCancel,
+}: ServiceDetailsProps) {
   const isDocker = service.source === ServiceSource.DOCKER;
   const { t } = useTranslation();
   const [editName, setEditName] = useState(service.name);
@@ -154,9 +161,16 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
       </div>
 
       <div className="flex justify-between items-center gap-2 px-5 py-4 border-t border-border">
-        <Button variant="destructive" onClick={onDelete}>
-          {t("modals.delete")}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="destructive" onClick={onDelete}>
+            {t("modals.delete")}
+          </Button>
+          {onRemoveFromDashboard && service.onDashboard && (
+            <Button variant="outline" onClick={onRemoveFromDashboard}>
+              {t("services.removeFromDashboard")}
+            </Button>
+          )}
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onCancel}>
             {t("modals.cancel")}
