@@ -14,6 +14,8 @@ export interface TagArrayInputProps {
   formatTag?: (value: string) => string;
   filterKey?: (e: KeyboardEvent<HTMLInputElement>) => boolean;
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
+  onTagClick?: (value: string, index: number) => void;
+  tagClickTitle?: string;
 }
 
 export function TagArrayInput({
@@ -24,6 +26,8 @@ export function TagArrayInput({
   formatTag = (v) => v,
   filterKey,
   inputProps,
+  onTagClick,
+  tagClickTitle,
 }: TagArrayInputProps) {
   const [inputValue, setInputValue] = useState("");
   const [error, setError] = useState("");
@@ -67,7 +71,18 @@ export function TagArrayInput({
               key={i}
               className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-[0.8rem] text-primary font-mono"
             >
-              {formatTag(v)}
+              {onTagClick ? (
+                <button
+                  type="button"
+                  onClick={() => onTagClick(v, i)}
+                  title={tagClickTitle}
+                  className="bg-transparent border-none p-0 text-inherit font-inherit cursor-pointer hover:text-primary/70"
+                >
+                  {formatTag(v)}
+                </button>
+              ) : (
+                formatTag(v)
+              )}
               <button
                 type="button"
                 onClick={() => handleRemove(i)}

@@ -122,6 +122,7 @@
     "portsDuplicate": "Porta já adicionada",
     "checkPort": "Porta de Verificação",
     "checkPortPlaceholder": "Porta usada para verificações de saúde",
+    "useAsCheckPort": "Usar como porta de verificação",
     "linkType": "Tipo de Conexão",
     "linkLabel": "Rótulo (opcional)",
     "linkLabelPlaceholder": "ex.: REST API, gRPC, WebSocket",

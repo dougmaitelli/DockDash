@@ -122,6 +122,7 @@
     "portsDuplicate": "Port already added",
     "checkPort": "Check Port",
     "checkPortPlaceholder": "Port used for health checks",
+    "useAsCheckPort": "Use as check port",
     "linkType": "Link Type",
     "linkLabel": "Label (optional)",
     "linkLabelPlaceholder": "e.g., REST API, gRPC, WebSocket",

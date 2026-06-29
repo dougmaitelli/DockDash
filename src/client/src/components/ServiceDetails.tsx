@@ -118,6 +118,15 @@ export function ServiceDetails({
             max={65535}
             formatTag={(v) => `:${v}`}
             placeholder={t("modals.portsPlaceholder")}
+            onTagClick={
+              !isDocker && !editCheckPort.trim()
+                ? (v) => {
+                    setEditCheckPort(v);
+                    clearError("checkPort");
+                  }
+                : undefined
+            }
+            tagClickTitle={t("modals.useAsCheckPort")}
           />
         </FormGroup>
         {!isDocker && (
