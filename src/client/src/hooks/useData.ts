@@ -252,6 +252,7 @@ export function useDashboard() {
   );
 
   return {
+    allServices: base.services,
     services,
     links,
     loading: base.loading,

@@ -3,6 +3,7 @@ import { useDashboard } from "../hooks/useData";
 
 export default function Dashboard() {
   const {
+    allServices,
     services,
     links,
     loading,
@@ -21,6 +22,7 @@ export default function Dashboard() {
   return (
     <div className="p-6 h-[calc(100vh-56px)] flex flex-col gap-5">
       <DashboardCanvas
+        allServices={allServices}
         services={services}
         links={links}
         loading={loading}

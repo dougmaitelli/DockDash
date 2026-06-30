@@ -42,6 +42,7 @@ import { ZoomControls } from "./ZoomControls";
 import "./DashboardCanvas.css";
 
 interface DashboardCanvasProps {
+  allServices: Service[];
   services: ServiceWithPosition[];
   links: ServiceLink[];
   loading: boolean;
@@ -105,6 +106,7 @@ function findNestTarget(
 }
 
 export function DashboardCanvas({
+  allServices,
   services,
   links,
   loading,
@@ -131,7 +133,7 @@ export function DashboardCanvas({
   const [canvasDimensions, setCanvasDimensions] = useState({ w: 0, h: 0 });
 
   const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
-  const servicesWithUpdates = services.filter((s) => s.metadata?.hasUpdate === true);
+  const servicesWithUpdates = allServices.filter((s) => s.metadata?.hasUpdate === true);
 
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
