@@ -3,58 +3,83 @@ import { Readable } from "stream";
 
 import type { FileContentResponse, FileEntry } from "@shared/api";
 
+import { sanitizeDockerError } from "../lib/errors.js";
 import { DOCKER_STREAM_HEADER_SIZE } from "./dockerService.js";
 
 class FileService {
   async listFiles(container: Docker.Container, path: string): Promise<FileEntry[]> {
-    const exec = await container.exec({
-      Cmd: ["ls", "-la", "--", path],
-      AttachStdout: true,
-      AttachStderr: true,
-      Tty: false,
-    });
+    try {
+      await this.assertRunning(container);
 
-    const stream = await exec.start({ hijack: true, stdin: false });
+      const exec = await container.exec({
+        Cmd: ["ls", "-la", "--", path],
+        AttachStdout: true,
+        AttachStderr: true,
+        Tty: false,
+      });
 
-    const { stdout, stderr } = await this.demuxStream(stream);
+      const stream = await exec.start({ hijack: true, stdin: false });
 
-    if (!stdout.trim() && stderr.trim()) {
-      throw new Error(stderr.trim());
+      const { stdout, stderr } = await this.demuxStream(stream);
+
+      if (!stdout.trim() && stderr.trim()) {
+        throw new Error(stderr.trim());
+      }
+
+      return this.parseLsOutput(stdout);
+    } catch (err) {
+      throw new Error(sanitizeDockerError(err));
     }
-
-    return this.parseLsOutput(stdout);
   }
 
   async readFile(container: Docker.Container, filePath: string): Promise<FileContentResponse> {
-    const exec = await container.exec({
-      Cmd: ["cat", "--", filePath],
-      AttachStdout: true,
-      AttachStderr: true,
-      Tty: false,
-    });
+    try {
+      await this.assertRunning(container);
 
-    const stream = await exec.start({ hijack: true, stdin: false });
+      const exec = await container.exec({
+        Cmd: ["cat", "--", filePath],
+        AttachStdout: true,
+        AttachStderr: true,
+        Tty: false,
+      });
 
-    const { stdout, stderr } = await this.demuxStream(stream);
+      const stream = await exec.start({ hijack: true, stdin: false });
 
-    if (!stdout && stderr.trim()) throw new Error(stderr.trim());
+      const { stdout, stderr } = await this.demuxStream(stream);
 
-    return { path: filePath, content: stdout };
+      if (!stdout && stderr.trim()) throw new Error(stderr.trim());
+
+      return { path: filePath, content: stdout };
+    } catch (err) {
+      throw new Error(sanitizeDockerError(err));
+    }
   }
 
   async writeFile(container: Docker.Container, filePath: string, content: string): Promise<void> {
-    const contentBuffer = Buffer.from(content, "utf8");
-    const lastSlash = filePath.lastIndexOf("/");
-    const filename = filePath.slice(lastSlash + 1);
-    const dir = lastSlash > 0 ? filePath.slice(0, lastSlash) : "/";
-    const tarBuffer = this.createTarBuffer(filename, contentBuffer);
+    try {
+      await this.assertRunning(container);
 
-    await new Promise<void>((resolve, reject) => {
-      container.putArchive(Readable.from(tarBuffer), { path: dir }, (err: Error | null) => {
-        if (err) reject(err);
-        else resolve();
+      const contentBuffer = Buffer.from(content, "utf8");
+      const lastSlash = filePath.lastIndexOf("/");
+      const filename = filePath.slice(lastSlash + 1);
+      const dir = lastSlash > 0 ? filePath.slice(0, lastSlash) : "/";
+      const tarBuffer = this.createTarBuffer(filename, contentBuffer);
+
+      await new Promise<void>((resolve, reject) => {
+        container.putArchive(Readable.from(tarBuffer), { path: dir }, (err: Error | null) => {
+          if (err) reject(err);
+          else resolve();
+        });
       });
-    });
+    } catch (err) {
+      throw new Error(sanitizeDockerError(err));
+    }
+  }
+
+  private async assertRunning(container: Docker.Container): Promise<void> {
+    const info = await container.inspect();
+
+    if (!info.State?.Running) throw new Error("Container is not running");
   }
 
   private demuxStream(stream: NodeJS.ReadableStream): Promise<{ stdout: string; stderr: string }> {

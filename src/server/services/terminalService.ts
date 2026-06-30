@@ -1,6 +1,8 @@
 import type Docker from "dockerode";
 import { v4 as uuidv4 } from "uuid";
 
+import { sanitizeDockerError } from "../lib/errors.js";
+
 const TERMINAL_SESSION_TTL_MS = 10 * 60 * 1000; // 10 minutes of inactivity
 
 interface TerminalSession {
@@ -22,29 +24,33 @@ class TerminalService {
     cols: number,
     rows: number,
   ): Promise<{ sessionId: string; stream: NodeJS.ReadWriteStream }> {
-    const exec = await container.exec({
-      AttachStdin: true,
-      AttachStdout: true,
-      AttachStderr: true,
-      Tty: true,
-      Cmd: [
-        "/bin/sh",
-        "-c",
-        "TERM=xterm-256color; export TERM; [ -x /bin/bash ] && exec bash || exec sh",
-      ],
-      Env: [`COLUMNS=${cols}`, `LINES=${rows}`],
-    });
+    try {
+      const exec = await container.exec({
+        AttachStdin: true,
+        AttachStdout: true,
+        AttachStderr: true,
+        Tty: true,
+        Cmd: [
+          "/bin/sh",
+          "-c",
+          "TERM=xterm-256color; export TERM; [ -x /bin/bash ] && exec bash || exec sh",
+        ],
+        Env: [`COLUMNS=${cols}`, `LINES=${rows}`],
+      });
 
-    const stream = await exec.start({ hijack: true, stdin: true, Tty: true });
-    const sessionId = uuidv4();
+      const stream = await exec.start({ hijack: true, stdin: true, Tty: true });
+      const sessionId = uuidv4();
 
-    this.sessions.set(sessionId, {
-      stream,
-      lastActivity: Date.now(),
-      ownerSessionId: userSessionId,
-    });
+      this.sessions.set(sessionId, {
+        stream,
+        lastActivity: Date.now(),
+        ownerSessionId: userSessionId,
+      });
 
-    return { sessionId, stream };
+      return { sessionId, stream };
+    } catch (err) {
+      throw new Error(sanitizeDockerError(err));
+    }
   }
 
   // Returns the session only when the caller's express-session ID matches

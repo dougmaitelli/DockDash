@@ -4,13 +4,10 @@ import { PassThrough } from "stream";
 import { v4 as uuidv4 } from "uuid";
 
 import { Service, ServiceSource, ServiceStatus } from "@shared";
-import type { FileContentResponse, FileEntry } from "@shared/api";
 
 import { db } from "../db/databaseService.js";
 import { config } from "../lib/config.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
-import { fileService } from "./fileService.js";
-import { terminalService } from "./terminalService.js";
 
 // Docker multiplexed stream header: 1 byte type + 3 bytes padding + 4 bytes payload length
 export const DOCKER_STREAM_HEADER_SIZE = 8;
@@ -207,30 +204,6 @@ export class DockerService {
     return { image: withoutDigest, tag: DOCKER_LATEST_TAG };
   }
 
-  async listFiles(container: Docker.Container, path: string): Promise<FileEntry[]> {
-    const info = await container.inspect();
-
-    if (!info.State?.Running) throw new Error("Container is not running");
-
-    return fileService.listFiles(container, path);
-  }
-
-  async readFile(container: Docker.Container, filePath: string): Promise<FileContentResponse> {
-    const info = await container.inspect();
-
-    if (!info.State?.Running) throw new Error("Container is not running");
-
-    return fileService.readFile(container, filePath);
-  }
-
-  async writeFile(container: Docker.Container, filePath: string, content: string): Promise<void> {
-    const info = await container.inspect();
-
-    if (!info.State?.Running) throw new Error("Container is not running");
-
-    return fileService.writeFile(container, filePath, content);
-  }
-
   async openLogStream(
     container: Docker.Container,
   ): Promise<NodeJS.ReadableStream & { destroy: () => void }> {
@@ -286,15 +259,6 @@ export class DockerService {
     );
 
     return output;
-  }
-
-  async openTerminal(
-    userSessionId: string,
-    container: Docker.Container,
-    cols: number,
-    rows: number,
-  ): Promise<{ sessionId: string; stream: NodeJS.ReadWriteStream }> {
-    return terminalService.openSession(userSessionId, container, cols, rows);
   }
 }
 
