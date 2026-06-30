@@ -20,22 +20,26 @@ interface Bucket {
   display: BucketDisplay;
 }
 
-function bucketHistory(history: ServiceHealthHistoryItem[], days: number): Bucket[] {
+function bucketHistory(
+  history: ServiceHealthHistoryItem[],
+  days: number,
+  count = BUCKETS,
+): Bucket[] {
   const now = Date.now();
   const rangeMs = days * 86_400_000;
   const start = now - rangeMs;
-  const bucketMs = rangeMs / BUCKETS;
+  const bucketMs = rangeMs / count;
 
-  const seen = Array.from({ length: BUCKETS }, () => new Set<ServiceStatus>());
+  const seen = Array.from({ length: count }, () => new Set<ServiceStatus>());
 
   for (const item of history) {
     const t = new Date(item.checked_at).getTime();
-    const idx = Math.min(Math.floor((t - start) / bucketMs), BUCKETS - 1);
+    const idx = Math.min(Math.floor((t - start) / bucketMs), count - 1);
 
     if (idx >= 0) seen[idx].add(item.status as ServiceStatus);
   }
 
-  return Array.from({ length: BUCKETS }, (_, i) => {
+  return Array.from({ length: count }, (_, i) => {
     const s = seen[i];
     let display: BucketDisplay = null;
 
@@ -95,6 +99,36 @@ interface TooltipState {
   y: number;
   timeLabel: string;
   statusLabel: string;
+}
+
+export function MiniHealthBar({ serviceId }: { serviceId: string }) {
+  const [history, setHistory] = useState<ServiceHealthHistoryItem[] | null>(null);
+
+  useEffect(() => {
+    serviceApi
+      .getHealthHistory(serviceId, 7)
+      .then((res) => setHistory(res.data))
+      .catch(() => setHistory([]));
+  }, [serviceId]);
+
+  if (!history) return null;
+
+  const buckets = bucketHistory(history, 7, 12);
+
+  return (
+    <div className="flex gap-[1px] h-3.5 w-14 shrink-0">
+      {buckets.map((bucket, i) => (
+        <div
+          key={i}
+          className="flex-1 rounded-[1px]"
+          style={{
+            background: bucket.display ? BUCKET_COLORS[bucket.display] : "var(--border-color)",
+            opacity: bucket.display ? 1 : 0.35,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 interface HealthHistoryGraphProps {

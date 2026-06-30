@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 
+import { MiniHealthBar } from "../components/HealthHistoryGraph";
 import { AddServiceModal } from "../components/modals/AddServiceModal";
 import { ServiceDrawer } from "../components/modals/ServiceDrawer";
 import { useServices } from "../hooks/useData";
@@ -170,7 +171,6 @@ export default function Services() {
               <th className="px-4 py-2.5 font-medium">{t("services.colPorts")}</th>
               <FilterHeader
                 label={t("services.colStatus")}
-                width="w-28"
                 value={statusFilter}
                 onChange={setStatusFilter}
                 filterCycle={[
@@ -248,13 +248,16 @@ export default function Services() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={statusVariant(service.status)} className="font-normal">
-                      {service.status === ServiceStatus.UP
-                        ? t("services.statusUp")
-                        : service.status === ServiceStatus.DOWN
-                          ? t("services.statusDown")
-                          : t("services.statusUnknown")}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <MiniHealthBar serviceId={service.id!} />
+                      <Badge variant={statusVariant(service.status)} className="font-normal">
+                        {service.status === ServiceStatus.UP
+                          ? t("services.statusUp")
+                          : service.status === ServiceStatus.DOWN
+                            ? t("services.statusDown")
+                            : t("services.statusUnknown")}
+                      </Badge>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     {imageTag ? (
