@@ -30,7 +30,7 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
 
   try {
     const container = dockerService.getContainerForServiceId(req.params.id);
-    const { sessionId, stream } = await dockerService.openTerminal(
+    const { sessionId, stream } = await terminalService.openSession(
       req.sessionID,
       container,
       cols,
