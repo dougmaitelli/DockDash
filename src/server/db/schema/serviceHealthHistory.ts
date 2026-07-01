@@ -18,7 +18,7 @@ export const serviceHealthHistory = sqliteTable(
       .default(sql`(datetime('now'))`),
   },
   (table) => [
-    index("idx_health_history_service_id").on(table.serviceId),
+    index("idx_health_history_service_checked_at").on(table.serviceId, table.checkedAt),
     index("idx_health_history_checked_at").on(table.checkedAt),
   ],
 );
