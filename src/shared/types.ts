@@ -48,13 +48,13 @@ export interface ServiceMetadata {
   dockerHostId?: string;
   containerId?: string;
   containerName?: string;
+  networkNames?: string[];
   image?: string;
   imageTag?: string;
   imageDigest?: string;
   hasUpdate?: boolean;
   latestVersion?: string;
   updateCheckedAt?: string;
-  [key: string]: string | number | boolean | string[] | number[] | undefined;
 }
 
 export interface ServicePosition {

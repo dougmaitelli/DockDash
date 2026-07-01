@@ -213,9 +213,9 @@ export default function Services() {
           <tbody>
             {visible.map((service) => {
               const isDocker = service.source === ServiceSource.DOCKER;
-              const imageTag = service.metadata?.imageTag as string | undefined;
-              const hasUpdate = service.metadata?.hasUpdate as boolean | undefined;
-              const latestVersion = service.metadata?.latestVersion as string | undefined;
+              const imageTag = service.metadata?.imageTag;
+              const hasUpdate = service.metadata?.hasUpdate;
+              const latestVersion = service.metadata?.latestVersion;
 
               return (
                 <tr

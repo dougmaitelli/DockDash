@@ -41,8 +41,8 @@ export class UpdateCheckerService {
   private async checkServiceForUpdate(
     service: Service,
   ): Promise<{ name: string; currentVersion: string; latestVersion: string } | null> {
-    const image = service.metadata?.image as string | undefined;
-    const imageTag = service.metadata?.imageTag as string | undefined;
+    const image = service.metadata?.image;
+    const imageTag = service.metadata?.imageTag;
 
     if (!image || !imageTag) return null;
 
@@ -54,7 +54,7 @@ export class UpdateCheckerService {
 
     try {
       if (imageTag === DOCKER_LATEST_TAG) {
-        const localDigest = service.metadata?.imageDigest as string | undefined;
+        const localDigest = service.metadata?.imageDigest;
         const registryDigest = await registryClient.getManifestDigest(ref);
 
         if (!localDigest || !registryDigest) return null;
@@ -108,7 +108,7 @@ export class UpdateCheckerService {
       return null;
     }
 
-    const previousHasUpdate = service.metadata?.hasUpdate as boolean | undefined;
+    const previousHasUpdate = service.metadata?.hasUpdate;
 
     db.updateServiceMetadata(service.id!, {
       hasUpdate,

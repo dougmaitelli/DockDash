@@ -28,7 +28,7 @@ export class Service {
       return (
         a.host === b.host &&
         a.metadata?.containerName === b.metadata?.containerName &&
-        a.metadata?.dockerHost === b.metadata?.dockerHost
+        a.metadata?.dockerHostId === b.metadata?.dockerHostId
       );
     }
 

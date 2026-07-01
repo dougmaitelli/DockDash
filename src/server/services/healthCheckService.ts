@@ -1,6 +1,7 @@
 import axios from "axios";
 import net from "net";
 
+import type { ServiceMetadata } from "@shared";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 import { db } from "../db/databaseService.js";
@@ -23,9 +24,9 @@ export class HealthCheckService {
     service: Service,
     stateMap?: ContainerStateMap,
   ): Promise<ServiceStatus | null> {
-    const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+    const dockerHostId = service.metadata?.dockerHostId;
     const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
-    const containerName = service.metadata?.containerName as string | undefined;
+    const containerName = service.metadata?.containerName;
 
     try {
       let status: ServiceStatus;
@@ -51,17 +52,16 @@ export class HealthCheckService {
         }
 
         if (containerInfo) {
-          const prevTag = service.metadata?.imageTag as string | undefined;
+          const prevTag = service.metadata?.imageTag;
           const newTag = containerInfo.imageTag;
-          const hasUpdate = service.metadata?.hasUpdate as boolean | undefined;
-          const latestVersion = service.metadata?.latestVersion as string | undefined;
+          const hasUpdate = service.metadata?.hasUpdate;
+          const latestVersion = service.metadata?.latestVersion;
 
-          const patch: Record<string, string | number | boolean | string[] | number[] | undefined> =
-            {
-              containerId: containerInfo.containerId,
-              imageTag: newTag,
-              imageDigest: containerInfo.imageDigest,
-            };
+          const patch: Partial<ServiceMetadata> = {
+            containerId: containerInfo.containerId,
+            imageTag: newTag,
+            imageDigest: containerInfo.imageDigest,
+          };
 
           if (hasUpdate && newTag !== prevTag && this.isUpdateApplied(newTag, latestVersion)) {
             patch.hasUpdate = false;
@@ -128,7 +128,7 @@ export class HealthCheckService {
     const hostById = services
       .filter((s) => s.source === ServiceSource.DOCKER)
       .reduce((map, service) => {
-        const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+        const dockerHostId = service.metadata?.dockerHostId;
         const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
 
         if (resolvedHost && dockerHostId) map.set(dockerHostId, resolvedHost);
@@ -155,7 +155,7 @@ export class HealthCheckService {
       let status: ServiceStatus | null;
 
       if (service.source === ServiceSource.DOCKER) {
-        const dockerHostId = service.metadata?.dockerHostId as string | undefined;
+        const dockerHostId = service.metadata?.dockerHostId;
 
         status = await this.checkSingleDockerService(
           service,
