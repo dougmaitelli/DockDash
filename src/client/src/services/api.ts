@@ -11,11 +11,11 @@ import type {
   DockerHostHealth,
   FileContentResponse,
   FilesResponse,
+  HealthBucket,
   PositionUpdate,
   SavePositionsRequest,
   SavePositionsResponse,
   Service,
-  ServiceHealthHistoryItem,
   ServiceLink,
   ServiceStatusItem,
   TerminalInputRequest,
@@ -53,8 +53,8 @@ export const serviceApi = {
   importService: (data: CreateServiceRequest) => api.post<Service>("/services", data),
   update: (id: string, data: UpdateServiceRequest) => api.put<Service>(`/services/${id}`, data),
   delete: (id: string) => api.delete<ApiSuccess>(`/services/${id}`),
-  getHealthHistory: (id: string, days: number) =>
-    api.get<ServiceHealthHistoryItem[]>(`/services/${id}/health-history`, { params: { days } }),
+  getHealthHistory: (id: string, days: number, buckets = 80) =>
+    api.get<HealthBucket[]>(`/services/${id}/health-history`, { params: { days, buckets } }),
   getChangelog: (id: string) => api.get<ChangelogResponse>(`/services/${id}/changelog`),
   addToDashboard: (id: string) => api.post<ApiSuccess>(`/services/${id}/dashboard`),
   removeFromDashboard: (id: string) => api.delete<ApiSuccess>(`/services/${id}/dashboard`),

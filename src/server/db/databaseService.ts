@@ -10,8 +10,8 @@ import { v4 as uuidv4 } from "uuid";
 
 import type {
   DashboardData,
+  HealthBucket,
   Service,
-  ServiceHealthHistoryItem,
   ServiceLink,
   ServiceMetadata,
   ServicePosition,
@@ -29,6 +29,7 @@ import type {
 import { serviceHealthHistory, serviceLinks, servicePositions, services } from "./schema/index.js";
 
 const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
+const MS_PER_DAY = 86_400_000;
 
 export class DatabaseService {
   private static instance: DatabaseService | null = null;
@@ -324,22 +325,49 @@ export class DatabaseService {
       .run();
   }
 
-  getHealthHistory(serviceId: string, days: number): ServiceHealthHistoryItem[] {
-    const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
-
-    return this.orm
+  getHealthHistory(serviceId: string, days: number, bucketCount: number): HealthBucket[] {
+    const rangeMs = days * MS_PER_DAY;
+    const cutoff = new Date(Date.now() - rangeMs).toISOString();
+    const rows = this.orm
       .select({ status: serviceHealthHistory.status, checkedAt: serviceHealthHistory.checkedAt })
       .from(serviceHealthHistory)
       .where(
         sql`${serviceHealthHistory.serviceId} = ${serviceId} AND ${serviceHealthHistory.checkedAt} >= ${cutoff}`,
       )
       .orderBy(asc(serviceHealthHistory.checkedAt))
-      .all()
-      .map((row) => ({ status: row.status, checked_at: row.checkedAt }));
+      .all();
+
+    const now = Date.now();
+    const start = now - rangeMs;
+    const bucketMs = rangeMs / bucketCount;
+
+    const seen: Set<string>[] = Array.from({ length: bucketCount }, () => new Set<string>());
+
+    for (const row of rows) {
+      const t = new Date(row.checkedAt).getTime();
+      const idx = Math.min(Math.floor((t - start) / bucketMs), bucketCount - 1);
+
+      if (idx >= 0) seen[idx].add(row.status);
+    }
+
+    return seen.map((s) => {
+      if (s.size === 0) return null;
+
+      const hasUp = s.has(ServiceStatus.UP);
+      const hasDown = s.has(ServiceStatus.DOWN);
+
+      if (hasUp && hasDown) return "mixed";
+
+      if (hasDown) return ServiceStatus.DOWN;
+
+      if (s.has(ServiceStatus.UNKNOWN)) return ServiceStatus.UNKNOWN;
+
+      return ServiceStatus.UP;
+    });
   }
 
   cleanOldHistory(ttlDays: number): number {
-    const cutoff = new Date(Date.now() - ttlDays * 86_400_000).toISOString();
+    const cutoff = new Date(Date.now() - ttlDays * MS_PER_DAY).toISOString();
 
     const result = this.orm
       .delete(serviceHealthHistory)

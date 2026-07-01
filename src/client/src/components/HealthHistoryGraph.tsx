@@ -1,76 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ServiceHealthHistoryItem } from "@shared";
+import type { HealthBucket } from "@shared";
 import { ServiceStatus } from "@shared";
 
 import { cn } from "@/lib/utils";
 import { serviceApi } from "@/services/api";
 
 const BUCKETS = 80;
+const MS_PER_DAY = 86_400_000;
 const PERIODS = [1, 7, 30] as const;
 
 type Period = (typeof PERIODS)[number];
-
-type BucketDisplay = ServiceStatus | "mixed" | null;
-
-interface Bucket {
-  start: number;
-  end: number;
-  display: BucketDisplay;
-}
-
-function bucketHistory(
-  history: ServiceHealthHistoryItem[],
-  days: number,
-  count = BUCKETS,
-): Bucket[] {
-  const now = Date.now();
-  const rangeMs = days * 86_400_000;
-  const start = now - rangeMs;
-  const bucketMs = rangeMs / count;
-
-  const seen = Array.from({ length: count }, () => new Set<ServiceStatus>());
-
-  for (const item of history) {
-    const t = new Date(item.checked_at).getTime();
-    const idx = Math.min(Math.floor((t - start) / bucketMs), count - 1);
-
-    if (idx >= 0) seen[idx].add(item.status as ServiceStatus);
-  }
-
-  return Array.from({ length: count }, (_, i) => {
-    const s = seen[i];
-    let display: BucketDisplay = null;
-
-    if (s.size > 0) {
-      const hasUp = s.has(ServiceStatus.UP);
-      const hasDown = s.has(ServiceStatus.DOWN);
-
-      if (hasUp && hasDown) {
-        display = "mixed";
-      } else if (hasDown) {
-        display = ServiceStatus.DOWN;
-      } else if (s.has(ServiceStatus.UNKNOWN)) {
-        display = ServiceStatus.UNKNOWN;
-      } else {
-        display = ServiceStatus.UP;
-      }
-    }
-
-    return { start: start + i * bucketMs, end: start + (i + 1) * bucketMs, display };
-  });
-}
-
-function calcUptime(buckets: Bucket[]): number | null {
-  const filled = buckets.filter((b) => b.display !== null);
-
-  if (filled.length === 0) return null;
-
-  const up = filled.filter((b) => b.display === ServiceStatus.UP).length;
-
-  return Math.round((up / filled.length) * 100);
-}
 
 function formatBucketTime(ts: number, days: number): string {
   const d = new Date(ts);
@@ -102,28 +43,26 @@ interface TooltipState {
 }
 
 export function MiniHealthBar({ serviceId }: { serviceId: string }) {
-  const [history, setHistory] = useState<ServiceHealthHistoryItem[] | null>(null);
+  const [buckets, setBuckets] = useState<HealthBucket[] | null>(null);
 
   useEffect(() => {
     serviceApi
-      .getHealthHistory(serviceId, 7)
-      .then((res) => setHistory(res.data))
-      .catch(() => setHistory([]));
+      .getHealthHistory(serviceId, 7, 12)
+      .then((res) => setBuckets(res.data))
+      .catch(() => setBuckets([]));
   }, [serviceId]);
 
-  if (!history) return null;
-
-  const buckets = bucketHistory(history, 7, 12);
+  if (!buckets) return null;
 
   return (
     <div className="flex gap-[1px] h-3.5 w-14 shrink-0">
-      {buckets.map((bucket, i) => (
+      {buckets.map((display, i) => (
         <div
           key={i}
           className="flex-1 rounded-[1px]"
           style={{
-            background: bucket.display ? BUCKET_COLORS[bucket.display] : "var(--border-color)",
-            opacity: bucket.display ? 1 : 0.35,
+            background: display ? BUCKET_COLORS[display] : "var(--border-color)",
+            opacity: display ? 1 : 0.35,
           }}
         />
       ))}
@@ -138,36 +77,57 @@ interface HealthHistoryGraphProps {
 export function HealthHistoryGraph({ serviceId }: HealthHistoryGraphProps) {
   const { t } = useTranslation();
   const [period, setPeriod] = useState<Period>(7);
-  const [history, setHistory] = useState<ServiceHealthHistoryItem[] | null>(null);
+  const [buckets, setBuckets] = useState<HealthBucket[] | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const bucketTimesRef = useRef<Array<{ start: number; end: number }>>([]);
 
   useEffect(() => {
-    setHistory(null);
+    setBuckets(null);
+    const now = Date.now();
+    const rangeMs = period * MS_PER_DAY;
+    const bucketMs = rangeMs / BUCKETS;
+
+    bucketTimesRef.current = Array.from({ length: BUCKETS }, (_, i) => ({
+      start: now - rangeMs + i * bucketMs,
+      end: now - rangeMs + (i + 1) * bucketMs,
+    }));
+
     serviceApi
-      .getHealthHistory(serviceId, period)
-      .then((res) => setHistory(res.data))
-      .catch(() => setHistory([]));
+      .getHealthHistory(serviceId, period, BUCKETS)
+      .then((res) => setBuckets(res.data))
+      .catch(() => setBuckets([]));
   }, [serviceId, period]);
 
-  const buckets = history ? bucketHistory(history, period) : null;
-  const uptime = buckets ? calcUptime(buckets) : null;
+  const uptime = useMemo(() => {
+    if (!buckets) return null;
 
-  const handleMouseMove = (e: React.MouseEvent, bucket: Bucket) => {
+    const filled = buckets.filter((b) => b !== null);
+
+    if (filled.length === 0) return null;
+
+    const up = filled.filter((b) => b === ServiceStatus.UP).length;
+
+    return Math.round((up / filled.length) * 100);
+  }, [buckets]);
+
+  const handleMouseMove = (e: React.MouseEvent, bucketIndex: number) => {
+    const { start, end } = bucketTimesRef.current[bucketIndex] ?? { start: 0, end: 0 };
+    const display = buckets?.[bucketIndex] ?? null;
     const statusLabel =
-      bucket.display === null
+      display === null
         ? t("modals.healthHistoryNoChecks")
-        : bucket.display === ServiceStatus.UP
+        : display === ServiceStatus.UP
           ? t("modals.healthHistoryStatusUp")
-          : bucket.display === ServiceStatus.DOWN
+          : display === ServiceStatus.DOWN
             ? t("modals.healthHistoryStatusDown")
-            : bucket.display === "mixed"
+            : display === "mixed"
               ? t("modals.healthHistoryStatusMixed")
               : t("modals.healthHistoryStatusUnknown");
 
     setTooltip({
       x: e.clientX,
       y: e.clientY,
-      timeLabel: `${formatBucketTime(bucket.start, period)} – ${formatBucketTime(bucket.end, period)}`,
+      timeLabel: `${formatBucketTime(start, period)} – ${formatBucketTime(end, period)}`,
       statusLabel,
     });
   };
@@ -207,23 +167,21 @@ export function HealthHistoryGraph({ serviceId }: HealthHistoryGraphProps) {
 
         {!buckets ? (
           <div className="text-xs text-muted-foreground text-center py-2">…</div>
-        ) : history!.length === 0 ? (
+        ) : buckets.every((b) => b === null) ? (
           <div className="text-xs text-muted-foreground text-center py-2">
             {t("modals.healthHistoryNoData")}
           </div>
         ) : (
           <div className="flex gap-[1.5px] h-7 rounded-sm">
-            {buckets.map((bucket, i) => (
+            {buckets.map((display, i) => (
               <div
                 key={i}
                 className="flex-1 rounded-sm cursor-default transition-opacity duration-100 hover:opacity-100"
                 style={{
-                  background: bucket.display
-                    ? BUCKET_COLORS[bucket.display]
-                    : "var(--border-color)",
-                  opacity: bucket.display ? 1 : 0.4,
+                  background: display ? BUCKET_COLORS[display] : "var(--border-color)",
+                  opacity: display ? 1 : 0.4,
                 }}
-                onMouseMove={(e) => handleMouseMove(e, bucket)}
+                onMouseMove={(e) => handleMouseMove(e, i)}
                 onMouseLeave={() => setTooltip(null)}
               />
             ))}

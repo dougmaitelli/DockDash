@@ -84,10 +84,7 @@ export interface DashboardData {
   links: ServiceLink[];
 }
 
-export interface ServiceHealthHistoryItem {
-  status: ServiceStatus;
-  checked_at: string;
-}
+export type HealthBucket = ServiceStatus | "mixed" | null;
 
 export interface ChangelogRelease {
   version: string;

@@ -176,9 +176,9 @@ router.post("/positions", (req, res) => {
 
 router.get("/services/:id/health-history", (req, res) => {
   const days = Math.max(1, parseInt(req.query.days as string, 10) || 7);
-  const history = db.getHealthHistory(req.params.id, days);
+  const buckets = Math.max(1, Math.min(200, parseInt(req.query.buckets as string, 10) || 80));
 
-  res.json(history);
+  res.json(db.getHealthHistory(req.params.id, days, buckets));
 });
 
 router.get("/services/:id/changelog", async (req, res) => {
