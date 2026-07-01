@@ -39,7 +39,7 @@ router.post("/links", (req, res) => {
       protocol: protocol || undefined,
     });
 
-    res.json(link);
+    res.status(201).json(link);
   } catch (err) {
     res.status(409).json({ error: err instanceof Error ? err.message : String(err) });
   }

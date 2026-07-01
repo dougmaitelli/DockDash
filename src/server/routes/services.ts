@@ -66,7 +66,7 @@ router.post("/services", (req, res) => {
 
   void healthCheckService.checkSingleService(service.id!).catch(console.error);
 
-  res.json(service);
+  res.status(201).json(service);
 });
 
 router.put("/services/:id", (req, res) => {
