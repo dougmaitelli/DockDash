@@ -114,8 +114,12 @@ router.post("/services/:id/terminal/input", (req, res) => {
     return res.status(404).json({ error: "Session not found" });
   }
 
-  terminalService.touch(sessionId);
-  session.stream.write(data);
+  try {
+    terminalService.touch(sessionId);
+    session.stream.write(data);
+  } catch {
+    return res.status(410).json({ error: "Session stream is closed" });
+  }
 
   const response: ApiSuccess = { success: true };
 
