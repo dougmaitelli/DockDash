@@ -117,11 +117,15 @@ export class RegistryClient {
   /**
    * Returns tags for the given repository relevant to the given tag prefix.
    *
-   * - Docker Hub (`DOCKER_HUB_REGISTRY`): uses the Docker Hub API with a
-   *   `name` prefix filter, fetching the first and last pages to cover both ends
-   *   of the ascending last_updated ordering.
-   * - Other registries: uses the standard Registry API v2 tags/list endpoint,
-   *   paginating via Link headers (1 000 tags per page, up to 50 pages).
+   * - Docker Hub: uses the Hub API with a name-prefix filter, fetching the
+   *   first and last pages to cover both ends of ascending last_updated order.
+   * - GHCR with GITHUB_TOKEN: uses the GitHub Packages REST API, which groups
+   *   all tags for a manifest into one version entry and returns versions
+   *   newest-first — far more efficient than the Registry v2 tag list for
+   *   repos that push a git-hash tag on every commit.
+   * - Other registries (or GHCR without a token): uses the Registry API v2
+   *   tags/list endpoint, paginating via Link headers (1 000 tags/page, up to
+   *   50 pages).
    */
   async getRepositoryTags(ref: ImageRef, prefix = ""): Promise<string[]> {
     try {
@@ -129,46 +133,11 @@ export class RegistryClient {
         return await this.getDockerHubTags(ref.repository, prefix);
       }
 
-      // Generic Registry API v2 — paginate with 1 000 tags per page via Link headers.
-      // Some registries (e.g. GHCR) push a git-hash tag on every commit, pushing
-      // version-specific tags far down the list. 50 pages (50 000 tags) covers
-      // known high-volume repos while remaining acceptable for hourly background checks.
-      const token = await this.fetchToken(ref.registry, ref.repository);
-      const headers: Record<string, string> = {};
-
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const allTags: string[] = [];
-      const MAX_PAGES = 50;
-      let path = `/v2/${ref.repository}/tags/list?n=1000`;
-
-      for (let page = 0; page < MAX_PAGES; page++) {
-        const resp = await axios.get(`https://${ref.registry}${path}`, {
-          headers,
-          timeout: REQUEST_TIMEOUT,
-          validateStatus: (s) => s < 500,
-        });
-
-        if (resp.status !== 200) {
-          console.warn(
-            `Registry: tags list for ${ref.registry}/${ref.repository} returned HTTP ${resp.status}`,
-          );
-
-          break;
-        }
-
-        allTags.push(...((resp.data?.tags as string[]) ?? []));
-
-        // Follow Link header to next page: </v2/repo/tags/list?last=xxx&n=1000>; rel="next"
-        const linkHeader = resp.headers["link"] as string | undefined;
-        const nextMatch = linkHeader?.match(/<([^>]+)>;\s*rel="next"/);
-
-        if (!nextMatch) break;
-
-        path = nextMatch[1];
+      if (ref.registry === GHCR_REGISTRY && config.githubToken) {
+        return await this.getGhcrTagsViaGitHub(ref.repository);
       }
 
-      return allTags;
+      return await this.getTagsViaRegistryApi(ref);
     } catch (err) {
       console.warn(
         `Registry: failed to fetch tags for ${ref.registry}/${ref.repository} —`,
@@ -177,6 +146,120 @@ export class RegistryClient {
 
       return [];
     }
+  }
+
+  /**
+   * Fetches all tags for a GHCR repository using the GitHub Packages REST API.
+   * Each "version" entry groups all tags pointing at the same manifest, and the
+   * API returns versions in descending creation order (newest first), so recent
+   * release tags appear in the first few pages regardless of how many git-hash
+   * tags exist.
+   *
+   * Tries the /orgs/ endpoint first and falls back to /users/ for personal repos.
+   */
+  private async getGhcrTagsViaGitHub(repository: string): Promise<string[]> {
+    const [owner, ...rest] = repository.split("/");
+    // Slashes in the package name must be percent-encoded for the GitHub API.
+    const packageName = encodeURIComponent(rest.join("/"));
+
+    const headers = {
+      Authorization: `Bearer ${config.githubToken}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    };
+
+    type GhVersion = { metadata?: { container?: { tags?: string[] } } };
+
+    const fetchPages = async (ownerType: "orgs" | "users"): Promise<string[] | null> => {
+      const base = `https://api.github.com/${ownerType}/${owner}/packages/container/${packageName}/versions`;
+      const allTags: string[] = [];
+      const MAX_PAGES = 100; // 100 × 100 = 10 000 versions
+
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        const resp = await axios.get<GhVersion[]>(base, {
+          headers,
+          params: { per_page: 100, page },
+          timeout: REQUEST_TIMEOUT,
+          validateStatus: (s) => s < 500,
+        });
+
+        if (resp.status === 404) return null; // Wrong owner type
+
+        if (resp.status !== 200) {
+          console.warn(`GitHub Packages API: ${base} returned HTTP ${resp.status}`);
+
+          return null;
+        }
+
+        for (const version of resp.data) {
+          allTags.push(...(version.metadata?.container?.tags ?? []));
+        }
+
+        if (resp.data.length < 100) break; // Last page
+      }
+
+      return allTags;
+    };
+
+    const orgTags = await fetchPages("orgs");
+
+    if (orgTags !== null) return orgTags;
+
+    const userTags = await fetchPages("users");
+
+    if (userTags !== null) return userTags;
+
+    // Both endpoints failed — fall back to Registry API v2
+    console.warn(
+      `GitHub Packages API: could not resolve ${repository}, falling back to registry API`,
+    );
+
+    return [];
+  }
+
+  /**
+   * Fetches tags via the standard Registry API v2 tags/list endpoint.
+   * Paginates via Link headers (1 000 tags per page, up to 50 pages).
+   * Used for non-GHCR registries and GHCR when no GITHUB_TOKEN is configured.
+   */
+  private async getTagsViaRegistryApi(ref: ImageRef): Promise<string[]> {
+    const token = await this.fetchToken(ref.registry, ref.repository);
+    const headers: Record<string, string> = {};
+
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const allTags: string[] = [];
+    // 50 pages × 1 000 tags covers repos that bury version tags behind tens of
+    // thousands of git-hash tags (e.g. GHCR without a token).
+    const MAX_PAGES = 50;
+    let path = `/v2/${ref.repository}/tags/list?n=1000`;
+
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const resp = await axios.get(`https://${ref.registry}${path}`, {
+        headers,
+        timeout: REQUEST_TIMEOUT,
+        validateStatus: (s) => s < 500,
+      });
+
+      if (resp.status !== 200) {
+        console.warn(
+          `Registry: tags list for ${ref.registry}/${ref.repository} returned HTTP ${resp.status}`,
+        );
+        break;
+      }
+
+      allTags.push(...((resp.data?.tags as string[]) ?? []));
+
+      // Follow Link header to next page: </v2/repo/tags/list?last=xxx&n=1000>; rel="next"
+      const linkHeader = resp.headers["link"] as string | undefined;
+      const nextMatch = linkHeader?.match(/<([^>]+)>;\s*rel="next"/);
+
+      if (!nextMatch) break;
+
+      path = nextMatch[1];
+    }
+
+    return allTags;
   }
 
   private parseWwwAuthenticate(
