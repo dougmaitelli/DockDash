@@ -1,29 +1,12 @@
 import axios from "axios";
 
-import { config } from "../lib/config.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
+import { fetchRegistryToken } from "./registry/auth.js";
+import { getProvider, Registry } from "./registry/providers.js";
+import type { ImageRef } from "./registry/types.js";
+import { MANIFEST_ACCEPT, REQUEST_TIMEOUT } from "./registry/types.js";
 
-// Accept header that prefers manifest lists (multi-arch) over single-platform manifests.
-// The digest from a manifest list is the stable "pull digest" shown by `docker pull`.
-const MANIFEST_ACCEPT = [
-  "application/vnd.oci.image.index.v1+json",
-  "application/vnd.docker.distribution.manifest.list.v2+json",
-  "application/vnd.docker.distribution.manifest.v2+json",
-  "application/vnd.oci.image.manifest.v1+json",
-].join(",");
-
-const REQUEST_TIMEOUT = 8_000;
-
-const DOCKER_HUB_REGISTRY = "registry-1.docker.io";
-const DOCKER_HUB_AUTH_URL = "https://auth.docker.io/token?service=registry.docker.io";
-const DOCKER_HUB_API_BASE = "https://hub.docker.com/v2/repositories";
-const GHCR_REGISTRY = "ghcr.io";
-
-export interface ImageRef {
-  registry: string;
-  repository: string;
-  tag: string;
-}
+export type { ImageRef };
 
 export class RegistryClient {
   /**
@@ -59,7 +42,7 @@ export class RegistryClient {
     if (!isExplicitRegistry) {
       const repository = segments.length === 1 ? `library/${nameWithoutTag}` : nameWithoutTag;
 
-      return { registry: DOCKER_HUB_REGISTRY, repository, tag };
+      return { registry: Registry.DOCKER_HUB.url, repository, tag };
     }
 
     const registry = firstSegment;
@@ -74,7 +57,7 @@ export class RegistryClient {
    */
   async getManifestDigest(ref: ImageRef): Promise<string | null> {
     try {
-      const token = await this.fetchToken(ref.registry, ref.repository);
+      const token = await fetchRegistryToken(ref.registry, ref.repository);
       const url = `https://${ref.registry}/v2/${ref.repository}/manifests/${ref.tag}`;
       const headers: Record<string, string> = { Accept: MANIFEST_ACCEPT };
 
@@ -116,28 +99,11 @@ export class RegistryClient {
 
   /**
    * Returns tags for the given repository relevant to the given tag prefix.
-   *
-   * - Docker Hub: uses the Hub API with a name-prefix filter, fetching the
-   *   first and last pages to cover both ends of ascending last_updated order.
-   * - GHCR with GITHUB_TOKEN: uses the GitHub Packages REST API, which groups
-   *   all tags for a manifest into one version entry and returns versions
-   *   newest-first — far more efficient than the Registry v2 tag list for
-   *   repos that push a git-hash tag on every commit.
-   * - Other registries (or GHCR without a token): uses the Registry API v2
-   *   tags/list endpoint, paginating via Link headers (1 000 tags/page, up to
-   *   50 pages).
+   * Delegates to the appropriate provider based on the registry hostname.
    */
   async getRepositoryTags(ref: ImageRef, prefix = ""): Promise<string[]> {
     try {
-      if (ref.registry === DOCKER_HUB_REGISTRY) {
-        return await this.getDockerHubTags(ref.repository, prefix);
-      }
-
-      if (ref.registry === GHCR_REGISTRY && config.githubToken) {
-        return await this.getGhcrTagsViaGitHub(ref.repository);
-      }
-
-      return await this.getTagsViaRegistryApi(ref);
+      return await getProvider(ref.registry).getRepositoryTags(ref, prefix);
     } catch (err) {
       console.warn(
         `Registry: failed to fetch tags for ${ref.registry}/${ref.repository} —`,
@@ -146,234 +112,6 @@ export class RegistryClient {
 
       return [];
     }
-  }
-
-  /**
-   * Fetches all tags for a GHCR repository using the GitHub Packages REST API.
-   * Each "version" entry groups all tags pointing at the same manifest, and the
-   * API returns versions in descending creation order (newest first), so recent
-   * release tags appear in the first few pages regardless of how many git-hash
-   * tags exist.
-   *
-   * Tries the /orgs/ endpoint first and falls back to /users/ for personal repos.
-   */
-  private async getGhcrTagsViaGitHub(repository: string): Promise<string[]> {
-    const [owner, ...rest] = repository.split("/");
-    // Slashes in the package name must be percent-encoded for the GitHub API.
-    const packageName = encodeURIComponent(rest.join("/"));
-
-    const headers = {
-      Authorization: `Bearer ${config.githubToken}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-    };
-
-    type GhVersion = { metadata?: { container?: { tags?: string[] } } };
-
-    const fetchPages = async (ownerType: "orgs" | "users"): Promise<string[] | null> => {
-      const base = `https://api.github.com/${ownerType}/${owner}/packages/container/${packageName}/versions`;
-      const allTags: string[] = [];
-      const MAX_PAGES = 100; // 100 × 100 = 10 000 versions
-
-      for (let page = 1; page <= MAX_PAGES; page++) {
-        const resp = await axios.get<GhVersion[]>(base, {
-          headers,
-          params: { per_page: 100, page },
-          timeout: REQUEST_TIMEOUT,
-          validateStatus: (s) => s < 500,
-        });
-
-        if (resp.status === 404) return null; // Wrong owner type
-
-        if (resp.status !== 200) {
-          console.warn(`GitHub Packages API: ${base} returned HTTP ${resp.status}`);
-
-          return null;
-        }
-
-        for (const version of resp.data) {
-          allTags.push(...(version.metadata?.container?.tags ?? []));
-        }
-
-        if (resp.data.length < 100) break; // Last page
-      }
-
-      return allTags;
-    };
-
-    const orgTags = await fetchPages("orgs");
-
-    if (orgTags !== null) return orgTags;
-
-    const userTags = await fetchPages("users");
-
-    if (userTags !== null) return userTags;
-
-    // Both endpoints failed — fall back to Registry API v2
-    console.warn(
-      `GitHub Packages API: could not resolve ${repository}, falling back to registry API`,
-    );
-
-    return [];
-  }
-
-  /**
-   * Fetches tags via the standard Registry API v2 tags/list endpoint.
-   * Paginates via Link headers (1 000 tags per page, up to 50 pages).
-   * Used for non-GHCR registries and GHCR when no GITHUB_TOKEN is configured.
-   */
-  private async getTagsViaRegistryApi(ref: ImageRef): Promise<string[]> {
-    const token = await this.fetchToken(ref.registry, ref.repository);
-    const headers: Record<string, string> = {};
-
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-
-    const allTags: string[] = [];
-    // 50 pages × 1 000 tags covers repos that bury version tags behind tens of
-    // thousands of git-hash tags (e.g. GHCR without a token).
-    const MAX_PAGES = 50;
-    let path = `/v2/${ref.repository}/tags/list?n=1000`;
-
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const resp = await axios.get(`https://${ref.registry}${path}`, {
-        headers,
-        timeout: REQUEST_TIMEOUT,
-        validateStatus: (s) => s < 500,
-      });
-
-      if (resp.status !== 200) {
-        console.warn(
-          `Registry: tags list for ${ref.registry}/${ref.repository} returned HTTP ${resp.status}`,
-        );
-        break;
-      }
-
-      allTags.push(...((resp.data?.tags as string[]) ?? []));
-
-      // Follow Link header to next page: </v2/repo/tags/list?last=xxx&n=1000>; rel="next"
-      const linkHeader = resp.headers["link"] as string | undefined;
-      const nextMatch = linkHeader?.match(/<([^>]+)>;\s*rel="next"/);
-
-      if (!nextMatch) break;
-
-      path = nextMatch[1];
-    }
-
-    return allTags;
-  }
-
-  private parseWwwAuthenticate(
-    header: string,
-  ): { realm: string; params: Record<string, string> } | null {
-    const match = header.match(/Bearer\s+(.+)/i);
-
-    if (!match) return null;
-
-    const params: Record<string, string> = {};
-    let realm = "";
-
-    for (const kv of match[1].matchAll(/(\w+)="([^"]+)"/g)) {
-      if (kv[1] === "realm") {
-        realm = kv[2];
-      } else {
-        params[kv[1]] = kv[2];
-      }
-    }
-
-    return realm ? { realm, params } : null;
-  }
-
-  private async fetchToken(registry: string, repository: string): Promise<string | null> {
-    try {
-      if (registry === DOCKER_HUB_REGISTRY) {
-        const resp = await axios.get(`${DOCKER_HUB_AUTH_URL}&scope=repository:${repository}:pull`, {
-          timeout: REQUEST_TIMEOUT,
-        });
-
-        return (resp.data?.token as string) ?? null;
-      }
-
-      // Generic: ping /v2/ to get a WWW-Authenticate challenge
-      const ping = await axios.get(`https://${registry}/v2/`, {
-        timeout: REQUEST_TIMEOUT,
-        validateStatus: (s) => s === 200 || s === 401,
-      });
-
-      if (ping.status === 200) return null; // No auth needed
-
-      const wwwAuth = ping.headers["www-authenticate"] as string | undefined;
-
-      if (!wwwAuth) return null;
-
-      const parsed = this.parseWwwAuthenticate(wwwAuth);
-
-      if (!parsed) return null;
-
-      // For private GHCR packages, supply the PAT as Basic auth credentials
-      // during the token exchange (the same mechanism Docker CLI uses).
-      const basicAuth =
-        registry === GHCR_REGISTRY && config.githubToken
-          ? { auth: { username: "token", password: config.githubToken } }
-          : {};
-
-      const tokenResp = await axios.get(parsed.realm, {
-        params: { ...parsed.params, scope: `repository:${repository}:pull` },
-        ...basicAuth,
-        timeout: REQUEST_TIMEOUT,
-      });
-
-      return (tokenResp.data?.token ?? tokenResp.data?.access_token ?? null) as string | null;
-    } catch (err) {
-      console.warn(
-        `Registry: failed to fetch auth token for ${registry}/${repository} —`,
-        err instanceof Error ? err.message : String(err),
-      );
-
-      return null;
-    }
-  }
-
-  /**
-   * Fetches tags from the Docker Hub Hub API (hub.docker.com) for a repository,
-   * optionally filtered by name prefix.
-   *
-   * The Hub API returns tags in ascending `last_updated` order (oldest first), so
-   * for repos with more than 100 matching tags we fetch both the first page (for
-   * the total count) and the last page (newest pushes) and combine them.
-   */
-  private async getDockerHubTags(repository: string, prefix: string): Promise<string[]> {
-    const nameParam = prefix ? `&name=${encodeURIComponent(prefix)}` : "";
-    const baseUrl = `${DOCKER_HUB_API_BASE}/${repository}/tags?page_size=100${nameParam}`;
-
-    const firstResp = await axios.get(baseUrl, {
-      timeout: REQUEST_TIMEOUT,
-      validateStatus: (s) => s < 500,
-    });
-
-    if (firstResp.status !== 200) return [];
-
-    const count: number = (firstResp.data?.count as number) ?? 0;
-    const firstTags =
-      (firstResp.data?.results as Array<{ name: string }>)?.map((r) => r.name) ?? [];
-
-    // If everything fits in one page we're done.
-    if (count <= 100) return firstTags;
-
-    // Fetch the last page: the Hub API returns ascending by last_updated, so the
-    // last page holds the most-recently-pushed tags — the ones most likely to
-    // be the newest semantic versions.
-    const lastPage = Math.ceil(count / 100);
-    const lastResp = await axios.get(`${baseUrl}&page=${lastPage}`, {
-      timeout: REQUEST_TIMEOUT,
-      validateStatus: (s) => s < 500,
-    });
-
-    if (lastResp.status !== 200) return firstTags;
-
-    const lastTags = (lastResp.data?.results as Array<{ name: string }>)?.map((r) => r.name) ?? [];
-
-    // Combine both ends so we see both the historical range and the newest pushes.
-    return [...new Set([...firstTags, ...lastTags])];
   }
 }
 
