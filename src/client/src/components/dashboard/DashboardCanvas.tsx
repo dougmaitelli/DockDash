@@ -974,6 +974,7 @@ export function DashboardCanvas({
 
       {editingNode && (
         <ServiceDrawer
+          key={editingNode.id}
           service={editingNode}
           initialTab={drawerInitialTab}
           onSave={handleEditNodeConfirm}
