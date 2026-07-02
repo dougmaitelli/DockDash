@@ -121,7 +121,7 @@ export class RegistryClient {
    *   `name` prefix filter, fetching the first and last pages to cover both ends
    *   of the ascending last_updated ordering.
    * - Other registries: uses the standard Registry API v2 tags/list endpoint,
-   *   paginating via Link headers (1 000 tags per page, up to 10 pages).
+   *   paginating via Link headers (1 000 tags per page, up to 50 pages).
    */
   async getRepositoryTags(ref: ImageRef, prefix = ""): Promise<string[]> {
     try {
@@ -130,13 +130,16 @@ export class RegistryClient {
       }
 
       // Generic Registry API v2 — paginate with 1 000 tags per page via Link headers.
+      // Some registries (e.g. GHCR) push a git-hash tag on every commit, pushing
+      // version-specific tags far down the list. 50 pages (50 000 tags) covers
+      // known high-volume repos while remaining acceptable for hourly background checks.
       const token = await this.fetchToken(ref.registry, ref.repository);
       const headers: Record<string, string> = {};
 
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const allTags: string[] = [];
-      const MAX_PAGES = 10;
+      const MAX_PAGES = 50;
       let path = `/v2/${ref.repository}/tags/list?n=1000`;
 
       for (let page = 0; page < MAX_PAGES; page++) {
