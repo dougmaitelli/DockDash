@@ -10,8 +10,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "paths": {
-      "@shared": ["./src/shared/index.js"],
-      "@shared/*": ["./src/shared/*.js"]
+      "@shared": ["./src/shared/index"],
+      "@shared/*": ["./src/shared/*"],
+      "@server/*": ["./src/server/*"]
     }
   },
   "include": ["src/server/**/*", "src/types/**/*"],

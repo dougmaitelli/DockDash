@@ -179,11 +179,7 @@ export class HealthCheckService {
     const newParsed = TagParser.extractSemVer(newTag);
     const latestParsed = latestVersion ? TagParser.extractSemVer(latestVersion) : null;
 
-    return (
-      !newParsed ||
-      !latestParsed ||
-      TagParser.compareSemVer(newParsed.parts, latestParsed.parts) >= 0
-    );
+    return !newParsed || !latestParsed || TagParser.compareSemVer(newParsed, latestParsed) >= 0;
   }
 
   private async checkTcp(host: string, port: number): Promise<boolean> {

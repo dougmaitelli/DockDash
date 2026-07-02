@@ -12,6 +12,8 @@
     "lint": "eslint src/ *.ts *.js && prettier --check \"src/\" \"*.{js,ts,json}\"",
     "lint:fix": "eslint --fix src/ *.ts *.js && prettier --write \"src/\" \"*.{js,ts,json}\"",
     "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio"
   },
@@ -47,6 +49,9 @@
     "tailwind-merge": "^3.6.0",
     "uuid": "^14.0.0"
   },
+  "resolutions": {
+    "vite": "8.0.16"
+  },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",
     "@types/better-sqlite3": "^7.6.13",
@@ -74,6 +79,7 @@
     "tailwindcss": "^4.3.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
   }
 }

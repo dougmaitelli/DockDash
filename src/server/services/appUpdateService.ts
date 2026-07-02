@@ -36,7 +36,7 @@ class AppUpdateService {
 
       if (!currentParsed || !latestParsed) return null;
 
-      const hasUpdate = TagParser.compareSemVer(latestParsed.parts, currentParsed.parts) > 0;
+      const hasUpdate = TagParser.compareSemVer(latestParsed, currentParsed) > 0;
       const release: ChangelogRelease = {
         version: latestTag,
         publishedAt: data.published_at as string,

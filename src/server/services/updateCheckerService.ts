@@ -74,21 +74,22 @@ export class UpdateCheckerService {
 
         if (allTags.length === 0) return null; // Can't determine — preserve existing status
 
-        let highestParts = parsed.parts;
+        let highest = parsed;
         let highestTag: string | undefined;
 
         for (const tag of allTags) {
-          if (!tag.startsWith(parsed.prefix) || !tag.endsWith(parsed.suffix)) continue;
-
           const candidate = TagParser.extractSemVer(tag);
 
           if (!candidate) continue;
 
-          // Ensure prefix and suffix match exactly (not just startsWith/endsWith)
-          if (candidate.prefix !== parsed.prefix || candidate.suffix !== parsed.suffix) continue;
+          if (
+            !TagParser.prefixMatches(candidate.prefix, parsed.prefix) ||
+            candidate.suffix !== parsed.suffix
+          )
+            continue;
 
-          if (TagParser.compareSemVer(candidate.parts, highestParts) > 0) {
-            highestParts = candidate.parts;
+          if (TagParser.compareSemVer(candidate, highest) > 0) {
+            highest = candidate;
             highestTag = tag;
           }
         }

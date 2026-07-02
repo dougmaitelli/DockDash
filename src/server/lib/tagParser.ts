@@ -1,4 +1,4 @@
-const SEMVER_RE = /(\d+\.\d+\.\d+(?:\.\d+)?)/;
+const SEMVER_RE = /(\d+\.\d+(?:\.\d+)?(?:\.\d+)?)/;
 
 export interface ParsedTag {
   version: string;
@@ -21,9 +21,23 @@ export class TagParser {
     return { version, prefix, suffix, parts };
   }
 
-  static compareSemVer(a: number[], b: number[]): number {
-    for (let i = 0; i < Math.max(a.length, b.length); i++) {
-      const diff = (a[i] ?? 0) - (b[i] ?? 0);
+  // Treats "" and "v" as the same prefix — projects often add/drop the "v" between releases.
+  static prefixMatches(a: string, b: string): boolean {
+    const norm = (p: string) => (p === "v" ? "" : p);
+
+    return norm(a) === norm(b);
+  }
+
+  static compareSemVer(a: ParsedTag, b: ParsedTag): number;
+  static compareSemVer(a: string, b: string): number;
+  static compareSemVer(a: ParsedTag | string, b: ParsedTag | string): number {
+    const pa = typeof a === "string" ? TagParser.extractSemVer(a) : a;
+    const pb = typeof b === "string" ? TagParser.extractSemVer(b) : b;
+
+    if (!pa || !pb) return 0;
+
+    for (let i = 0; i < Math.max(pa.parts.length, pb.parts.length); i++) {
+      const diff = (pa.parts[i] ?? 0) - (pb.parts[i] ?? 0);
 
       if (diff !== 0) return diff;
     }
