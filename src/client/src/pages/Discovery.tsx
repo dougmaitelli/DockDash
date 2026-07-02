@@ -236,7 +236,7 @@ export default function Discovery() {
             <div className="mt-4 flex flex-col gap-2">
               <div className="text-xs text-muted-foreground mb-1 flex justify-between">
                 <span>{t("discovery.foundContainers", { count: dockerResults.length })}</span>
-                <span>{t("discovery.notOnDashboard", { count: availableDocker.length })}</span>
+                <span>{t("discovery.notMonitored", { count: availableDocker.length })}</span>
               </div>
               {dockerResults.map((svc) => {
                 const imported = services.some((e) => Service.equals(svc, e));
@@ -262,7 +262,7 @@ export default function Discovery() {
                     </div>
                     {imported ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase bg-success/15 text-success">
-                        <Icons.Check size={11} /> {t("discovery.onDashboard")}
+                        <Icons.Check size={11} /> {t("discovery.monitored")}
                       </span>
                     ) : (
                       <Button
@@ -330,7 +330,7 @@ export default function Discovery() {
             <div className="mt-4 flex flex-col gap-2">
               <div className="text-xs text-muted-foreground mb-1 flex justify-between">
                 <span>{t("discovery.foundServices", { count: networkResults.length })}</span>
-                <span>{t("discovery.notOnDashboard", { count: availableNetwork.length })}</span>
+                <span>{t("discovery.notMonitored", { count: availableNetwork.length })}</span>
               </div>
               {networkResults.map((svc) => {
                 const imported = services.some((e) => Service.equals(svc, e));
@@ -356,7 +356,7 @@ export default function Discovery() {
                     </div>
                     {imported ? (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase bg-success/15 text-success">
-                        <Icons.Check size={11} /> {t("discovery.onDashboard")}
+                        <Icons.Check size={11} /> {t("discovery.monitored")}
                       </span>
                     ) : (
                       <Button
