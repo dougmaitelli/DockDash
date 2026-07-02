@@ -1,7 +1,7 @@
 # Stage 1: Build
 ARG APP_REPO
 ARG APP_VERSION=dev
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 ARG APP_REPO
 ARG APP_VERSION
 
@@ -9,7 +9,7 @@ WORKDIR /app
 
 COPY package.json yarn.lock ./
 RUN apk add --no-cache python3 make g++ && \
-    yarn install --frozen-lockfile
+    npm install -g yarn && yarn install --frozen-lockfile
 
 COPY . .
 RUN yarn build
@@ -18,7 +18,7 @@ RUN yarn build
 RUN yarn install --production --ignore-scripts
 
 # Stage 2: Production
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 ARG APP_REPO
 ARG APP_VERSION=dev
 
