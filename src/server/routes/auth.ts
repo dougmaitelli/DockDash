@@ -1,8 +1,15 @@
 import type { Request } from "express";
 import { Router } from "express";
+import {
+  authorizationCodeGrant,
+  buildAuthorizationUrl,
+  calculatePKCECodeChallenge,
+  randomPKCECodeVerifier,
+  randomState,
+} from "openid-client";
 
 import { config } from "../lib/config.js";
-import { generators, oidcService } from "../services/oidcService.js";
+import { oidcService } from "../services/oidcService.js";
 
 function callbackUrl(req: Request): string {
   // Explicit override takes precedence for unusual proxy setups
@@ -47,15 +54,15 @@ router.get("/login", async (req, res) => {
   }
 
   try {
-    const client = await oidcService.getClient();
-    const codeVerifier = generators.codeVerifier();
-    const codeChallenge = generators.codeChallenge(codeVerifier);
-    const state = generators.state();
+    const oidcConfig = await oidcService.getConfig();
+    const codeVerifier = randomPKCECodeVerifier();
+    const codeChallenge = await calculatePKCECodeChallenge(codeVerifier);
+    const state = randomState();
 
     req.session.oidcCodeVerifier = codeVerifier;
     req.session.oidcState = state;
 
-    const authUrl = client.authorizationUrl({
+    const authUrl = buildAuthorizationUrl(oidcConfig, {
       scope: config.oidcScopes,
       redirect_uri: callbackUrl(req),
       code_challenge: codeChallenge,
@@ -63,7 +70,7 @@ router.get("/login", async (req, res) => {
       state,
     });
 
-    res.redirect(authUrl);
+    res.redirect(authUrl.href);
   } catch (err) {
     console.error("OIDC login error:", err);
     res.status(500).json({ error: "OIDC configuration error" });
@@ -79,15 +86,17 @@ router.get("/callback", async (req, res) => {
   }
 
   try {
-    const client = await oidcService.getClient();
-    const params = client.callbackParams(req);
+    const oidcConfig = await oidcService.getConfig();
+    const currentUrl = new URL(req.originalUrl, callbackUrl(req));
 
-    const tokenSet = await client.callback(callbackUrl(req), params, {
-      code_verifier: req.session.oidcCodeVerifier,
-      state: req.session.oidcState,
+    const tokenSet = await authorizationCodeGrant(oidcConfig, currentUrl, {
+      pkceCodeVerifier: req.session.oidcCodeVerifier,
+      expectedState: req.session.oidcState,
     });
 
     const claims = tokenSet.claims();
+
+    if (!claims) throw new Error("No ID token claims in response");
 
     // Regenerate the session ID on login to prevent session fixation, then
     // explicitly save before redirecting so the new cookie reaches the client.

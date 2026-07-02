@@ -1,31 +1,27 @@
-import type { Client } from "openid-client";
-import { generators, Issuer } from "openid-client";
+import { type Configuration, discovery } from "openid-client";
 
 import { config } from "../lib/config.js";
 
 class OidcService {
-  private client: Client | null = null;
+  private oidcConfig: Configuration | null = null;
 
   get isEnabled(): boolean {
     return config.oidcEnabled;
   }
 
-  async getClient(): Promise<Client> {
-    if (this.client) return this.client;
+  async getConfig(): Promise<Configuration> {
+    if (this.oidcConfig) return this.oidcConfig;
 
     if (!config.oidcEnabled) throw new Error("OIDC is not configured");
 
-    const issuer = await Issuer.discover(config.oidcIssuer!);
+    this.oidcConfig = await discovery(
+      new URL(config.oidcIssuer!),
+      config.oidcClientId!,
+      config.oidcClientSecret ?? undefined,
+    );
 
-    this.client = new issuer.Client({
-      client_id: config.oidcClientId!,
-      client_secret: config.oidcClientSecret!,
-      response_types: ["code"],
-    });
-
-    return this.client;
+    return this.oidcConfig;
   }
 }
 
 export const oidcService = new OidcService();
-export { generators };
