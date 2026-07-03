@@ -105,8 +105,7 @@ export class NetworkScanner {
           })();
         }
 
-        if (pingSweepStderr)
-          logger.warn(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
+        if (pingSweepStderr) logger.warn(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
       } catch (err) {
         logger.error(
           `[NetworkScanner] Ping sweep failed: ${err instanceof Error ? err.message : String(err)}`,
