@@ -201,8 +201,9 @@ Environment variables can be defined in a `.env` file at the project root. See [
 
 ```bash
 yarn install
-yarn dev        # starts both Vite (port 8081) and the Express server (port 3001)
-yarn test       # run the server-side test suite
-yarn typecheck  # type-check client and server
-yarn lint:fix   # auto-fix lint and formatting
+yarn dev             # starts both Vite (port 8081) and the Express server (port 3001)
+yarn test            # run the server-side test suite
+yarn test:coverage   # run tests with V8 coverage report (output: coverage/)
+yarn typecheck       # type-check client and server
+yarn lint:fix        # auto-fix lint and formatting
 ```
