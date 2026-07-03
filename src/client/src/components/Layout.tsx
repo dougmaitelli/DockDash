@@ -68,6 +68,7 @@ function Layout({ children }: LayoutProps) {
   const { enabled, user, logout } = useAuth();
   const [updateInfo, setUpdateInfo] = useState<ChangelogRelease | null>(null);
   const [changelogOpen, setChangelogOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     discoveryApi.checkAppUpdate().then(({ data }) => {
@@ -81,7 +82,29 @@ function Layout({ children }: LayoutProps) {
     });
   }, []);
 
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const navigate = useTransitionNavigate();
+
+  const navLinks = (
+    <>
+      <NavLink to="/" active={location.pathname === "/"}>
+        {t("nav.dashboard")}
+      </NavLink>
+      <NavLink to="/services" active={location.pathname === "/services"}>
+        {t("nav.services")}
+      </NavLink>
+      <NavLink to="/discover" active={location.pathname === "/discover"}>
+        {t("nav.discovery")}
+      </NavLink>
+      <NavLink to="/settings" active={location.pathname === "/settings"}>
+        {t("nav.settings")}
+      </NavLink>
+    </>
+  );
 
   return (
     <>
@@ -102,45 +125,66 @@ function Layout({ children }: LayoutProps) {
             DockDash
           </span>
         </Link>
-        <div className="flex gap-1 h-full items-center">
-          <NavLink to="/" active={location.pathname === "/"}>
-            {t("nav.dashboard")}
-          </NavLink>
-          <NavLink to="/services" active={location.pathname === "/services"}>
-            {t("nav.services")}
-          </NavLink>
-          <NavLink to="/discover" active={location.pathname === "/discover"}>
-            {t("nav.discovery")}
-          </NavLink>
-          <NavLink to="/settings" active={location.pathname === "/settings"}>
-            {t("nav.settings")}
-          </NavLink>
+
+        {/* Desktop nav links */}
+        <div className="hidden sm:flex gap-1 h-full items-center">{navLinks}</div>
+
+        {/* Right side: desktop auth + mobile hamburger */}
+        <div className="ml-auto flex items-center gap-3">
+          {enabled && user && (
+            <>
+              {user.picture ? (
+                <img
+                  src={user.picture}
+                  alt={user.name ?? user.email ?? ""}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
+                  {(user.name ?? user.email ?? "?")[0].toUpperCase()}
+                </div>
+              )}
+              <span className="text-sm text-secondary-foreground hidden sm:block">
+                {user.name ?? user.email}
+              </span>
+              <button
+                onClick={logout}
+                className="hidden sm:block px-3 py-1 text-xs font-medium rounded-md text-secondary-foreground hover:text-foreground hover:bg-primary/5 transition-colors cursor-pointer"
+              >
+                {t("nav.logout")}
+              </button>
+            </>
+          )}
+
+          {/* Mobile hamburger */}
+          <button
+            className="sm:hidden text-secondary-foreground hover:text-foreground transition-colors cursor-pointer"
+            onClick={() => setMobileMenuOpen((o) => !o)}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <Icons.X size={18} /> : <Icons.Menu size={18} />}
+          </button>
         </div>
-        {enabled && user && (
-          <div className="ml-auto flex items-center gap-3">
-            {user.picture ? (
-              <img
-                src={user.picture}
-                alt={user.name ?? user.email ?? ""}
-                className="w-7 h-7 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
-                {(user.name ?? user.email ?? "?")[0].toUpperCase()}
-              </div>
-            )}
-            <span className="text-sm text-secondary-foreground hidden sm:block">
-              {user.name ?? user.email}
-            </span>
-            <button
-              onClick={logout}
-              className="px-3 py-1 text-xs font-medium rounded-md text-secondary-foreground hover:text-foreground hover:bg-primary/5 transition-colors cursor-pointer"
-            >
-              {t("nav.logout")}
-            </button>
-          </div>
-        )}
       </nav>
+
+      {/* Mobile dropdown menu */}
+      {mobileMenuOpen && (
+        <div className="sm:hidden fixed top-14 left-0 right-0 bg-muted/95 backdrop-blur-[12px] border-b border-border z-[99] flex flex-col p-2">
+          {navLinks}
+          {enabled && user && (
+            <div className="border-t border-border mt-2 pt-2 px-2 flex items-center justify-between">
+              <span className="text-sm text-secondary-foreground">{user.name ?? user.email}</span>
+              <button
+                onClick={logout}
+                className="px-3 py-1 text-xs font-medium rounded-md text-secondary-foreground hover:text-foreground hover:bg-primary/5 transition-colors cursor-pointer"
+              >
+                {t("nav.logout")}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       <main className="pt-14 min-h-screen">
         {updateInfo && (
           <div className="relative flex items-center justify-center gap-3 px-4 py-2 bg-warning/10 border-b border-warning/20 text-xs text-warning">

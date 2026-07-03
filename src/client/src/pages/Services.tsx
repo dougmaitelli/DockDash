@@ -53,7 +53,6 @@ export default function Services() {
     updateService,
     removeService,
     addToDashboard,
-    removeFromDashboard,
   } = useServices();
 
   const [search, setSearch] = useState("");
@@ -136,174 +135,176 @@ export default function Services() {
       {error && !loading && <p className="text-sm text-destructive">{error}</p>}
 
       <Card className="overflow-hidden p-0">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <FilterHeader
-                label={t("services.colSource")}
-                width="w-32"
-                value={sourceFilter}
-                onChange={setSourceFilter}
-                filterCycle={[
-                  { value: "all" },
-                  {
-                    value: ServiceSource.DOCKER,
-                    title: t("services.filterSourceDocker"),
-                  },
-                  {
-                    value: ServiceSource.NETWORK,
-                    title: t("services.filterSourceNetwork"),
-                  },
-                ]}
-              />
-              <SortHeader
-                col="name"
-                label={t("services.colName")}
-                value={sort}
-                onChange={setSort}
-              />
-              <SortHeader
-                col="host"
-                label={t("services.colHost")}
-                value={sort}
-                onChange={setSort}
-              />
-              <th className="px-4 py-2.5 font-medium">{t("services.colPorts")}</th>
-              <FilterHeader
-                label={t("services.colStatus")}
-                value={statusFilter}
-                onChange={setStatusFilter}
-                filterCycle={[
-                  { value: "all" },
-                  {
-                    value: ServiceStatus.UP,
-                    activeClass: "text-success hover:text-success/80",
-                    dotClass: "bg-success",
-                  },
-                  {
-                    value: ServiceStatus.DOWN,
-                    activeClass: "text-destructive hover:text-destructive/80",
-                    dotClass: "bg-destructive",
-                  },
-                  {
-                    value: ServiceStatus.UNKNOWN,
-                    activeClass: "text-muted-foreground hover:text-secondary-foreground",
-                    dotClass: "bg-muted-foreground",
-                  },
-                ]}
-              />
-              <FilterHeader
-                label={t("services.colVersion")}
-                value={updateFilter}
-                onChange={setUpdateFilter}
-                filterCycle={[
-                  { value: "all" },
-                  {
-                    value: "hasUpdate",
-                    title: t("services.filterHasUpdate"),
-                  },
-                ]}
-              />
-              <th
-                className="px-4 py-2.5 font-medium w-32"
-                aria-label={t("services.colDashboard")}
-              />
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((service) => {
-              const isDocker = service.source === ServiceSource.DOCKER;
-              const imageTag = service.metadata?.imageTag;
-              const hasUpdate = service.metadata?.hasUpdate;
-              const latestVersion = service.metadata?.latestVersion;
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
+            <thead>
+              <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <FilterHeader
+                  label={t("services.colSource")}
+                  width="w-32"
+                  value={sourceFilter}
+                  onChange={setSourceFilter}
+                  filterCycle={[
+                    { value: "all" },
+                    {
+                      value: ServiceSource.DOCKER,
+                      title: t("services.filterSourceDocker"),
+                    },
+                    {
+                      value: ServiceSource.NETWORK,
+                      title: t("services.filterSourceNetwork"),
+                    },
+                  ]}
+                />
+                <SortHeader
+                  col="name"
+                  label={t("services.colName")}
+                  value={sort}
+                  onChange={setSort}
+                />
+                <SortHeader
+                  col="host"
+                  label={t("services.colHost")}
+                  value={sort}
+                  onChange={setSort}
+                />
+                <th className="px-4 py-2.5 font-medium">{t("services.colPorts")}</th>
+                <FilterHeader
+                  label={t("services.colStatus")}
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  filterCycle={[
+                    { value: "all" },
+                    {
+                      value: ServiceStatus.UP,
+                      activeClass: "text-success hover:text-success/80",
+                      dotClass: "bg-success",
+                    },
+                    {
+                      value: ServiceStatus.DOWN,
+                      activeClass: "text-destructive hover:text-destructive/80",
+                      dotClass: "bg-destructive",
+                    },
+                    {
+                      value: ServiceStatus.UNKNOWN,
+                      activeClass: "text-muted-foreground hover:text-secondary-foreground",
+                      dotClass: "bg-muted-foreground",
+                    },
+                  ]}
+                />
+                <FilterHeader
+                  label={t("services.colVersion")}
+                  value={updateFilter}
+                  onChange={setUpdateFilter}
+                  filterCycle={[
+                    { value: "all" },
+                    {
+                      value: "hasUpdate",
+                      title: t("services.filterHasUpdate"),
+                    },
+                  ]}
+                />
+                <th
+                  className="px-4 py-2.5 font-medium w-32"
+                  aria-label={t("services.colDashboard")}
+                />
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((service) => {
+                const isDocker = service.source === ServiceSource.DOCKER;
+                const imageTag = service.metadata?.imageTag;
+                const hasUpdate = service.metadata?.hasUpdate;
+                const latestVersion = service.metadata?.latestVersion;
 
-              return (
-                <tr
-                  key={service.id}
-                  onClick={() => setDrawerService(service)}
-                  className={cn(
-                    "border-b border-border last:border-b-0 cursor-pointer transition-colors",
-                    "hover:bg-primary/5",
-                  )}
-                >
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1.5 px-[6px] py-px rounded text-[0.65rem] bg-warning/10 text-warning">
-                      {isDocker ? <Icons.Docker size={12} /> : <Icons.Globe size={12} />}
-                      {isDocker ? t("services.sourceDocker") : t("services.sourceNetwork")}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-medium text-foreground">{service.name}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-secondary-foreground">
-                    {service.host}
-                  </td>
-                  <td className="px-4 py-3">
-                    {service.ports.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {service.ports.map((p) => (
-                          <PortTag key={p}>:{p}</PortTag>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="font-mono text-xs text-muted-foreground">—</span>
+                return (
+                  <tr
+                    key={service.id}
+                    onClick={() => setDrawerService(service)}
+                    className={cn(
+                      "border-b border-border last:border-b-0 cursor-pointer transition-colors",
+                      "hover:bg-primary/5",
                     )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <MiniHealthBar serviceId={service.id!} />
-                      <Badge variant={statusVariant(service.status)} className="font-normal">
-                        {service.status === ServiceStatus.UP
-                          ? t("services.statusUp")
-                          : service.status === ServiceStatus.DOWN
-                            ? t("services.statusDown")
-                            : t("services.statusUnknown")}
-                      </Badge>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {imageTag ? (
-                      <div className="flex items-center gap-1 flex-wrap">
-                        <span className="inline-block px-1.5 py-px bg-accent-purple/10 text-accent-purple rounded text-[0.65rem] font-mono">
-                          {imageTag}
-                        </span>
-                        {hasUpdate && (
-                          <>
-                            <Icons.ArrowRight size={10} className="text-muted-foreground" />
-                            <span className="inline-block px-1.5 py-px bg-warning/10 text-warning border border-warning/30 rounded text-[0.65rem] font-mono">
-                              {latestVersion ?? t("services.updateBadge")}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="font-mono text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {service.onDashboard ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Icons.Check size={12} />
-                        {t("services.onDashboard")}
+                  >
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5 px-[6px] py-px rounded text-[0.65rem] bg-warning/10 text-warning">
+                        {isDocker ? <Icons.Docker size={12} /> : <Icons.Globe size={12} />}
+                        {isDocker ? t("services.sourceDocker") : t("services.sourceNetwork")}
                       </span>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        title={t("services.addToDashboard")}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void addToDashboard(service.id!);
-                        }}
-                      >
-                        <Icons.Plus size={12} />
-                        {t("services.addToDashboard")}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-foreground">{service.name}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-secondary-foreground">
+                      {service.host}
+                    </td>
+                    <td className="px-4 py-3">
+                      {service.ports.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {service.ports.map((p) => (
+                            <PortTag key={p}>:{p}</PortTag>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="font-mono text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <MiniHealthBar serviceId={service.id!} />
+                        <Badge variant={statusVariant(service.status)} className="font-normal">
+                          {service.status === ServiceStatus.UP
+                            ? t("services.statusUp")
+                            : service.status === ServiceStatus.DOWN
+                              ? t("services.statusDown")
+                              : t("services.statusUnknown")}
+                        </Badge>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {imageTag ? (
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="inline-block px-1.5 py-px bg-accent-purple/10 text-accent-purple rounded text-[0.65rem] font-mono">
+                            {imageTag}
+                          </span>
+                          {hasUpdate && (
+                            <>
+                              <Icons.ArrowRight size={10} className="text-muted-foreground" />
+                              <span className="inline-block px-1.5 py-px bg-warning/10 text-warning border border-warning/30 rounded text-[0.65rem] font-mono">
+                                {latestVersion ?? t("services.updateBadge")}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="font-mono text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {service.onDashboard ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Icons.Check size={12} />
+                          {t("services.onDashboard")}
+                        </span>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          title={t("services.addToDashboard")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void addToDashboard(service.id!);
+                          }}
+                        >
+                          <Icons.Plus size={12} />
+                          {t("services.addToDashboard")}
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
 
         {!loading && visible.length === 0 && services.length > 0 && (
           <div className="p-8 text-center text-sm text-muted-foreground">
@@ -325,10 +326,6 @@ export default function Services() {
           service={drawerService}
           onSave={handleDrawerSave}
           onDelete={handleDrawerDelete}
-          onRemoveFromDashboard={async () => {
-            await removeFromDashboard(drawerService.id!);
-            setDrawerService(null);
-          }}
           onClose={() => setDrawerService(null)}
         />
       )}

@@ -17,17 +17,10 @@ interface ServiceDetailsProps {
   service: Service;
   onSave: (data: UpdateServiceRequest) => void;
   onDelete: () => void;
-  onRemoveFromDashboard?: () => void;
   onCancel: () => void;
 }
 
-export function ServiceDetails({
-  service,
-  onSave,
-  onDelete,
-  onRemoveFromDashboard,
-  onCancel,
-}: ServiceDetailsProps) {
+export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceDetailsProps) {
   const isDocker = service.source === ServiceSource.DOCKER;
   const { t } = useTranslation();
   const [editName, setEditName] = useState(service.name);
@@ -174,11 +167,6 @@ export function ServiceDetails({
           <Button variant="destructive" onClick={onDelete}>
             {t("modals.delete")}
           </Button>
-          {onRemoveFromDashboard && service.onDashboard && (
-            <Button variant="outline" onClick={onRemoveFromDashboard}>
-              {t("services.removeFromDashboard")}
-            </Button>
-          )}
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onCancel}>

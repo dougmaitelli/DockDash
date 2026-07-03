@@ -979,7 +979,6 @@ export function DashboardCanvas({
           initialTab={drawerInitialTab}
           onSave={handleEditNodeConfirm}
           onDelete={handleEditNodeDelete}
-          onRemoveFromDashboard={() => void handleRemoveFromDashboard(editingNode.id!)}
           onClose={() => {
             setEditingNode(null);
             setDrawerInitialTab(undefined);
