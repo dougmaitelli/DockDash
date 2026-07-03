@@ -174,6 +174,61 @@ describe("ChangelogService", () => {
       );
     });
 
+    it("falls back to the shorter form when a trailing-.0 tag returns 404 (1.4.0 → 1.4)", async () => {
+      // The update checker always stores the longest available form (e.g. "1.4.0").
+      // If GitHub only tags the shorter form ("1.4"), the changelog service must fall back.
+      const svc = makeService({ metadata: { image: "owner/my-app", imageTag: "1.4.0" } });
+
+      const notFound = Object.assign(new Error("Not Found"), { response: { status: 404 } });
+
+      mockAxios.isAxiosError.mockReturnValue(true);
+      // Exact form "1.4.0" tried first, then "v1.4.0", then fallback "1.4" succeeds
+      mockAxios.get
+        .mockRejectedValueOnce(notFound)
+        .mockRejectedValueOnce(notFound)
+        .mockResolvedValueOnce({ data: mockGithubRelease("1.4") });
+
+      const result = await changelogService.fetchChangelog(svc);
+
+      expect(result.available).toBe(true);
+
+      if (!result.available) throw new Error("Expected available changelog");
+
+      expect(result.release.version).toBe("1.4");
+      expect(mockAxios.get).toHaveBeenNthCalledWith(
+        1,
+        expect.stringContaining("/tags/1.4.0"),
+        expect.any(Object),
+      );
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        expect.stringContaining("/tags/1.4"),
+        expect.any(Object),
+      );
+    });
+
+    it("strips trailing .0 parts iteratively: 1.2.0.0 → 1.2.0 → 1.2", async () => {
+      const svc = makeService({ metadata: { image: "owner/my-app", imageTag: "1.2.0.0" } });
+
+      const notFound = Object.assign(new Error("Not Found"), { response: { status: 404 } });
+
+      mockAxios.isAxiosError.mockReturnValue(true);
+      mockAxios.get
+        .mockRejectedValueOnce(notFound) // "1.2.0.0"
+        .mockRejectedValueOnce(notFound) // "v1.2.0.0"
+        .mockRejectedValueOnce(notFound) // "1.2.0"
+        .mockRejectedValueOnce(notFound) // "v1.2.0"
+        .mockResolvedValueOnce({ data: mockGithubRelease("1.2") }); // final fallback
+
+      const result = await changelogService.fetchChangelog(svc);
+
+      expect(result.available).toBe(true);
+
+      if (!result.available) throw new Error("Expected available changelog");
+
+      expect(result.release.version).toBe("1.2");
+      expect(mockAxios.get).toHaveBeenCalledTimes(5);
+    });
+
     it("returns available:false when all tag variants return 404", async () => {
       const svc = makeService({ metadata: { image: "owner/my-app", imageTag: "v2.0.0" } });
 

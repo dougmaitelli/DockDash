@@ -90,6 +90,18 @@ export class ChangelogService {
 
     if (parsed && (parsed.prefix || parsed.suffix)) addWithVVariant(parsed.version);
 
+    // Fallback: iteratively strip trailing .0 parts and add each shorter form as a candidate.
+    // The update checker stores the longest available form, but GitHub releases sometimes
+    // only tag shorter forms. Handles multiple levels: "1.2.0.0" → "1.2.0" → "1.2".
+    if (parsed) {
+      let parts = [...parsed.parts];
+
+      while (parts.length > 2 && parts[parts.length - 1] === 0) {
+        parts = parts.slice(0, -1);
+        addWithVVariant(parsed.prefix + parts.join(".") + parsed.suffix);
+      }
+    }
+
     const candidates = [...seen];
 
     for (const candidate of candidates) {

@@ -91,7 +91,9 @@ export class UpdateCheckerService {
           )
             continue;
 
-          if (TagParser.compareSemVer(candidate, highest) > 0) {
+          const cmp = TagParser.compareSemVer(candidate, highest);
+
+          if (cmp > 0 || (cmp === 0 && candidate.parts.length > highest.parts.length)) {
             highest = candidate;
             highestTag = tag;
           }

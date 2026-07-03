@@ -162,6 +162,21 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
       );
     });
 
+    it("stores the longer tag form when semver-equal tags coexist (prefers 1.27.0 over 1.27)", async () => {
+      const svc = makeDockerService();
+
+      mockDb.getServices.mockReturnValue([svc]);
+      // Registry has both short and long forms; should store the more specific one
+      mockRegistryClient.getRepositoryTags.mockResolvedValue(["1.25", "1.26", "1.27", "1.27.0"]);
+
+      await updateCheckerService.checkAllServicesForUpdates();
+
+      expect(mockDb.updateServiceMetadata).toHaveBeenCalledWith(
+        "svc-1",
+        expect.objectContaining({ hasUpdate: true, latestVersion: "1.27.0" }),
+      );
+    });
+
     it("does not set hasUpdate when already at the latest tag", async () => {
       const svc = makeDockerService();
 
