@@ -74,6 +74,7 @@ export function ServiceDrawer({
       enabled: true,
       content: (
         <ServiceDetails
+          key={service.id}
           service={service}
           onSave={onSave}
           onDelete={() => setConfirmingDelete(true)}

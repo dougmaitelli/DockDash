@@ -322,7 +322,6 @@ export default function Services() {
 
       {drawerService && (
         <ServiceDrawer
-          key={drawerService.id}
           service={drawerService}
           onSave={handleDrawerSave}
           onDelete={handleDrawerDelete}
