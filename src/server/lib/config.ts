@@ -7,7 +7,6 @@ export const DEFAULT_PORT = 3001;
 export const DEFAULT_DOCKER_SOCKET = "unix:///var/run/docker.sock";
 export const DEFAULT_NETWORK_CIDRS = "192.168.0.0/24";
 export const DEFAULT_HEALTH_CHECK_INTERVAL = 30000;
-export const DEFAULT_REFRESH_INTERVAL = 30000;
 export const DEFAULT_UPDATE_CHECK_INTERVAL = 3_600_000; // 1 hour
 export const DEFAULT_HEALTH_HISTORY_TTL_DAYS = 30;
 export const DEFAULT_SESSION_MAX_AGE = 8 * 60 * 60 * 1000; // 8 hours
@@ -45,12 +44,6 @@ class Config {
     return process.env.HEALTH_CHECK_INTERVAL
       ? parseInt(process.env.HEALTH_CHECK_INTERVAL, 10)
       : DEFAULT_HEALTH_CHECK_INTERVAL;
-  }
-
-  get refreshInterval(): number {
-    return process.env.REFRESH_INTERVAL
-      ? parseInt(process.env.REFRESH_INTERVAL, 10)
-      : DEFAULT_REFRESH_INTERVAL;
   }
 
   get updateCheckInterval(): number {

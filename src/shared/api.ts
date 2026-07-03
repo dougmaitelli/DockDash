@@ -67,9 +67,9 @@ export interface DashboardConfig {
   version: string;
   dockerHosts: string[];
   networkCidrs: string[];
-  refreshInterval: number;
   healthCheckInterval: number;
   updateCheckInterval: number;
+  healthHistoryTtlDays: number;
   appriseConfigured: boolean;
   containerControlsEnabled: boolean;
   fileExplorerEnabled: boolean;

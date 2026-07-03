@@ -43,8 +43,9 @@ export default function Settings() {
   const configEntries = [
     { key: "DOCKER_HOSTS", value: config?.dockerHosts.join(", ") },
     { key: "NETWORK_CIDRS", value: config?.networkCidrs.join(",") },
-    { key: "REFRESH_INTERVAL", value: String(config?.refreshInterval ?? "") },
     { key: "HEALTH_CHECK_INTERVAL", value: String(config?.healthCheckInterval ?? "") },
+    { key: "UPDATE_CHECK_INTERVAL", value: String(config?.updateCheckInterval ?? "") },
+    { key: "HEALTH_HISTORY_TTL_DAYS", value: String(config?.healthHistoryTtlDays ?? "") },
   ];
 
   return (

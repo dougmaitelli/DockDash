@@ -120,7 +120,6 @@ All configuration is done via environment variables. Changes require a container
 | `DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker daemon socket or TCP address |
 | `NETWORK_CIDRS` | `192.168.0.1/24` | Comma-separated CIDR ranges to scan |
 | `DB_PATH` | `/app/data/dockdash.db` | Path to the SQLite database file |
-| `REFRESH_INTERVAL` | `30000` | Discovery refresh interval in milliseconds |
 | `HEALTH_CHECK_INTERVAL` | `30000` | How often the server re-checks service health (ms) |
 | `UPDATE_CHECK_INTERVAL` | `3600000` | How often to check Docker images for updates (ms) |
 | `HEALTH_HISTORY_TTL_DAYS` | `30` | How many days of health check history to retain |
