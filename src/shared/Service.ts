@@ -26,9 +26,8 @@ export class Service {
   static equals(a: Service, b: Service): boolean {
     if (a.source === ServiceSource.DOCKER && b.source === ServiceSource.DOCKER) {
       return (
-        a.host === b.host &&
-        a.metadata?.containerName === b.metadata?.containerName &&
-        a.metadata?.dockerHostId === b.metadata?.dockerHostId
+        a.metadata?.dockerHostId === b.metadata?.dockerHostId &&
+        a.metadata?.containerName === b.metadata?.containerName
       );
     }
 
