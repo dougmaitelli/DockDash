@@ -12,6 +12,8 @@ import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 // Docker multiplexed stream header: 1 byte type + 3 bytes padding + 4 bytes payload length
 export const DOCKER_STREAM_HEADER_SIZE = 8;
 
+const DOCKER_TIMEOUT_MS = 5_000;
+
 export type ContainerStateMap = Map<
   string,
   { containerId: string; state: string; imageTag: string; imageDigest: string | undefined }
@@ -63,12 +65,16 @@ export class DockerService {
 
   private buildClient(host: string): Docker {
     if (host.startsWith("unix://")) {
-      return new Docker({ socketPath: host.replace("unix://", "") });
+      return new Docker({ socketPath: host.replace("unix://", ""), timeout: DOCKER_TIMEOUT_MS });
     }
 
     const url = new URL(host.startsWith("tcp://") ? host : `tcp://${host}`);
 
-    return new Docker({ host: url.hostname, port: parseInt(url.port, 10) || 2375 });
+    return new Docker({
+      host: url.hostname,
+      port: parseInt(url.port, 10) || 2375,
+      timeout: DOCKER_TIMEOUT_MS,
+    });
   }
 
   createDockerClientForHost(host: string): Docker {

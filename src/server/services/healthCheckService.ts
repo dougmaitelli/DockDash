@@ -42,7 +42,7 @@ export class HealthCheckService {
         const containerInfo = map.get(containerName);
 
         if (!containerInfo) {
-          status = ServiceStatus.UNKNOWN;
+          status = ServiceStatus.DOWN;
         } else if (containerInfo.state === DOCKER_CONTAINER_STATE.RUNNING) {
           status = ServiceStatus.UP;
         } else if (DOCKER_CONTAINER_DOWN_STATES.includes(containerInfo.state)) {
@@ -72,19 +72,18 @@ export class HealthCheckService {
         }
       }
 
-      this.logStatusChange(service.name, service.status, status);
-      this.notifyStatusChange(service.name, service.status, status);
-      db.updateServiceStatus(service.id!, status);
-      db.addHealthHistory(service.id!, status);
+      this.commitStatus(service, status);
 
       return status;
     } catch (err) {
       console.error(
-        `Health check failed for Docker service "${service.name}" (${service.id}):`,
-        err,
+        `Health check failed for Docker service "${service.name}": ${err instanceof Error ? err.message : String(err)}`,
       );
 
-      return null;
+      // Can't reach the Docker host — state is unknown, not necessarily down.
+      this.commitStatus(service, ServiceStatus.UNKNOWN);
+
+      return ServiceStatus.UNKNOWN;
     }
   }
 
@@ -92,16 +91,12 @@ export class HealthCheckService {
     try {
       const status = await this.checkNetworkService(service);
 
-      this.logStatusChange(service.name, service.status, status);
-      this.notifyStatusChange(service.name, service.status, status);
-      db.updateServiceStatus(service.id!, status);
-      db.addHealthHistory(service.id!, status);
+      this.commitStatus(service, status);
 
       return status;
     } catch (err) {
       console.error(
-        `Health check failed for network service "${service.name}" (${service.id}):`,
-        err,
+        `Health check failed for network service "${service.name}": ${err instanceof Error ? err.message : String(err)}`,
       );
 
       return null;
@@ -147,7 +142,9 @@ export class HealthCheckService {
           ),
         );
       } catch (err) {
-        console.error(`Failed to fetch container states for Docker host ${resolvedHost}:`, err);
+        console.error(
+          `Failed to fetch container states for Docker host ${resolvedHost}: ${err instanceof Error ? err.message : String(err)}`,
+        );
       }
     }
 
@@ -236,6 +233,13 @@ export class HealthCheckService {
     }
 
     return (await this.checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
+  }
+
+  private commitStatus(service: Service, status: ServiceStatus): void {
+    this.logStatusChange(service.name, service.status, status);
+    this.notifyStatusChange(service.name, service.status, status);
+    db.updateServiceStatus(service.id!, status);
+    db.addHealthHistory(service.id!, status);
   }
 
   private logStatusChange(name: string, oldStatus: ServiceStatus, newStatus: ServiceStatus): void {
