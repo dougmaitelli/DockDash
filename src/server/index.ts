@@ -9,6 +9,7 @@ import { HistoryCleanupJob } from "./jobs/HistoryCleanupJob.js";
 import { UpdateCheckJob } from "./jobs/UpdateCheckJob.js";
 import { config } from "./lib/config.js";
 import { APP_NAME } from "./lib/constants.js";
+import { logger } from "./lib/logService.js";
 import { requireAuth } from "./middleware/auth.js";
 import authRoutes from "./routes/auth.js";
 import containerRoutes from "./routes/container.js";
@@ -112,18 +113,18 @@ app.get("/{*path}", (_req, res) => {
 // Error handler
 app.use(
   (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    console.error("Server error:", err);
+    logger.error("Server error:", err);
     res.status(500).json({ error: err instanceof Error ? err.message : "Internal server error" });
   },
 );
 
 const server = app.listen(PORT, () => {
-  console.log(`${APP_NAME} server running on http://localhost:${PORT}`);
-  console.log(`Docker hosts: ${config.dockerHosts.join(", ")}`);
-  console.log(`Network CIDRs: ${config.networkCidrs.join(",")}`);
-  console.log(`Health check interval: ${config.healthCheckInterval}ms`);
-  console.log(`Update check interval: ${config.updateCheckInterval}ms`);
-  console.log(
+  logger.info(`${APP_NAME} server running on http://localhost:${PORT}`);
+  logger.info(`Docker hosts: ${config.dockerHosts.join(", ")}`);
+  logger.info(`Network CIDRs: ${config.networkCidrs.join(",")}`);
+  logger.info(`Health check interval: ${config.healthCheckInterval}ms`);
+  logger.info(`Update check interval: ${config.updateCheckInterval}ms`);
+  logger.info(
     `Auth: ${config.oidcEnabled ? `OIDC (${config.oidcIssuer})` : "disabled (unsecured)"}`,
   );
 
@@ -134,7 +135,7 @@ const server = app.listen(PORT, () => {
 
 server.on("error", (err: NodeJS.ErrnoException) => {
   if (err.code === "EADDRINUSE") {
-    console.error(`[${APP_NAME}] Port ${PORT} is already in use. Run: fuser -k ${PORT}/tcp`);
+    logger.error(`[${APP_NAME}] Port ${PORT} is already in use. Run: fuser -k ${PORT}/tcp`);
     process.exit(1);
   }
 

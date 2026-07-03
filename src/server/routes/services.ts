@@ -10,6 +10,7 @@ import type {
 } from "@shared/api";
 
 import { db } from "../db/databaseService.js";
+import { logger } from "../lib/logService.js";
 import { isNonEmptyString, isValidEnumValue, isValidPort } from "../lib/validate.js";
 import { changelogService } from "../services/changelogService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
@@ -64,7 +65,11 @@ router.post("/services", (req, res) => {
     metadata: metadata || {},
   });
 
-  void healthCheckService.checkSingleService(service.id!).catch(console.error);
+  void healthCheckService
+    .checkSingleService(service.id!)
+    .catch((err: unknown) =>
+      logger.error(`Health check failed: ${err instanceof Error ? err.message : String(err)}`),
+    );
 
   res.status(201).json(service);
 });
@@ -96,7 +101,11 @@ router.put("/services/:id", (req, res) => {
       checkPort,
     });
 
-    void healthCheckService.checkSingleService(req.params.id).catch(console.error);
+    void healthCheckService
+      .checkSingleService(req.params.id)
+      .catch((err: unknown) =>
+        logger.error(`Health check failed: ${err instanceof Error ? err.message : String(err)}`),
+      );
 
     res.json(service);
   } catch (err) {

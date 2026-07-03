@@ -12,6 +12,7 @@ import {
   PORT_INFO_MAP,
   USER_AGENT,
 } from "../lib/constants.js";
+import { logger } from "../lib/logService.js";
 
 const SCAN_CONCURRENCY = 15;
 const DEEP_SCAN_CONCURRENCY = 5;
@@ -32,7 +33,7 @@ export class NetworkScanner {
   }
 
   async *scanNetworkStream(cidr: string, deepScan = false): AsyncGenerator<Service[]> {
-    console.log(`[NetworkScanner] Starting ${deepScan ? "deep" : "standard"} scan for ${cidr}`);
+    logger.info(`[NetworkScanner] Starting ${deepScan ? "deep" : "standard"} scan for ${cidr}`);
 
     // Queue for completed results + a notify handle to wake the generator
     const queue: Service[] = [];
@@ -93,7 +94,9 @@ export class NetworkScanner {
 
               if (service) queue.push(service);
             } catch (err) {
-              console.error(`[NetworkScanner] Failed to scan host ${match[1]}:`, err);
+              logger.error(
+                `[NetworkScanner] Failed to scan host ${match[1]}: ${err instanceof Error ? err.message : String(err)}`,
+              );
             } finally {
               release();
               pendingScans--;
@@ -102,9 +105,12 @@ export class NetworkScanner {
           })();
         }
 
-        if (pingSweepStderr) console.log(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
+        if (pingSweepStderr)
+          logger.warn(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
       } catch (err) {
-        console.error("[NetworkScanner] Ping sweep failed:", err);
+        logger.error(
+          `[NetworkScanner] Ping sweep failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
       } finally {
         pingSweepDone = true;
         wake();
@@ -131,7 +137,7 @@ export class NetworkScanner {
     const now = new Date().toISOString();
     const openPorts = await this.nmapPortScan(ip, deepScan);
 
-    console.log(`[NetworkScanner] ${ip} open ports:`, openPorts);
+    logger.debug(`[NetworkScanner] ${ip} open ports: ${openPorts.join(", ")}`);
 
     const detectedPorts = await Promise.all(
       openPorts.map(async (port): Promise<PortInfo> => {
@@ -173,7 +179,7 @@ export class NetworkScanner {
       proc.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
       proc.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
       proc.on("close", () => {
-        if (stderr) console.log(`[NetworkScanner] port scan ${ip} stderr:\n${stderr}`);
+        if (stderr) logger.warn(`[NetworkScanner] port scan ${ip} stderr:\n${stderr}`);
 
         resolve(this.parseNmapOpenPorts(stdout));
       });

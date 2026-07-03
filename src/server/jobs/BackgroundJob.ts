@@ -1,3 +1,5 @@
+import { logger } from "../lib/logService.js";
+
 export abstract class BackgroundJob {
   abstract readonly name: string;
   abstract readonly intervalMs: number;
@@ -26,7 +28,7 @@ export abstract class BackgroundJob {
     try {
       await this.run();
     } catch (err) {
-      console.error(`[${this.name}] failed:`, err instanceof Error ? err.message : String(err));
+      logger.error(`[${this.name}] failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }

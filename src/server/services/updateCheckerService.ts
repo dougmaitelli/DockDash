@@ -3,6 +3,7 @@ import { ServiceSource } from "@shared";
 import { db } from "../db/databaseService.js";
 import { t } from "../i18n/index.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
+import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
 import { notificationService } from "./notificationService.js";
 import { registryClient } from "./registryClient.js";
@@ -45,6 +46,8 @@ export class UpdateCheckerService {
     const imageTag = service.metadata?.imageTag;
 
     if (!image || !imageTag) return null;
+
+    logger.debug(`Update check: checking "${service.name}" (${image}:${imageTag})`);
 
     const ref = registryClient.parseImageRef(`${image}:${imageTag}`);
 
@@ -101,9 +104,8 @@ export class UpdateCheckerService {
         }
       }
     } catch (err) {
-      console.error(
-        `Update check failed for service "${service.name}":`,
-        err instanceof Error ? err.message : String(err),
+      logger.error(
+        `Update check failed for service "${service.name}": ${err instanceof Error ? err.message : String(err)}`,
       );
 
       return null;

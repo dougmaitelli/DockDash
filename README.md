@@ -46,6 +46,7 @@ services:
     ports:
       - "3001:3001"
     environment:
+      - LOG_LEVEL=info
       - NETWORK_CIDRS=192.168.0.1/24
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -116,6 +117,7 @@ All configuration is done via environment variables. Changes require a container
 
 | Variable | Default | Description |
 |---|---|---|
+| `LOG_LEVEL` | `info` | Logging verbosity: `error`, `warn`, `info`, or `debug`. Set to `debug` to trace registry provider selection and pagination |
 | `PORT` | `3001` | Port the server listens on |
 | `DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker daemon socket or TCP address |
 | `NETWORK_CIDRS` | `192.168.0.1/24` | Comma-separated CIDR ranges to scan |

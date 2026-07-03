@@ -1,5 +1,6 @@
 import axios from "axios";
 
+import { logger } from "../../lib/logService.js";
 import { REQUEST_TIMEOUT } from "./types.js";
 
 function parseWwwAuthenticate(
@@ -55,9 +56,8 @@ export async function fetchRegistryToken(
 
     return (tokenResp.data?.token ?? tokenResp.data?.access_token ?? null) as string | null;
   } catch (err) {
-    console.warn(
-      `Registry: failed to fetch auth token for ${registry}/${repository} —`,
-      err instanceof Error ? err.message : String(err),
+    logger.warn(
+      `Registry: failed to fetch auth token for ${registry}/${repository} — ${err instanceof Error ? err.message : String(err)}`,
     );
 
     return null;

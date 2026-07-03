@@ -3,6 +3,7 @@ import { Router } from "express";
 import type { CheckAllServicesResponse } from "@shared/api";
 
 import { db } from "../db/databaseService.js";
+import { logger } from "../lib/logService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
 
 const router = Router();
@@ -17,10 +18,10 @@ router.post("/checkAllServices", (_req, res) => {
   void healthCheckService
     .checkAllServices()
     .then((result) => {
-      console.log(`Health check: ${result.updated} updated, ${result.errors} errors`);
+      logger.info(`Health check: ${result.updated} updated, ${result.errors} errors`);
     })
     .catch((err: unknown) => {
-      console.error("Health check failed:", err instanceof Error ? err.message : String(err));
+      logger.error(`Health check failed: ${err instanceof Error ? err.message : String(err)}`);
     });
 
   const response: CheckAllServicesResponse = {

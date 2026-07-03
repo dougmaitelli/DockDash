@@ -1,4 +1,5 @@
 import { config } from "../lib/config.js";
+import { logger } from "../lib/logService.js";
 import { updateCheckerService } from "../services/updateCheckerService.js";
 import { BackgroundJob } from "./BackgroundJob.js";
 
@@ -8,8 +9,8 @@ export class UpdateCheckJob extends BackgroundJob {
   readonly runImmediately = true;
 
   async run(): Promise<void> {
-    console.log("Update check: starting…");
+    logger.info("Update check: starting…");
     await updateCheckerService.checkAllServicesForUpdates();
-    console.log("Update check: done");
+    logger.info("Update check: done");
   }
 }

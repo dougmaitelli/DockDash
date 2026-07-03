@@ -1,5 +1,6 @@
 import axios from "axios";
 
+import { logger } from "../../lib/logService.js";
 import { fetchRegistryToken } from "./auth.js";
 import type { ImageRef, RegistryProvider } from "./types.js";
 import { REQUEST_TIMEOUT } from "./types.js";
@@ -17,8 +18,13 @@ export class GenericRegistryProvider implements RegistryProvider {
 
     const allTags: string[] = [];
     let path = `/v2/${ref.repository}/tags/list?n=1000`;
+    let page = 0;
 
-    for (let page = 0; page < GenericRegistryProvider.MAX_PAGES; page++) {
+    for (; page < GenericRegistryProvider.MAX_PAGES; page++) {
+      logger.debug(
+        `Registry [generic]: fetching page ${page + 1} for ${ref.registry}/${ref.repository}`,
+      );
+
       const resp = await axios.get(`https://${ref.registry}${path}`, {
         headers,
         timeout: REQUEST_TIMEOUT,
@@ -26,7 +32,7 @@ export class GenericRegistryProvider implements RegistryProvider {
       });
 
       if (resp.status !== 200) {
-        console.warn(
+        logger.warn(
           `Registry: tags list for ${ref.registry}/${ref.repository} returned HTTP ${resp.status}`,
         );
 
@@ -43,6 +49,10 @@ export class GenericRegistryProvider implements RegistryProvider {
 
       path = nextMatch[1];
     }
+
+    logger.debug(
+      `Registry [generic]: fetched ${page + 1} page(s), ${allTags.length} tags for ${ref.registry}/${ref.repository}`,
+    );
 
     return allTags;
   }

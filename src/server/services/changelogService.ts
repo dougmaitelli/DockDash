@@ -5,6 +5,7 @@ import type { Service } from "@shared";
 import type { ChangelogRelease, ChangelogResponse } from "@shared";
 
 import { config } from "../lib/config.js";
+import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
 import { dockerService } from "./dockerService.js";
 
@@ -38,16 +39,16 @@ export class ChangelogService {
 
           if (match) return match[1];
 
-          console.warn(
+          logger.warn(
             `Changelog: "${service.name}" has OCI source label "${source}" but it is not a recognized GitHub URL`,
           );
         } else {
-          console.warn(
+          logger.warn(
             `Changelog: "${service.name}" image has no ${OCI_SOURCE_LABEL} label — falling back to image name resolution`,
           );
         }
       } catch (err) {
-        console.warn(
+        logger.warn(
           `Changelog: failed to inspect image for "${service.name}" — falling back to image name resolution:`,
           err,
         );
@@ -108,7 +109,7 @@ export class ChangelogService {
           const status = err.response?.status;
 
           if (status === 403 || status === 429) {
-            console.warn(
+            logger.warn(
               `Changelog: GitHub API rate limit hit for ${repo} (HTTP ${status}). Set GITHUB_TOKEN to increase the limit.`,
             );
 
@@ -116,13 +117,13 @@ export class ChangelogService {
           }
 
           if (status !== 404) {
-            console.warn(
+            logger.warn(
               `Changelog: unexpected HTTP ${status} fetching release tag "${candidate}" for ${repo} —`,
               err.message,
             );
           }
         } else {
-          console.warn(`Changelog: error fetching release tag "${candidate}" for ${repo} —`, err);
+          logger.warn(`Changelog: error fetching release tag "${candidate}" for ${repo} —`, err);
         }
         // try next candidate
       }
@@ -146,7 +147,7 @@ export class ChangelogService {
     const repo = await this.resolveGithubRepo(service);
 
     if (!repo) {
-      console.warn(
+      logger.warn(
         `Changelog: could not resolve GitHub repo for service "${service.name}" (image: ${service.metadata?.image ?? "unknown"})`,
       );
 

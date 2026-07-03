@@ -2,6 +2,7 @@ import axios from "axios";
 
 import { config } from "../lib/config.js";
 import { APP_NAME } from "../lib/constants.js";
+import { logger } from "../lib/logService.js";
 
 export type NotificationType = "info" | "success" | "warning" | "failure";
 
@@ -31,7 +32,7 @@ class NotificationService {
             ? err.message
             : String(err);
 
-      console.error("Apprise notification failed:", message);
+      logger.error(`Apprise notification failed: ${message}`);
       throw new Error(message);
     }
   }

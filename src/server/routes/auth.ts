@@ -9,6 +9,7 @@ import {
 } from "openid-client";
 
 import { config } from "../lib/config.js";
+import { logger } from "../lib/logService.js";
 import { oidcService } from "../services/oidcService.js";
 
 function callbackUrl(req: Request): string {
@@ -72,7 +73,7 @@ router.get("/login", async (req, res) => {
 
     res.redirect(authUrl.href);
   } catch (err) {
-    console.error("OIDC login error:", err);
+    logger.error(`OIDC login error: ${err instanceof Error ? err.message : String(err)}`);
     res.status(500).json({ error: "OIDC configuration error" });
   }
 });
@@ -117,7 +118,7 @@ router.get("/callback", async (req, res) => {
 
     res.redirect("/");
   } catch (err) {
-    console.error("OIDC callback error:", err);
+    logger.error(`OIDC callback error: ${err instanceof Error ? err.message : String(err)}`);
     res.redirect("/login?error=callback_failed");
   }
 });

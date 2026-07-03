@@ -7,6 +7,7 @@ import { Service, ServiceSource, ServiceStatus } from "@shared";
 import { db } from "../db/databaseService.js";
 import { t } from "../i18n/index.js";
 import { detectProtocolByPort, HTTP_PROTOCOLS, USER_AGENT } from "../lib/constants.js";
+import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
 import {
   type ContainerStateMap,
@@ -76,7 +77,7 @@ export class HealthCheckService {
 
       return status;
     } catch (err) {
-      console.error(
+      logger.error(
         `Health check failed for Docker service "${service.name}": ${err instanceof Error ? err.message : String(err)}`,
       );
 
@@ -95,7 +96,7 @@ export class HealthCheckService {
 
       return status;
     } catch (err) {
-      console.error(
+      logger.error(
         `Health check failed for network service "${service.name}": ${err instanceof Error ? err.message : String(err)}`,
       );
 
@@ -142,7 +143,7 @@ export class HealthCheckService {
           ),
         );
       } catch (err) {
-        console.error(
+        logger.error(
           `Failed to fetch container states for Docker host ${resolvedHost}: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
@@ -244,7 +245,7 @@ export class HealthCheckService {
 
   private logStatusChange(name: string, oldStatus: ServiceStatus, newStatus: ServiceStatus): void {
     if (oldStatus !== newStatus) {
-      console.log(`Service "${name}" status changed: ${oldStatus} -> ${newStatus}`);
+      logger.info(`Service "${name}" status changed: ${oldStatus} -> ${newStatus}`);
     }
   }
 

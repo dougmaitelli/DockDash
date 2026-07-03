@@ -1,3 +1,4 @@
+import { logger } from "../../lib/logService.js";
 import { DockerHubProvider } from "./dockerHubProvider.js";
 import { GenericRegistryProvider } from "./genericProvider.js";
 import { GhcrProvider } from "./ghcrProvider.js";
@@ -14,6 +15,8 @@ export const Registry: Record<string, RegistryEntry> = {
 export function getProvider(registry: string): RegistryProvider {
   const entry = Object.values(Registry).find((r) => r.url === registry);
   const ProviderClass = entry?.Provider ?? GenericRegistryProvider;
+
+  logger.debug(`Registry: using ${ProviderClass.name} for ${registry}`);
 
   return new ProviderClass();
 }

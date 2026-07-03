@@ -33,6 +33,7 @@ export default [
       },
     },
     rules: {
+      "no-console": "error",
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "@typescript-eslint/no-unused-vars": [
@@ -69,6 +70,12 @@ export default [
         { blankLine: "always", prev: "*", next: ["if", "for", "while", "switch"] },
         { blankLine: "always", prev: ["if", "for", "while", "switch"], next: "*" },
       ],
+    },
+  },
+  {
+    files: ["**/lib/logService.ts"],
+    rules: {
+      "no-console": "off",
     },
   },
   prettier,

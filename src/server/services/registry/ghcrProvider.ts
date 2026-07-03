@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { config } from "../../lib/config.js";
+import { logger } from "../../lib/logService.js";
 import { GenericRegistryProvider } from "./genericProvider.js";
 import type { ImageRef } from "./types.js";
 import { REQUEST_TIMEOUT } from "./types.js";
@@ -16,8 +17,14 @@ export class GhcrProvider extends GenericRegistryProvider {
    */
   async getRepositoryTags(ref: ImageRef, prefix: string): Promise<string[]> {
     if (config.githubToken) {
+      logger.debug(`Registry [ghcr]: using GitHub Packages API for ${ref.repository}`);
+
       return this.getTagsViaGitHubApi(ref.repository);
     }
+
+    logger.debug(
+      `Registry [ghcr]: no token, falling back to generic registry API for ${ref.repository}`,
+    );
 
     return super.getRepositoryTags(ref, prefix);
   }
@@ -40,7 +47,13 @@ export class GhcrProvider extends GenericRegistryProvider {
       const allTags: string[] = [];
       const MAX_PAGES = 100; // 100 × 100 = 10 000 versions
 
-      for (let page = 1; page <= MAX_PAGES; page++) {
+      let page = 1;
+
+      for (; page <= MAX_PAGES; page++) {
+        logger.debug(
+          `Registry [ghcr]: fetching page ${page} via GitHub Packages API (${ownerType}) for ${repository}`,
+        );
+
         const resp = await axios.get<GhVersion[]>(base, {
           headers,
           params: { per_page: 100, page },
@@ -51,7 +64,7 @@ export class GhcrProvider extends GenericRegistryProvider {
         if (resp.status === 404) return null; // Wrong owner type
 
         if (resp.status !== 200) {
-          console.warn(`GitHub Packages API: ${base} returned HTTP ${resp.status}`);
+          logger.warn(`GitHub Packages API: ${base} returned HTTP ${resp.status}`);
 
           return null;
         }
@@ -62,6 +75,10 @@ export class GhcrProvider extends GenericRegistryProvider {
 
         if (resp.data.length < 100) break; // Last page
       }
+
+      logger.debug(
+        `Registry [ghcr]: fetched ${page} page(s) via GitHub Packages API for ${repository}, ${allTags.length} tags`,
+      );
 
       return allTags;
     };
@@ -75,7 +92,7 @@ export class GhcrProvider extends GenericRegistryProvider {
     if (userTags !== null) return userTags;
 
     // Both endpoints failed — fall back to Registry API v2
-    console.warn(
+    logger.warn(
       `GitHub Packages API: could not resolve ${repository}, falling back to registry API`,
     );
 

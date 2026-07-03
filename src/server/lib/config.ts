@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import fs from "fs";
 
+import { logger } from "./logService.js";
+
 import "dotenv/config";
 
 export const DEFAULT_PORT = 3001;
@@ -143,7 +145,7 @@ class Config {
 
     if (!this._sessionSecret) {
       this._sessionSecret = crypto.randomBytes(32).toString("hex");
-      console.warn(
+      logger.warn(
         "\n⚠️  WARNING: SESSION_SECRET is not set. A random secret was generated for this process." +
           " Sessions will be invalidated on every restart. Set SESSION_SECRET in production.\n",
       );

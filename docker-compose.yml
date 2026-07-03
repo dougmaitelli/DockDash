@@ -8,13 +8,13 @@ services:
     ports:
       - "${APP_PORT:-3001}:3001"
     environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
       - PORT=3001
       - DOCKER_HOST=${DOCKER_HOST:-unix:///var/run/docker.sock}
       - DOCKER_TLS_CERTDIR=${DOCKER_TLS_CERTDIR:-}
       - NETWORK_CIDRS=${NETWORK_CIDRS:-192.168.0.1/24}
       - SCAN_PORTS=${SCAN_PORTS:-}
       - DB_PATH=/app/data/dockdash.db
-      - REFRESH_INTERVAL=${REFRESH_INTERVAL:-30000}
       - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30000}
       - UPDATE_CHECK_INTERVAL=${UPDATE_CHECK_INTERVAL:-3600000}
     volumes:

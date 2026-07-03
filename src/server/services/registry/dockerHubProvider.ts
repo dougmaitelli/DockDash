@@ -1,5 +1,6 @@
 import axios from "axios";
 
+import { logger } from "../../lib/logService.js";
 import type { ImageRef, RegistryProvider } from "./types.js";
 import { REQUEST_TIMEOUT } from "./types.js";
 
@@ -32,6 +33,8 @@ export class DockerHubProvider implements RegistryProvider {
     const firstTags =
       (firstResp.data?.results as Array<{ name: string }>)?.map((r) => r.name) ?? [];
 
+    logger.debug(`Registry [dockerhub]: ${count} total tags for ${repository}, prefix="${prefix}"`);
+
     // If everything fits in one page we're done.
     if (count <= 100) return firstTags;
 
@@ -39,6 +42,11 @@ export class DockerHubProvider implements RegistryProvider {
     // last page holds the most-recently-pushed tags — the ones most likely to
     // be the newest semantic versions.
     const lastPage = Math.ceil(count / 100);
+
+    logger.debug(
+      `Registry [dockerhub]: fetching last page ${lastPage} (${count} total tags) for ${repository}`,
+    );
+
     const lastResp = await axios.get(`${baseUrl}&page=${lastPage}`, {
       timeout: REQUEST_TIMEOUT,
       validateStatus: (s) => s < 500,
