@@ -16,6 +16,16 @@ import { themeSelections } from "../styles/themes";
 
 type TestState = "idle" | "sending" | "sent" | "failed";
 
+function formatMs(ms: number): string {
+  if (ms % 3600_000 === 0) return `${ms / 3_600_000}h`;
+
+  if (ms % 60_000 === 0) return `${ms / 60_000}m`;
+
+  if (ms % 1_000 === 0) return `${ms / 1_000}s`;
+
+  return `${ms}ms`;
+}
+
 export default function Settings() {
   const { t } = useTranslation();
   const config = useConfig();
@@ -43,8 +53,14 @@ export default function Settings() {
   const configEntries = [
     { key: "DOCKER_HOSTS", value: config?.dockerHosts.join(", ") },
     { key: "NETWORK_CIDRS", value: config?.networkCidrs.join(",") },
-    { key: "HEALTH_CHECK_INTERVAL", value: String(config?.healthCheckInterval ?? "") },
-    { key: "UPDATE_CHECK_INTERVAL", value: String(config?.updateCheckInterval ?? "") },
+    {
+      key: "HEALTH_CHECK_INTERVAL",
+      value: config?.healthCheckInterval != null ? formatMs(config.healthCheckInterval) : "",
+    },
+    {
+      key: "UPDATE_CHECK_INTERVAL",
+      value: config?.updateCheckInterval != null ? formatMs(config.updateCheckInterval) : "",
+    },
     { key: "HEALTH_HISTORY_TTL_DAYS", value: String(config?.healthHistoryTtlDays ?? "") },
   ];
 
