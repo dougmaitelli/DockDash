@@ -190,7 +190,9 @@ export function ServiceDrawer({
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden overscroll-contain">{tabs[tab].content}</div>
+        <div className="flex-1 flex flex-col overflow-hidden overscroll-contain">
+          {tabs[tab].content}
+        </div>
       </div>
     </>,
     document.body,
