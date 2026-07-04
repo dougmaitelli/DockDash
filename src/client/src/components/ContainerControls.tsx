@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { serviceApi } from "@/services/api";
 
 const tabClass =
-  "rounded-t-none rounded-b-md h-7 w-10 disabled:opacity-20 disabled:cursor-not-allowed";
+  "rounded-t-none rounded-b-md h-7 w-10 p-0 disabled:opacity-20 disabled:cursor-not-allowed";
 
 interface ContainerControlsProps {
   service: Service;
