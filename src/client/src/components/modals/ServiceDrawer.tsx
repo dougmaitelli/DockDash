@@ -135,7 +135,8 @@ export function ServiceDrawer({
         />
       )}
       <div
-        className="fixed left-0 top-0 h-full flex flex-col border-r border-border z-[101] bg-muted"
+        data-drawer
+        className="fixed left-0 top-0 h-dvh flex flex-col border-r border-border z-[101] bg-muted"
         style={{
           width: `min(${tab !== Tab.DETAILS ? 900 : 600}px, 100dvw)`,
           animation: `${closing ? "slideOutDrawer" : "slideInDrawer"} ${ANIM_MS}ms ease both`,
@@ -189,7 +190,7 @@ export function ServiceDrawer({
           ))}
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden">{tabs[tab].content}</div>
+        <div className="flex-1 flex flex-col overflow-hidden overscroll-contain">{tabs[tab].content}</div>
       </div>
     </>,
     document.body,

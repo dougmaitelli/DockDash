@@ -1,3 +1,8 @@
+/* Lock body scroll while the drawer is mounted */
+body:has([data-drawer]) {
+  overflow: hidden;
+}
+
 /* Animations used by ServiceDrawer slide in/out */
 @keyframes slideInDrawer {
   from {
