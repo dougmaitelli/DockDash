@@ -19,21 +19,36 @@ A self-hosted dashboard for visualizing Docker containers and network services. 
 
 ## Screenshots
 
-![Dashboard canvas showing discovered services with health status badges](screenshots/1.png)
-
-*Interactive canvas — services are auto-grouped by Docker network, connected by drawn links, and annotated with live health badges.*
-
-![Service drawer open on the Changelog tab showing GitHub release notes and Docker image update info](screenshots/2.png)
-
-*Service drawer (Changelog tab) — GitHub release notes fetched automatically for the running image version, including dependency and Docker image changes.*
-
-![Service drawer open on the Terminal tab with an interactive shell inside the container](screenshots/3.png)
-
-*Service drawer (Terminal tab) — interactive shell inside any container, themed to match the active UI theme.*
-
-![Service drawer open on the Files tab showing the container filesystem browser](screenshots/4.png)
-
-*Service drawer (Files tab) — browse a container's filesystem and view or edit text files directly in the UI.*
+<table>
+<tr>
+<td width="33%">
+<a href="screenshots/1.png"><img src="screenshots/1.png" alt="Dashboard canvas"></a>
+<p><em>Interactive canvas — services connected by drawn links, annotated with live health badges and update availability indicators.</em></p>
+</td>
+<td width="33%">
+<a href="screenshots/2.png"><img src="screenshots/2.png" alt="Service drawer — Details tab"></a>
+<p><em>Service drawer (Details tab) — container metadata, port info, and a color-coded uptime history graph for the last 30 days.</em></p>
+</td>
+<td width="33%">
+<a href="screenshots/3.png"><img src="screenshots/3.png" alt="Services table"></a>
+<p><em>Services table — flat list of all discovered services with live status, image version, ports, and per-row uptime history bars.</em></p>
+</td>
+</tr>
+<tr>
+<td width="33%">
+<a href="screenshots/4.png"><img src="screenshots/4.png" alt="Service drawer — Changelog tab"></a>
+<p><em>Service drawer (Changelog tab) — GitHub release notes fetched automatically for the running image version.</em></p>
+</td>
+<td width="33%">
+<a href="screenshots/5.png"><img src="screenshots/5.png" alt="Service drawer — Files tab"></a>
+<p><em>Service drawer (Files tab) — browse a container's filesystem and view or edit text files directly in the UI.</em></p>
+</td>
+<td width="33%">
+<a href="screenshots/6.png"><img src="screenshots/6.png" alt="Service drawer — Terminal tab"></a>
+<p><em>Service drawer (Terminal tab) — interactive shell inside any container, themed to match the active UI theme.</em></p>
+</td>
+</tr>
+</table>
 
 ## Running with Docker Compose
 

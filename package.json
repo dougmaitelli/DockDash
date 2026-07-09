@@ -16,7 +16,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "screenshots": "tsx scripts/take-screenshots.ts",
+    "screenshots:docker": "sh scripts/screenshots-docker.sh"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.8",
@@ -78,6 +80,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-simple-import-sort": "^13.0.0",
+    "playwright": "^1.61.0",
     "prettier": "^3.8.3",
     "supertest": "^7.2.2",
     "tailwindcss": "^4.3.0",
