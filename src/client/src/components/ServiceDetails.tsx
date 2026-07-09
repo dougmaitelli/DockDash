@@ -8,6 +8,7 @@ import { NumberInput } from "@/components/NumberInput";
 import { NumberTagArrayInput } from "@/components/TagArrayInput";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useConfig } from "@/context/ConfigContext";
 import { useFormValidation } from "@/hooks/useFormValidation";
 
 import { ContainerResourceMonitor } from "./ContainerResourceMonitor";
@@ -24,6 +25,7 @@ interface ServiceDetailsProps {
 export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceDetailsProps) {
   const isDocker = service.source === ServiceSource.DOCKER;
   const { t } = useTranslation();
+  const config = useConfig();
   const [editName, setEditName] = useState(service.name);
   const [editHost, setEditHost] = useState(service.host);
   const [editPorts, setEditPorts] = useState<number[]>(service.ports ?? []);
@@ -78,8 +80,10 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
   return (
     <>
       <div className="flex-1 overflow-y-auto flex flex-col p-5">
-        <HealthHistoryGraph serviceId={service.id!} />
-        {isDocker && <ContainerResourceMonitor serviceId={service.id!} />}
+        {(config?.healthHistoryEnabled ?? true) && <HealthHistoryGraph serviceId={service.id!} />}
+        {isDocker && (config?.resourceMonitorEnabled ?? true) && (
+          <ContainerResourceMonitor serviceId={service.id!} />
+        )}
 
         <FormGroup error={errors.name}>
           <Label>{t("modals.name")}</Label>

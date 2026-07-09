@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockConfig = vi.hoisted(() => ({
   containerControlsEnabled: true,
+  resourceMonitorEnabled: true,
 }));
 
 const mockContainer = vi.hoisted(() => ({
@@ -122,8 +123,18 @@ describe("GET /api/services/:id/stats", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockConfig.resourceMonitorEnabled = true;
     mockDockerService.getContainerForServiceId.mockReturnValue(mockContainer);
     mockDockerService.getContainerStats.mockResolvedValue(MOCK_STATS);
+  });
+
+  it("returns 403 when resourceMonitorEnabled is false", async () => {
+    mockConfig.resourceMonitorEnabled = false;
+
+    const res = await request(app).get("/api/services/svc-1/stats");
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty("error");
   });
 
   it("returns 200 with parsed stats", async () => {

@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 
 import type { ContainerStats } from "@shared";
 
-import { cn } from "@/lib/utils";
 import { serviceApi } from "@/services/api";
 
 const POLL_INTERVAL_MS = 2500;
@@ -41,23 +40,6 @@ function StatBar({ label, value, percent, color }: StatBarProps) {
   );
 }
 
-interface StatRowProps {
-  items: { label: string; value: string }[];
-}
-
-function StatRow({ items }: StatRowProps) {
-  return (
-    <div className={cn("grid gap-2", items.length === 2 ? "grid-cols-2" : "grid-cols-3")}>
-      {items.map(({ label, value }) => (
-        <div key={label} className="flex flex-col gap-0.5">
-          <span className="text-xs text-muted-foreground">{label}</span>
-          <span className="text-xs font-mono text-secondary-foreground">{value}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 interface SectionProps {
   title: string;
   children: React.ReactNode;
@@ -65,11 +47,25 @@ interface SectionProps {
 
 function Section({ title, children }: SectionProps) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-1.5">
       <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
         {title}
       </span>
       {children}
+    </div>
+  );
+}
+
+interface StatCellProps {
+  label: string;
+  value: string;
+}
+
+function StatCell({ label, value }: StatCellProps) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[0.65rem] text-muted-foreground">{label}</span>
+      <span className="text-xs font-mono text-secondary-foreground">{value}</span>
     </div>
   );
 }
@@ -117,13 +113,37 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
     stats && stats.memoryLimit > 0 ? (stats.memoryUsed / stats.memoryLimit) * 100 : 0;
 
   return (
-    <div className="mb-5 flex flex-col gap-4">
+    <div className="mb-5 flex flex-col gap-3">
       <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
         {t("modals.resourceMonitor")}
       </span>
 
       {!stats ? (
-        <div className="text-xs text-muted-foreground text-center py-2">…</div>
+        <div className="flex flex-col gap-3 animate-pulse">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="flex flex-col gap-1.5">
+              <div className="h-2.5 w-10 rounded bg-border" />
+              <div>
+                <div className="flex justify-between mb-1">
+                  <div className="h-3 w-16 rounded bg-border" />
+                  <div className="h-3 w-8 rounded bg-border" />
+                </div>
+                <div className="h-1.5 rounded-full bg-border" />
+              </div>
+            </div>
+          ))}
+          <div className="flex flex-col gap-1.5">
+            <div className="h-2.5 w-24 rounded bg-border" />
+            <div className="grid grid-cols-4 gap-2">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex flex-col gap-0.5">
+                  <div className="h-2 w-4 rounded bg-border" />
+                  <div className="h-2.5 w-10 rounded bg-border" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       ) : (
         <>
           <Section title={t("modals.resourceCpu")}>
@@ -150,22 +170,13 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
             />
           </Section>
 
-          <Section title={t("modals.resourceNetwork")}>
-            <StatRow
-              items={[
-                { label: t("modals.resourceRx"), value: formatBytes(stats.networkRx) },
-                { label: t("modals.resourceTx"), value: formatBytes(stats.networkTx) },
-              ]}
-            />
-          </Section>
-
-          <Section title={t("modals.resourceDisk")}>
-            <StatRow
-              items={[
-                { label: t("modals.resourceRead"), value: formatBytes(stats.blockRead) },
-                { label: t("modals.resourceWrite"), value: formatBytes(stats.blockWrite) },
-              ]}
-            />
+          <Section title={`${t("modals.resourceNetwork")} / ${t("modals.resourceDisk")}`}>
+            <div className="grid grid-cols-4 gap-2">
+              <StatCell label={t("modals.resourceRx")} value={formatBytes(stats.networkRx)} />
+              <StatCell label={t("modals.resourceTx")} value={formatBytes(stats.networkTx)} />
+              <StatCell label={t("modals.resourceRead")} value={formatBytes(stats.blockRead)} />
+              <StatCell label={t("modals.resourceWrite")} value={formatBytes(stats.blockWrite)} />
+            </div>
           </Section>
         </>
       )}

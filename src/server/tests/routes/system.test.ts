@@ -11,6 +11,8 @@ const mockConfig = vi.hoisted(() => ({
   healthHistoryTtlDays: 30,
   appriseConfigured: false,
   containerControlsEnabled: true,
+  healthHistoryEnabled: true,
+  resourceMonitorEnabled: true,
   fileExplorerEnabled: true,
   terminalEnabled: true,
 }));
@@ -45,6 +47,8 @@ describe("GET /api/config", () => {
       healthHistoryTtlDays: mockConfig.healthHistoryTtlDays,
       appriseConfigured: mockConfig.appriseConfigured,
       containerControlsEnabled: mockConfig.containerControlsEnabled,
+      healthHistoryEnabled: mockConfig.healthHistoryEnabled,
+      resourceMonitorEnabled: mockConfig.resourceMonitorEnabled,
       fileExplorerEnabled: mockConfig.fileExplorerEnabled,
       terminalEnabled: mockConfig.terminalEnabled,
     });

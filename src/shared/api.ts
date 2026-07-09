@@ -72,6 +72,8 @@ export interface DashboardConfig {
   healthHistoryTtlDays: number;
   appriseConfigured: boolean;
   containerControlsEnabled: boolean;
+  healthHistoryEnabled: boolean;
+  resourceMonitorEnabled: boolean;
   fileExplorerEnabled: boolean;
   terminalEnabled: boolean;
 }

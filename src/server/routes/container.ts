@@ -39,6 +39,10 @@ router.post("/services/:id/container/:action", async (req, res) => {
 });
 
 router.get("/services/:id/stats", async (req, res) => {
+  if (!config.resourceMonitorEnabled) {
+    return res.status(403).json({ error: "Resource monitor is disabled" });
+  }
+
   try {
     const container = dockerService.getContainerForServiceId(req.params.id);
     const stats = await dockerService.getContainerStats(container);

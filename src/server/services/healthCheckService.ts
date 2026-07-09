@@ -6,6 +6,7 @@ import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 import { db } from "../db/databaseService.js";
 import { t } from "../i18n/index.js";
+import { config } from "../lib/config.js";
 import { detectProtocolByPort, HTTP_PROTOCOLS, USER_AGENT } from "../lib/constants.js";
 import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
@@ -240,7 +241,8 @@ export class HealthCheckService {
     this.logStatusChange(service.name, service.status, status);
     this.notifyStatusChange(service.name, service.status, status);
     db.updateServiceStatus(service.id!, status);
-    db.addHealthHistory(service.id!, status);
+
+    if (config.healthHistoryEnabled) db.addHealthHistory(service.id!, status);
   }
 
   private logStatusChange(name: string, oldStatus: ServiceStatus, newStatus: ServiceStatus): void {

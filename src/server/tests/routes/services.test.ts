@@ -26,6 +26,10 @@ const mockChangelogService = vi.hoisted(() => ({
   fetchChangelog: vi.fn(),
 }));
 
+const mockConfig = vi.hoisted(() => ({
+  healthHistoryEnabled: true,
+}));
+
 const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
   warn: vi.fn(),
@@ -33,6 +37,7 @@ const mockLogger = vi.hoisted(() => ({
   debug: vi.fn(),
 }));
 
+vi.mock("@server/lib/config.js", () => ({ config: mockConfig }));
 vi.mock("@server/db/databaseService.js", () => ({ db: mockDb }));
 vi.mock("@server/services/healthCheckService.js", () => ({
   healthCheckService: mockHealthCheckService,
@@ -275,7 +280,19 @@ describe("POST /api/positions", () => {
 });
 
 describe("GET /api/services/:id/health-history", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockConfig.healthHistoryEnabled = true;
+  });
+
+  it("returns 403 when healthHistoryEnabled is false", async () => {
+    mockConfig.healthHistoryEnabled = false;
+
+    const res = await request(app).get("/api/services/svc-1/health-history");
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty("error");
+  });
 
   it("returns 200", async () => {
     mockDb.getHealthHistory.mockReturnValue([]);

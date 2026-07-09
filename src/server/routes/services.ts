@@ -10,6 +10,7 @@ import type {
 } from "@shared/api";
 
 import { db } from "../db/databaseService.js";
+import { config } from "../lib/config.js";
 import { logger } from "../lib/logService.js";
 import { isNonEmptyString, isValidEnumValue, isValidPort } from "../lib/validate.js";
 import { changelogService } from "../services/changelogService.js";
@@ -184,6 +185,10 @@ router.post("/positions", (req, res) => {
 });
 
 router.get("/services/:id/health-history", (req, res) => {
+  if (!config.healthHistoryEnabled) {
+    return res.status(403).json({ error: "Health history is disabled" });
+  }
+
   const days = Math.max(1, parseInt(req.query.days as string, 10) || 7);
   const buckets = Math.max(1, Math.min(200, parseInt(req.query.buckets as string, 10) || 80));
 

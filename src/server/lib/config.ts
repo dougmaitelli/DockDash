@@ -104,6 +104,14 @@ class Config {
     return process.env.DISABLE_TERMINAL !== "true";
   }
 
+  get healthHistoryEnabled(): boolean {
+    return process.env.DISABLE_HEALTH_HISTORY !== "true";
+  }
+
+  get resourceMonitorEnabled(): boolean {
+    return process.env.DISABLE_RESOURCE_MONITOR !== "true";
+  }
+
   get locale(): string {
     return process.env.LOCALE || "en";
   }

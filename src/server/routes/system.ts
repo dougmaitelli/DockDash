@@ -17,6 +17,8 @@ router.get("/config", (_req, res) => {
     healthHistoryTtlDays: config.healthHistoryTtlDays,
     appriseConfigured: config.appriseConfigured,
     containerControlsEnabled: config.containerControlsEnabled,
+    healthHistoryEnabled: config.healthHistoryEnabled,
+    resourceMonitorEnabled: config.resourceMonitorEnabled,
     fileExplorerEnabled: config.fileExplorerEnabled,
     terminalEnabled: config.terminalEnabled,
   };
