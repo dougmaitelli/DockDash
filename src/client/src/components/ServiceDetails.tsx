@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useFormValidation } from "@/hooks/useFormValidation";
 
+import { ContainerResourceMonitor } from "./ContainerResourceMonitor";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
 import { FormGroup, Label } from "./modals/BaseModal";
 
@@ -78,6 +79,7 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
     <>
       <div className="flex-1 overflow-y-auto flex flex-col p-5">
         <HealthHistoryGraph serviceId={service.id!} />
+        {isDocker && <ContainerResourceMonitor serviceId={service.id!} />}
 
         <FormGroup error={errors.name}>
           <Label>{t("modals.name")}</Label>

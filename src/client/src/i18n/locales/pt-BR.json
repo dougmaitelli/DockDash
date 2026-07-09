@@ -174,6 +174,15 @@
     "containerStop": "Parar",
     "containerStart": "Iniciar",
     "containerRestart": "Reiniciar",
-    "containerActionFailed": "Ação falhou: {{error}}"
+    "containerActionFailed": "Ação falhou: {{error}}",
+    "resourceMonitor": "Monitor de Recursos",
+    "resourceCpu": "CPU",
+    "resourceMemory": "Memória",
+    "resourceNetwork": "Rede",
+    "resourceDisk": "I/O de Disco",
+    "resourceRx": "RX",
+    "resourceTx": "TX",
+    "resourceRead": "Leitura",
+    "resourceWrite": "Escrita"
   }
 }

@@ -14,6 +14,7 @@ const mockContainer = vi.hoisted(() => ({
 
 const mockDockerService = vi.hoisted(() => ({
   getContainerForServiceId: vi.fn(),
+  getContainerStats: vi.fn(),
   openLogStream: vi.fn(),
 }));
 
@@ -107,3 +108,51 @@ describe("POST /api/services/:id/container/:action", () => {
     expect(res.body).toHaveProperty("error");
   });
 });
+
+describe("GET /api/services/:id/stats", () => {
+  const MOCK_STATS = {
+    cpuPercent: 12.5,
+    memoryUsed: 134_217_728,
+    memoryLimit: 8_589_934_592,
+    networkRx: 1_048_576,
+    networkTx: 524_288,
+    blockRead: 2_097_152,
+    blockWrite: 1_048_576,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDockerService.getContainerForServiceId.mockReturnValue(mockContainer);
+    mockDockerService.getContainerStats.mockResolvedValue(MOCK_STATS);
+  });
+
+  it("returns 200 with parsed stats", async () => {
+    const res = await request(app).get("/api/services/svc-1/stats");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(MOCK_STATS);
+    expect(mockDockerService.getContainerForServiceId).toHaveBeenCalledWith("svc-1");
+    expect(mockDockerService.getContainerStats).toHaveBeenCalledWith(mockContainer);
+  });
+
+  it("returns 400 when the service has no container metadata", async () => {
+    mockDockerService.getContainerForServiceId.mockImplementation(() => {
+      throw new Error("Container metadata not available");
+    });
+
+    const res = await request(app).get("/api/services/unknown/stats");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+  });
+
+  it("returns 400 when getContainerStats rejects", async () => {
+    mockDockerService.getContainerStats.mockRejectedValue(new Error("Docker daemon unreachable"));
+
+    const res = await request(app).get("/api/services/svc-1/stats");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty("error");
+  });
+});
+

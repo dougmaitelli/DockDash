@@ -213,3 +213,17 @@ export interface TerminalInputRequest {
 export interface SseTerminalSessionPayload {
   sessionId: string;
 }
+
+// ---------------------------------------------------------------------------
+// GET /api/services/:id/stats
+// ---------------------------------------------------------------------------
+
+export interface ContainerStats {
+  cpuPercent: number;
+  memoryUsed: number;
+  memoryLimit: number;
+  networkRx: number;
+  networkTx: number;
+  blockRead: number;
+  blockWrite: number;
+}

@@ -3,7 +3,7 @@ import Docker from "dockerode";
 import { PassThrough } from "stream";
 import { v4 as uuidv4 } from "uuid";
 
-import { Service, ServiceSource, ServiceStatus } from "@shared";
+import { ContainerStats, Service, ServiceSource, ServiceStatus } from "@shared";
 
 import { db } from "../db/databaseService.js";
 import { config } from "../lib/config.js";
@@ -208,6 +208,50 @@ export class DockerService {
     }
 
     return { image: withoutDigest, tag: DOCKER_LATEST_TAG };
+  }
+
+  async getContainerStats(container: Docker.Container): Promise<ContainerStats> {
+    // stream: false fetches a single snapshot instead of a continuous stream
+    const raw = await container.stats({ stream: false });
+
+    const cpu = raw.cpu_stats;
+    const precpu = raw.precpu_stats;
+    const cpuDelta = cpu.cpu_usage.total_usage - precpu.cpu_usage.total_usage;
+    const systemDelta = (cpu.system_cpu_usage ?? 0) - (precpu.system_cpu_usage ?? 0);
+    const numCpus = cpu.online_cpus ?? cpu.cpu_usage.percpu_usage?.length ?? 1;
+    const cpuPercent =
+      systemDelta > 0 ? Math.min((cpuDelta / systemDelta) * numCpus * 100, 100 * numCpus) : 0;
+
+    const mem = raw.memory_stats;
+    // cgroup v2 uses inactive_file; v1 exposes cache — both should be subtracted
+    const memCache = mem.stats?.inactive_file ?? mem.stats?.cache ?? 0;
+    const memoryUsed = (mem.usage ?? 0) - memCache;
+    const memoryLimit = mem.limit ?? 0;
+
+    const nets = Object.values(raw.networks ?? {}) as { rx_bytes: number; tx_bytes: number }[];
+    const networkRx = nets.reduce((s, n) => s + (n.rx_bytes ?? 0), 0);
+    const networkTx = nets.reduce((s, n) => s + (n.tx_bytes ?? 0), 0);
+
+    const blkio = (raw.blkio_stats?.io_service_bytes_recursive ?? []) as {
+      op: string;
+      value: number;
+    }[];
+    const blockRead = blkio
+      .filter((e) => e.op.toLowerCase() === "read")
+      .reduce((s, e) => s + e.value, 0);
+    const blockWrite = blkio
+      .filter((e) => e.op.toLowerCase() === "write")
+      .reduce((s, e) => s + e.value, 0);
+
+    return {
+      cpuPercent: Math.round(cpuPercent * 10) / 10,
+      memoryUsed,
+      memoryLimit,
+      networkRx,
+      networkTx,
+      blockRead,
+      blockWrite,
+    };
   }
 
   async openLogStream(

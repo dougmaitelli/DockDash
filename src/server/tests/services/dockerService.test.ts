@@ -8,6 +8,7 @@ import { ServiceSource, ServiceStatus } from "@shared";
 const mockContainerObj = vi.hoisted(() => ({
   inspect: vi.fn(),
   logs: vi.fn(),
+  stats: vi.fn(),
 }));
 
 const mockImageObj = vi.hoisted(() => ({
@@ -212,6 +213,184 @@ describe("DockerService.hostId", () => {
     expect(DockerService.hostId("tcp://host-a:2375")).not.toBe(
       DockerService.hostId("tcp://host-b:2375"),
     );
+  });
+});
+
+describe("DockerService.getContainerStats", () => {
+  const BASE_RAW = {
+    cpu_stats: {
+      cpu_usage: { total_usage: 1_000_000, percpu_usage: [500_000, 500_000] },
+      system_cpu_usage: 10_000_000,
+      online_cpus: 2,
+    },
+    precpu_stats: {
+      cpu_usage: { total_usage: 900_000 },
+      system_cpu_usage: 9_000_000,
+    },
+    memory_stats: {
+      usage: 150_000_000,
+      limit: 8_000_000_000,
+      stats: { cache: 10_000_000 },
+    },
+    networks: {
+      eth0: { rx_bytes: 1_000_000, tx_bytes: 500_000 },
+      eth1: { rx_bytes: 2_000_000, tx_bytes: 1_000_000 },
+    },
+    blkio_stats: {
+      io_service_bytes_recursive: [
+        { op: "Read", value: 500_000 },
+        { op: "Write", value: 250_000 },
+      ],
+    },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockContainerObj.stats.mockResolvedValue(BASE_RAW);
+  });
+
+  // CPU
+
+  it("calculates CPU percent from delta / system_delta * num_cpus", async () => {
+    // cpu_delta = 100_000, system_delta = 1_000_000, num_cpus = 2 → 20.0%
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.cpuPercent).toBe(20.0);
+  });
+
+  it("returns 0% CPU when system_delta is zero (container just started)", async () => {
+    mockContainerObj.stats.mockResolvedValue({
+      ...BASE_RAW,
+      cpu_stats: { ...BASE_RAW.cpu_stats, system_cpu_usage: 5_000_000 },
+      precpu_stats: { cpu_usage: { total_usage: 900_000 }, system_cpu_usage: 5_000_000 },
+    });
+
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.cpuPercent).toBe(0);
+  });
+
+  it("clamps CPU percent to 100 * num_cpus when delta exceeds system delta", async () => {
+    mockContainerObj.stats.mockResolvedValue({
+      ...BASE_RAW,
+      cpu_stats: {
+        cpu_usage: { total_usage: 10_000_000, percpu_usage: [5_000_000, 5_000_000] },
+        system_cpu_usage: 10_000_001, // tiny system delta → huge ratio
+        online_cpus: 2,
+      },
+      precpu_stats: {
+        cpu_usage: { total_usage: 0 },
+        system_cpu_usage: 0,
+      },
+    });
+
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.cpuPercent).toBeLessThanOrEqual(200); // 100 * 2 cpus
+  });
+
+  it("falls back to percpu_usage length when online_cpus is absent", async () => {
+    mockContainerObj.stats.mockResolvedValue({
+      ...BASE_RAW,
+      cpu_stats: {
+        cpu_usage: { total_usage: 1_000_000, percpu_usage: [250_000, 250_000, 250_000, 250_000] },
+        system_cpu_usage: 10_000_000,
+        // no online_cpus
+      },
+      precpu_stats: {
+        cpu_usage: { total_usage: 900_000 },
+        system_cpu_usage: 9_000_000,
+      },
+    });
+
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    // cpu_delta=100k, system_delta=1M, num_cpus=4 → 40%
+    expect(result.cpuPercent).toBe(40.0);
+  });
+
+  // Memory
+
+  it("subtracts cgroup v1 cache from memory usage", async () => {
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.memoryUsed).toBe(140_000_000); // 150M - 10M cache
+    expect(result.memoryLimit).toBe(8_000_000_000);
+  });
+
+  it("subtracts cgroup v2 inactive_file when cache is absent", async () => {
+    mockContainerObj.stats.mockResolvedValue({
+      ...BASE_RAW,
+      memory_stats: {
+        usage: 150_000_000,
+        limit: 8_000_000_000,
+        stats: { inactive_file: 20_000_000 },
+      },
+    });
+
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.memoryUsed).toBe(130_000_000); // 150M - 20M inactive_file
+  });
+
+  // Network and disk
+
+  it("sums rx_bytes and tx_bytes across all network interfaces", async () => {
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.networkRx).toBe(3_000_000); // eth0 + eth1
+    expect(result.networkTx).toBe(1_500_000);
+  });
+
+  it("returns zero network totals when networks is absent", async () => {
+    mockContainerObj.stats.mockResolvedValue({ ...BASE_RAW, networks: undefined });
+
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.networkRx).toBe(0);
+    expect(result.networkTx).toBe(0);
+  });
+
+  it("sums Read and Write blkio entries (case-insensitive op)", async () => {
+    mockContainerObj.stats.mockResolvedValue({
+      ...BASE_RAW,
+      blkio_stats: {
+        io_service_bytes_recursive: [
+          { op: "read", value: 300_000 },
+          { op: "Read", value: 200_000 },
+          { op: "write", value: 100_000 },
+          { op: "Write", value: 150_000 },
+          { op: "Sync", value: 999 }, // should be ignored
+        ],
+      },
+    });
+
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.blockRead).toBe(500_000);
+    expect(result.blockWrite).toBe(250_000);
+  });
+
+  it("returns zero block I/O when io_service_bytes_recursive is absent", async () => {
+    mockContainerObj.stats.mockResolvedValue({
+      ...BASE_RAW,
+      blkio_stats: { io_service_bytes_recursive: null },
+    });
+
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.blockRead).toBe(0);
+    expect(result.blockWrite).toBe(0);
   });
 });
 

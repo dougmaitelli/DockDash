@@ -5,6 +5,7 @@ import type {
   ChangelogResponse,
   CheckAllServicesResponse,
   ContainerAction,
+  ContainerStats,
   CreateLinkRequest,
   CreateServiceRequest,
   DashboardData,
@@ -68,6 +69,7 @@ export const serviceApi = {
     api.put<ApiSuccess>(`/services/${id}/files/content`, { path, content }),
   writeTerminalInput: (id: string, data: TerminalInputRequest) =>
     api.post<ApiSuccess>(`/services/${id}/terminal/input`, data),
+  getStats: (id: string) => api.get<ContainerStats>(`/services/${id}/stats`),
 };
 
 // Link management APIs

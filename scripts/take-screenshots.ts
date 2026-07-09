@@ -198,6 +198,16 @@ const CONFIG = {
   terminalEnabled: true,
 };
 
+const STATS = {
+  cpuPercent: 3.2,
+  memoryUsed: 142_606_336, // ~136 MB
+  memoryLimit: 8_589_934_592, // 8 GB
+  networkRx: 284_327_936, // ~271 MB
+  networkTx: 58_720_256, // ~56 MB
+  blockRead: 1_073_741_824, // 1 GB
+  blockWrite: 524_288_000, // 500 MB
+};
+
 const CHANGELOG = {
   available: true,
   release: {
@@ -462,6 +472,8 @@ async function main() {
 
       return route.fulfill({ json: buckets });
     }
+
+    if (/\/api\/services\/[^/]+\/stats/.test(p)) return route.fulfill({ json: STATS });
 
     if (/\/api\/services\/[^/]+\/changelog/.test(p)) return route.fulfill({ json: CHANGELOG });
 

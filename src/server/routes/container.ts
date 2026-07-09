@@ -1,7 +1,7 @@
 import { Router } from "express";
 
 import { ContainerAction } from "@shared";
-import type { ApiSuccess } from "@shared/api";
+import type { ApiSuccess, ContainerStats } from "@shared/api";
 import { SSE_EVENT } from "@shared/api";
 
 import { config } from "../lib/config.js";
@@ -33,6 +33,17 @@ router.post("/services/:id/container/:action", async (req, res) => {
     const response: ApiSuccess = { success: true };
 
     res.json(response);
+  } catch (err) {
+    res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+router.get("/services/:id/stats", async (req, res) => {
+  try {
+    const container = dockerService.getContainerForServiceId(req.params.id);
+    const stats = await dockerService.getContainerStats(container);
+
+    res.json(stats satisfies ContainerStats);
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : String(err) });
   }
