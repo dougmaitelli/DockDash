@@ -1,7 +1,7 @@
-import { chromium } from "playwright";
 import { spawn } from "child_process";
-import { fileURLToPath } from "url";
 import path from "path";
+import { chromium } from "playwright";
+import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
@@ -58,7 +58,16 @@ function makeService(
 
 const SERVICES = [
   {
-    ...makeService(IDS.traefik, "traefik", "172.17.0.10", [80, 443, 8080], "up", "traefik", "v3.2", ["web", "internal"]),
+    ...makeService(
+      IDS.traefik,
+      "traefik",
+      "172.17.0.10",
+      [80, 443, 8080],
+      "up",
+      "traefik",
+      "v3.2",
+      ["web", "internal"],
+    ),
     metadata: {
       dockerHostId: "local",
       containerId: "111111000001",
@@ -72,10 +81,21 @@ const SERVICES = [
     },
   },
   makeService(IDS.nginx, "nginx", "172.17.0.11", [80], "up", "nginx", "1.27", ["web"]),
-  makeService(IDS.postgres, "postgres", "172.17.0.12", [5432], "up", "postgres", "17", ["internal"]),
+  makeService(IDS.postgres, "postgres", "172.17.0.12", [5432], "up", "postgres", "17", [
+    "internal",
+  ]),
   makeService(IDS.redis, "redis", "172.17.0.13", [6379], "up", "redis", "7", ["internal"]),
   {
-    ...makeService(IDS.grafana, "grafana", "172.17.0.14", [3000], "up", "grafana/grafana", "11.4.0", ["monitoring", "web"]),
+    ...makeService(
+      IDS.grafana,
+      "grafana",
+      "172.17.0.14",
+      [3000],
+      "up",
+      "grafana/grafana",
+      "11.4.0",
+      ["monitoring", "web"],
+    ),
     metadata: {
       dockerHostId: "local",
       containerId: "111111000005",
@@ -88,7 +108,16 @@ const SERVICES = [
       updateCheckedAt: "2024-12-20T10:00:00.000Z",
     },
   },
-  makeService(IDS.prometheus, "prometheus", "172.17.0.15", [9090], "up", "prom/prometheus", "v2.55.1", ["monitoring"]),
+  makeService(
+    IDS.prometheus,
+    "prometheus",
+    "172.17.0.15",
+    [9090],
+    "up",
+    "prom/prometheus",
+    "v2.55.1",
+    ["monitoring"],
+  ),
 ];
 
 const POSITIONS = [
@@ -197,17 +226,83 @@ const CHANGELOG = {
 const FILES = {
   path: "/",
   entries: [
-    { name: "bin", type: "directory", size: 4096, permissions: "drwxr-xr-x", modified: "2024-12-01T00:00:00Z" },
-    { name: "dev", type: "directory", size: 360, permissions: "drwxr-xr-x", modified: "2024-12-20T10:00:00Z" },
-    { name: "etc", type: "directory", size: 4096, permissions: "drwxr-xr-x", modified: "2024-12-01T00:00:00Z" },
-    { name: "home", type: "directory", size: 4096, permissions: "drwxr-xr-x", modified: "2024-12-01T00:00:00Z" },
-    { name: "proc", type: "directory", size: 0, permissions: "dr-xr-xr-x", modified: "2024-12-20T10:00:00Z" },
-    { name: "root", type: "directory", size: 4096, permissions: "drwx------", modified: "2024-12-20T10:00:00Z" },
-    { name: "sys", type: "directory", size: 0, permissions: "dr-xr-xr-x", modified: "2024-12-20T10:00:00Z" },
-    { name: "tmp", type: "directory", size: 4096, permissions: "drwxrwxrwt", modified: "2024-12-20T10:00:00Z" },
-    { name: "traefik", type: "file", size: 38291456, permissions: "-rwxr-xr-x", modified: "2024-12-20T10:00:00Z" },
-    { name: "usr", type: "directory", size: 4096, permissions: "drwxr-xr-x", modified: "2024-12-01T00:00:00Z" },
-    { name: "var", type: "directory", size: 4096, permissions: "drwxr-xr-x", modified: "2024-12-01T00:00:00Z" },
+    {
+      name: "bin",
+      type: "directory",
+      size: 4096,
+      permissions: "drwxr-xr-x",
+      modified: "2024-12-01T00:00:00Z",
+    },
+    {
+      name: "dev",
+      type: "directory",
+      size: 360,
+      permissions: "drwxr-xr-x",
+      modified: "2024-12-20T10:00:00Z",
+    },
+    {
+      name: "etc",
+      type: "directory",
+      size: 4096,
+      permissions: "drwxr-xr-x",
+      modified: "2024-12-01T00:00:00Z",
+    },
+    {
+      name: "home",
+      type: "directory",
+      size: 4096,
+      permissions: "drwxr-xr-x",
+      modified: "2024-12-01T00:00:00Z",
+    },
+    {
+      name: "proc",
+      type: "directory",
+      size: 0,
+      permissions: "dr-xr-xr-x",
+      modified: "2024-12-20T10:00:00Z",
+    },
+    {
+      name: "root",
+      type: "directory",
+      size: 4096,
+      permissions: "drwx------",
+      modified: "2024-12-20T10:00:00Z",
+    },
+    {
+      name: "sys",
+      type: "directory",
+      size: 0,
+      permissions: "dr-xr-xr-x",
+      modified: "2024-12-20T10:00:00Z",
+    },
+    {
+      name: "tmp",
+      type: "directory",
+      size: 4096,
+      permissions: "drwxrwxrwt",
+      modified: "2024-12-20T10:00:00Z",
+    },
+    {
+      name: "traefik",
+      type: "file",
+      size: 38291456,
+      permissions: "-rwxr-xr-x",
+      modified: "2024-12-20T10:00:00Z",
+    },
+    {
+      name: "usr",
+      type: "directory",
+      size: 4096,
+      permissions: "drwxr-xr-x",
+      modified: "2024-12-01T00:00:00Z",
+    },
+    {
+      name: "var",
+      type: "directory",
+      size: 4096,
+      permissions: "drwxr-xr-x",
+      modified: "2024-12-01T00:00:00Z",
+    },
   ],
 };
 
@@ -230,14 +325,17 @@ const TERMINAL_LINES = [
 
 async function waitForPort(port: number, timeoutMs = 30_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
+
   while (Date.now() < deadline) {
     try {
       await fetch(`http://127.0.0.1:${port}`);
+
       return;
     } catch {
       await new Promise((r) => setTimeout(r, 400));
     }
   }
+
   throw new Error(`Port ${port} not ready after ${timeoutMs}ms`);
 }
 
@@ -248,9 +346,11 @@ function startVite(): Promise<() => void> {
     stdio: "inherit",
     env: { ...process.env, FORCE_COLOR: "0" },
   });
+
   proc.on("error", (err) => {
     console.error("Vite process error:", err);
   });
+
   return waitForPort(PORT).then(() => () => {
     proc.kill("SIGTERM");
   });
@@ -279,6 +379,7 @@ async function main() {
   // Uses ES6 class syntax so `super()` properly initialises EventTarget's
   // native internal slots — ES5 EventTarget.call(this) doesn't work in Chromium.
   const terminalLinesJson = JSON.stringify(TERMINAL_LINES);
+
   await page.addInitScript(`(function () {
     localStorage.setItem('dockdash-theme', 'dark');
 
@@ -335,26 +436,38 @@ async function main() {
     const p = url.pathname;
 
     if (p === "/api/config") return route.fulfill({ json: CONFIG });
+
     if (p === "/api/services") return route.fulfill({ json: SERVICES });
+
     if (p === "/api/dashboard") return route.fulfill({ json: DASHBOARD });
+
     if (p === "/api/serviceStatuses")
       return route.fulfill({ json: SERVICES.map((s) => ({ id: s.id, status: s.status })) });
+
     if (p === "/api/docker/health")
       return route.fulfill({
         json: [{ host: "local", connected: true, containers: 6, containersRunning: 6 }],
       });
+
     if (p === "/api/app-update") return route.fulfill({ json: { hasUpdate: false } });
+
     if (/\/api\/services\/[^/]+\/health-history/.test(p)) {
       const buckets = Array.from({ length: 80 }, (_, i) => {
         if (i % 17 === 5 || i % 23 === 11) return "down";
+
         if (i % 37 === 29) return null;
+
         return "up";
       });
+
       return route.fulfill({ json: buckets });
     }
+
     if (/\/api\/services\/[^/]+\/changelog/.test(p)) return route.fulfill({ json: CHANGELOG });
+
     if (/\/api\/services\/[^/]+\/files/.test(p) && !p.includes("/content"))
       return route.fulfill({ json: FILES });
+
     // Terminal input, other POSTs/DELETEs
     return route.fulfill({ status: 200, json: { success: true } });
   });
@@ -370,17 +483,27 @@ async function main() {
     // at translate(0px,0px) scale(1); auto-fit updates it once node sizes are
     // measured. Polling until the transform diverges from identity ensures link
     // paths are recomputed with correct offsetWidth/offsetHeight values.
-    await page.waitForFunction(() => {
-      const node = document.querySelector("[data-service-id]");
-      if (!node) return false;
-      // Walk up to find the canvas transform div (has translate+scale inline style)
-      let el: Element | null = node.parentElement;
-      while (el && !((el as HTMLElement).style?.transform ?? "").includes("scale")) {
-        el = el.parentElement;
-      }
-      if (!el) return false;
-      return (el as HTMLElement).style.transform !== "translate(0px, 0px) scale(1)";
-    }, { timeout: 8000 }).catch(() => null);
+    await page
+      .waitForFunction(
+        () => {
+          const node = document.querySelector("[data-service-id]");
+
+          if (!node) return false;
+
+          // Walk up to find the canvas transform div (has translate+scale inline style)
+          let el: Element | null = node.parentElement;
+
+          while (el && !((el as HTMLElement).style?.transform ?? "").includes("scale")) {
+            el = el.parentElement;
+          }
+
+          if (!el) return false;
+
+          return (el as HTMLElement).style.transform !== "translate(0px, 0px) scale(1)";
+        },
+        { timeout: 8000 },
+      )
+      .catch(() => null);
     await page.waitForTimeout(400);
     await page.screenshot({ path: "screenshots/1.png" });
     console.log("✓ screenshots/1.png");

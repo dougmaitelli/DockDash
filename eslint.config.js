@@ -78,5 +78,11 @@ export default [
       "no-console": "off",
     },
   },
+  {
+    files: ["scripts/**"],
+    rules: {
+      "no-console": "off",
+    },
+  },
   prettier,
 ];
