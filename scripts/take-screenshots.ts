@@ -491,32 +491,11 @@ async function main() {
     console.log("Navigating to dashboard…");
     await page.goto(BASE_URL, { waitUntil: "networkidle" });
     await page.waitForSelector("[data-service-id]", { timeout: 15_000 });
-    // Wait for the auto-fit CSS transform to settle. The inner canvas div starts
-    // at translate(0px,0px) scale(1); auto-fit updates it once node sizes are
-    // measured. Polling until the transform diverges from identity ensures link
-    // paths are recomputed with correct offsetWidth/offsetHeight values.
-    await page
-      .waitForFunction(
-        () => {
-          const node = document.querySelector("[data-service-id]");
-
-          if (!node) return false;
-
-          // Walk up to find the canvas transform div (has translate+scale inline style)
-          let el: Element | null = node.parentElement;
-
-          while (el && !((el as HTMLElement).style?.transform ?? "").includes("scale")) {
-            el = el.parentElement;
-          }
-
-          if (!el) return false;
-
-          return (el as HTMLElement).style.transform !== "translate(0px, 0px) scale(1)";
-        },
-        { timeout: 8000 },
-      )
-      .catch(() => null);
-    await page.waitForTimeout(400);
+    // Click "Fit to screen" to force fitToContent() to run against the fully
+    // laid-out DOM — this guarantees offsetWidth/offsetHeight are correct when
+    // link paths are recomputed, avoiding misalignment on first render.
+    await page.click('button[title="Fit to screen"]');
+    await page.waitForTimeout(600);
     await page.screenshot({ path: "screenshots/1.png" });
     console.log("✓ screenshots/1.png");
 
