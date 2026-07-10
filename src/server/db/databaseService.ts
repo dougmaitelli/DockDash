@@ -26,7 +26,13 @@ import type {
   UpdateServiceRequest,
 } from "@shared/api";
 
-import { serviceHealthHistory, serviceLinks, servicePositions, services } from "./schema/index.js";
+import {
+  serviceHealthHistory,
+  serviceLinks,
+  servicePositions,
+  serviceResourceHistory,
+  services,
+} from "./schema/index.js";
 
 const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
 const MS_PER_DAY = 86_400_000;
@@ -316,23 +322,22 @@ export class DatabaseService {
       }));
   }
 
-  addHealthHistory(
-    serviceId: string,
-    status: ServiceStatus,
-    cpuPercent?: number,
-    memoryPercent?: number,
-  ): void {
-    const now = new Date().toISOString();
-
+  addHealthHistory(serviceId: string, status: ServiceStatus): void {
     this.orm
       .insert(serviceHealthHistory)
+      .values({ id: uuidv4(), serviceId, status, checkedAt: new Date().toISOString() })
+      .run();
+  }
+
+  addResourceStatsHistory(serviceId: string, cpuPercent: number, memoryPercent: number): void {
+    this.orm
+      .insert(serviceResourceHistory)
       .values({
         id: uuidv4(),
         serviceId,
-        status,
-        cpuPercent: cpuPercent ?? null,
-        memoryPercent: memoryPercent ?? null,
-        checkedAt: now,
+        cpuPercent,
+        memoryPercent,
+        checkedAt: new Date().toISOString(),
       })
       .run();
   }
@@ -381,12 +386,17 @@ export class DatabaseService {
   cleanOldHistory(ttlDays: number): number {
     const cutoff = new Date(Date.now() - ttlDays * MS_PER_DAY).toISOString();
 
-    const result = this.orm
+    const health = this.orm
       .delete(serviceHealthHistory)
       .where(lt(serviceHealthHistory.checkedAt, cutoff))
       .run();
 
-    return result.changes;
+    const resource = this.orm
+      .delete(serviceResourceHistory)
+      .where(lt(serviceResourceHistory.checkedAt, cutoff))
+      .run();
+
+    return health.changes + resource.changes;
   }
 }
 

@@ -10,6 +10,7 @@ const mockDb = vi.hoisted(() => ({
   updateServiceStatus: vi.fn(),
   updateServiceMetadata: vi.fn(),
   addHealthHistory: vi.fn(),
+  addResourceStatsHistory: vi.fn(),
 }));
 
 const mockDockerService = vi.hoisted(() => ({
@@ -592,7 +593,7 @@ describe("HealthCheckService — flag interaction scenarios", () => {
     mockNotificationService.notify.mockResolvedValue(undefined);
   });
 
-  it("persists health history with stats when Apprise is disabled", async () => {
+  it("persists health history and resource stats independently when Apprise is disabled", async () => {
     mockNotificationService.configured = false;
     const svc = makeDownDockerSvc("flag-apprise-disabled-history");
 
@@ -600,15 +601,15 @@ describe("HealthCheckService — flag interaction scenarios", () => {
 
     await healthCheckService.checkAllServices();
 
-    expect(mockDb.addHealthHistory).toHaveBeenCalledWith(
+    expect(mockDb.addHealthHistory).toHaveBeenCalledWith(svc.id, ServiceStatus.UP);
+    expect(mockDb.addResourceStatsHistory).toHaveBeenCalledWith(
       svc.id,
-      ServiceStatus.UP,
       SPIKE_STATS.cpuPercent,
       SPIKE_STATS.memoryPercent,
     );
   });
 
-  it("persists health history without stats when resource monitoring is disabled", async () => {
+  it("persists health history but not resource stats when resource monitoring is disabled", async () => {
     mockConfig.resourceMonitorEnabled = false;
     const svc = makeDownDockerSvc("flag-resmon-disabled-history");
 
@@ -616,23 +617,8 @@ describe("HealthCheckService — flag interaction scenarios", () => {
 
     await healthCheckService.checkAllServices();
 
-    expect(mockDb.addHealthHistory).toHaveBeenCalledWith(
-      svc.id,
-      ServiceStatus.UP,
-      undefined,
-      undefined,
-    );
-  });
-
-  it("does not persist health history when health history is disabled, even with resource monitoring enabled", async () => {
-    mockConfig.healthHistoryEnabled = false;
-    const svc = makeDownDockerSvc("flag-history-disabled-no-persist");
-
-    setupDockerEnv(svc);
-
-    await healthCheckService.checkAllServices();
-
-    expect(mockDb.addHealthHistory).not.toHaveBeenCalled();
+    expect(mockDb.addHealthHistory).toHaveBeenCalledWith(svc.id, ServiceStatus.UP);
+    expect(mockDb.addResourceStatsHistory).not.toHaveBeenCalled();
   });
 
   it("skips all notifications when Apprise is disabled, even when status and stats would trigger them", async () => {

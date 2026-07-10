@@ -312,7 +312,11 @@ export class HealthCheckService {
     db.updateServiceStatus(service.id!, status);
 
     if (config.healthHistoryEnabled) {
-      db.addHealthHistory(service.id!, status, stats?.cpuPercent, stats?.memoryPercent);
+      db.addHealthHistory(service.id!, status);
+    }
+
+    if (stats && config.resourceMonitorEnabled) {
+      db.addResourceStatsHistory(service.id!, stats.cpuPercent, stats.memoryPercent);
     }
 
     if (stats && notificationService.configured) this.notifyResourceSpikes(service, stats);

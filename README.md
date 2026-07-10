@@ -149,7 +149,7 @@ All configuration is done via environment variables. Changes require a container
 | `MEMORY_SPIKE_THRESHOLD` | `90` | Memory usage percentage at which an Apprise alert is sent (and again when it drops back below) |
 | `DISABLE_CONTAINER_CONTROLS` | — | Set to `true` to hide the Stop / Start / Restart buttons in the service drawer |
 | `DISABLE_HEALTH_HISTORY` | — | Set to `true` to hide the health history graph in the service drawer and stop recording health check results |
-| `DISABLE_RESOURCE_MONITOR` | — | Set to `true` to hide the CPU / memory / network / disk monitor in the service drawer |
+| `DISABLE_RESOURCE_MONITOR` | — | Set to `true` to hide the CPU / memory / network / disk monitor in the service drawer and stop persisting resource stats history |
 | `DISABLE_FILE_EXPLORER` | — | Set to `true` to hide the file explorer tab in the service drawer |
 | `DISABLE_TERMINAL` | — | Set to `true` to hide the terminal tab in the service drawer |
 | `TRUST_PROXY` | `loopback, uniquelocal` | Express trust proxy setting — controls which `X-Forwarded-*` headers are trusted. The default covers same-host and LAN proxies. Set to `true` to trust all proxies or a specific IP/CIDR for stricter control |
