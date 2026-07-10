@@ -12,6 +12,8 @@ export const DEFAULT_HEALTH_CHECK_INTERVAL = 30000;
 export const DEFAULT_UPDATE_CHECK_INTERVAL = 3_600_000; // 1 hour
 export const DEFAULT_HEALTH_HISTORY_TTL_DAYS = 30;
 export const DEFAULT_SESSION_MAX_AGE = 8 * 60 * 60 * 1000; // 8 hours
+export const DEFAULT_CPU_SPIKE_THRESHOLD = 90;
+export const DEFAULT_MEMORY_SPIKE_THRESHOLD = 90;
 
 class Config {
   private _sessionSecret: string | undefined;
@@ -110,6 +112,18 @@ class Config {
 
   get resourceMonitorEnabled(): boolean {
     return process.env.DISABLE_RESOURCE_MONITOR !== "true";
+  }
+
+  get cpuSpikeThreshold(): number {
+    return process.env.CPU_SPIKE_THRESHOLD
+      ? parseInt(process.env.CPU_SPIKE_THRESHOLD, 10)
+      : DEFAULT_CPU_SPIKE_THRESHOLD;
+  }
+
+  get memorySpikeThreshold(): number {
+    return process.env.MEMORY_SPIKE_THRESHOLD
+      ? parseInt(process.env.MEMORY_SPIKE_THRESHOLD, 10)
+      : DEFAULT_MEMORY_SPIKE_THRESHOLD;
   }
 
   get locale(): string {

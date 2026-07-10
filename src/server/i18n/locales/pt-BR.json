@@ -8,6 +8,14 @@
     "updatesAvailable": "⚠️ Atualizações Disponíveis",
     "updateEntry": "{{name}}: {{currentVersion}} → {{latestVersion}}",
     "updateEntryDigest": "{{name}}: {{currentVersion}} → {{latestVersion}}",
+    "cpuSpike": "⚠️ Pico de CPU: {{name}}",
+    "cpuSpikeBody": "O uso de CPU de {{name}} está em {{percent}}%.",
+    "cpuRecovered": "✅ CPU Normalizada: {{name}}",
+    "cpuRecoveredBody": "O uso de CPU de {{name}} voltou ao normal.",
+    "memorySpike": "⚠️ Pico de Memória: {{name}}",
+    "memorySpikeBody": "O uso de memória de {{name}} está em {{percent}}%.",
+    "memoryRecovered": "✅ Memória Normalizada: {{name}}",
+    "memoryRecoveredBody": "O uso de memória de {{name}} voltou ao normal.",
     "testTitle": "Notificação de Teste",
     "testBody": "As notificações do Apprise estão configuradas corretamente."
   }

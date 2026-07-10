@@ -145,6 +145,8 @@ All configuration is done via environment variables. Changes require a container
 | `APPRISE_URL` | — | Full notify endpoint of the [Apprise REST API](https://github.com/caronc/apprise-api) server (e.g. `http://apprise:8000/notify/myconfig`) |
 | `APPRISE_TAGS` | — | Optional — comma-separated tags to filter which configured Apprise endpoints receive notifications (e.g. `admin`) |
 | `APPRISE_URLS` | — | Optional — comma-separated Apprise notification URLs sent inline (e.g. `slack://token/channel`) |
+| `CPU_SPIKE_THRESHOLD` | `90` | CPU usage percentage at which an Apprise alert is sent (and again when it drops back below) |
+| `MEMORY_SPIKE_THRESHOLD` | `90` | Memory usage percentage at which an Apprise alert is sent (and again when it drops back below) |
 | `DISABLE_CONTAINER_CONTROLS` | — | Set to `true` to hide the Stop / Start / Restart buttons in the service drawer |
 | `DISABLE_HEALTH_HISTORY` | — | Set to `true` to hide the health history graph in the service drawer and stop recording health check results |
 | `DISABLE_RESOURCE_MONITOR` | — | Set to `true` to hide the CPU / memory / network / disk monitor in the service drawer |

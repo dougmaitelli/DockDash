@@ -8,6 +8,14 @@
     "updatesAvailable": "⚠️ Updates Available",
     "updateEntry": "{{name}}: {{currentVersion}} → {{latestVersion}}",
     "updateEntryDigest": "{{name}}: {{currentVersion}} → {{latestVersion}}",
+    "cpuSpike": "⚠️ CPU Spike: {{name}}",
+    "cpuSpikeBody": "{{name}} CPU usage is at {{percent}}%.",
+    "cpuRecovered": "✅ CPU Recovered: {{name}}",
+    "cpuRecoveredBody": "{{name}} CPU usage has returned to normal.",
+    "memorySpike": "⚠️ Memory Spike: {{name}}",
+    "memorySpikeBody": "{{name}} memory usage is at {{percent}}%.",
+    "memoryRecovered": "✅ Memory Recovered: {{name}}",
+    "memoryRecoveredBody": "{{name}} memory usage has returned to normal.",
     "testTitle": "Test Notification",
     "testBody": "Apprise notifications are configured correctly."
   }

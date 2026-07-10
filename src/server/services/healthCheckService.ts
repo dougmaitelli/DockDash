@@ -1,7 +1,7 @@
 import axios from "axios";
 import net from "net";
 
-import type { ServiceMetadata } from "@shared";
+import type { ContainerStats, ServiceMetadata } from "@shared";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 import { db } from "../db/databaseService.js";
@@ -22,6 +22,9 @@ const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
 
 export class HealthCheckService {
+  private readonly cpuSpiking = new Map<string, boolean>();
+  private readonly memorySpiking = new Map<string, boolean>();
+
   private async checkSingleDockerService(
     service: Service,
     stateMap?: ContainerStateMap,
@@ -74,8 +77,6 @@ export class HealthCheckService {
         }
       }
 
-      this.commitStatus(service, status);
-
       return status;
     } catch (err) {
       logger.error(
@@ -83,19 +84,13 @@ export class HealthCheckService {
       );
 
       // Can't reach the Docker host — state is unknown, not necessarily down.
-      this.commitStatus(service, ServiceStatus.UNKNOWN);
-
       return ServiceStatus.UNKNOWN;
     }
   }
 
   private async checkSingleNetworkService(service: Service): Promise<ServiceStatus | null> {
     try {
-      const status = await this.checkNetworkService(service);
-
-      this.commitStatus(service, status);
-
-      return status;
+      return await this.checkNetworkService(service);
     } catch (err) {
       logger.error(
         `Health check failed for network service "${service.name}": ${err instanceof Error ? err.message : String(err)}`,
@@ -110,9 +105,14 @@ export class HealthCheckService {
 
     if (!service) return null;
 
-    return service.source === ServiceSource.DOCKER
-      ? this.checkSingleDockerService(service)
-      : this.checkSingleNetworkService(service);
+    const status =
+      service.source === ServiceSource.DOCKER
+        ? await this.checkSingleDockerService(service)
+        : await this.checkSingleNetworkService(service);
+
+    if (status !== null) this.commitStatus(service, status);
+
+    return status;
   }
 
   async checkAllServices(): Promise<{ updated: number; errors: number }> {
@@ -152,6 +152,7 @@ export class HealthCheckService {
 
     for (const service of services) {
       let status: ServiceStatus | null;
+      let stats: ContainerStats | undefined;
 
       if (service.source === ServiceSource.DOCKER) {
         const dockerHostId = service.metadata?.dockerHostId;
@@ -160,9 +161,23 @@ export class HealthCheckService {
           service,
           dockerHostId ? stateMapByHostId.get(dockerHostId) : undefined,
         );
+
+        if (config.resourceMonitorEnabled) {
+          try {
+            const container = dockerService.getContainerForServiceId(service.id!);
+
+            stats = await dockerService.getContainerStats(container);
+          } catch (err) {
+            logger.debug(
+              `Resource monitor: skipping ${service.name}: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        }
       } else {
         status = await this.checkSingleNetworkService(service);
       }
+
+      if (status !== null) this.commitStatus(service, status, stats);
 
       if (status === null) {
         errors++;
@@ -237,12 +252,70 @@ export class HealthCheckService {
     return (await this.checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
   }
 
-  private commitStatus(service: Service, status: ServiceStatus): void {
+  private notifyResourceSpikes(service: Service, stats: ContainerStats): void {
+    const wasCpuSpiking = this.cpuSpiking.get(service.id!) ?? false;
+    const nowCpuSpiking = stats.cpuPercent >= config.cpuSpikeThreshold;
+
+    this.cpuSpiking.set(service.id!, nowCpuSpiking);
+
+    if (nowCpuSpiking && !wasCpuSpiking) {
+      void notificationService
+        .notify(
+          t("notifications.cpuSpike", { name: service.name }),
+          t("notifications.cpuSpikeBody", {
+            name: service.name,
+            percent: stats.cpuPercent.toFixed(1),
+          }),
+          "warning",
+        )
+        .catch(() => {});
+    } else if (!nowCpuSpiking && wasCpuSpiking) {
+      void notificationService
+        .notify(
+          t("notifications.cpuRecovered", { name: service.name }),
+          t("notifications.cpuRecoveredBody", { name: service.name }),
+          "success",
+        )
+        .catch(() => {});
+    }
+
+    const wasMemSpiking = this.memorySpiking.get(service.id!) ?? false;
+    const nowMemSpiking = stats.memoryPercent >= config.memorySpikeThreshold;
+
+    this.memorySpiking.set(service.id!, nowMemSpiking);
+
+    if (nowMemSpiking && !wasMemSpiking) {
+      void notificationService
+        .notify(
+          t("notifications.memorySpike", { name: service.name }),
+          t("notifications.memorySpikeBody", {
+            name: service.name,
+            percent: stats.memoryPercent.toFixed(1),
+          }),
+          "warning",
+        )
+        .catch(() => {});
+    } else if (!nowMemSpiking && wasMemSpiking) {
+      void notificationService
+        .notify(
+          t("notifications.memoryRecovered", { name: service.name }),
+          t("notifications.memoryRecoveredBody", { name: service.name }),
+          "success",
+        )
+        .catch(() => {});
+    }
+  }
+
+  private commitStatus(service: Service, status: ServiceStatus, stats?: ContainerStats): void {
     this.logStatusChange(service.name, service.status, status);
     this.notifyStatusChange(service.name, service.status, status);
     db.updateServiceStatus(service.id!, status);
 
-    if (config.healthHistoryEnabled) db.addHealthHistory(service.id!, status);
+    if (config.healthHistoryEnabled) {
+      db.addHealthHistory(service.id!, status, stats?.cpuPercent, stats?.memoryPercent);
+    }
+
+    if (stats && notificationService.configured) this.notifyResourceSpikes(service, stats);
   }
 
   private logStatusChange(name: string, oldStatus: ServiceStatus, newStatus: ServiceStatus): void {
@@ -257,6 +330,8 @@ export class HealthCheckService {
     newStatus: ServiceStatus,
   ): void {
     if (oldStatus === newStatus) return;
+
+    if (!notificationService.configured) return;
 
     if (newStatus === ServiceStatus.DOWN) {
       void notificationService
