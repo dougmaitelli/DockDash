@@ -109,9 +109,6 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
 
   if (error) return null;
 
-  const memPercent =
-    stats && stats.memoryLimit > 0 ? (stats.memoryUsed / stats.memoryLimit) * 100 : 0;
-
   return (
     <div className="mb-5 flex flex-col gap-3">
       <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
@@ -158,12 +155,12 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
           <Section title={t("modals.resourceMemory")}>
             <StatBar
               label={`${formatBytes(stats.memoryUsed)} / ${formatBytes(stats.memoryLimit)}`}
-              value={`${memPercent.toFixed(1)}%`}
-              percent={memPercent}
+              value={`${stats.memoryPercent.toFixed(1)}%`}
+              percent={stats.memoryPercent}
               color={
-                memPercent >= 90
+                stats.memoryPercent >= 90
                   ? "var(--accent-red)"
-                  : memPercent >= 75
+                  : stats.memoryPercent >= 75
                     ? "var(--accent-yellow)"
                     : "var(--accent-green)"
               }

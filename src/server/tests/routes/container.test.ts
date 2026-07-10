@@ -115,6 +115,7 @@ describe("GET /api/services/:id/stats", () => {
     cpuPercent: 12.5,
     memoryUsed: 134_217_728,
     memoryLimit: 8_589_934_592,
+    memoryPercent: 1.6,
     networkRx: 1_048_576,
     networkTx: 524_288,
     blockRead: 2_097_152,

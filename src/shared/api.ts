@@ -180,6 +180,7 @@ export interface ContainerStats {
   cpuPercent: number;
   memoryUsed: number;
   memoryLimit: number;
+  memoryPercent: number;
   networkRx: number;
   networkTx: number;
   blockRead: number;

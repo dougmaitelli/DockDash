@@ -227,6 +227,7 @@ export class DockerService {
     const memCache = mem.stats?.inactive_file ?? mem.stats?.cache ?? 0;
     const memoryUsed = (mem.usage ?? 0) - memCache;
     const memoryLimit = mem.limit ?? 0;
+    const memoryPercent = memoryLimit > 0 ? Math.round((memoryUsed / memoryLimit) * 1000) / 10 : 0;
 
     const nets = Object.values(raw.networks ?? {}) as { rx_bytes: number; tx_bytes: number }[];
     const networkRx = nets.reduce((s, n) => s + (n.rx_bytes ?? 0), 0);
@@ -247,6 +248,7 @@ export class DockerService {
       cpuPercent: Math.round(cpuPercent * 10) / 10,
       memoryUsed,
       memoryLimit,
+      memoryPercent,
       networkRx,
       networkTx,
       blockRead,

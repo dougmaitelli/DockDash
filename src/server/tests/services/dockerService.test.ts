@@ -315,15 +315,16 @@ describe("DockerService.getContainerStats", () => {
 
   // Memory
 
-  it("subtracts cgroup v1 cache from memory usage", async () => {
+  it("subtracts cgroup v1 cache from memory usage and computes memoryPercent", async () => {
     const svc = new DockerService();
     const result = await svc.getContainerStats(mockContainerObj as never);
 
     expect(result.memoryUsed).toBe(140_000_000); // 150M - 10M cache
     expect(result.memoryLimit).toBe(8_000_000_000);
+    expect(result.memoryPercent).toBe(1.8); // 140M / 8000M
   });
 
-  it("subtracts cgroup v2 inactive_file when cache is absent", async () => {
+  it("subtracts cgroup v2 inactive_file when cache is absent and computes memoryPercent", async () => {
     mockContainerObj.stats.mockResolvedValue({
       ...BASE_RAW,
       memory_stats: {
@@ -337,6 +338,19 @@ describe("DockerService.getContainerStats", () => {
     const result = await svc.getContainerStats(mockContainerObj as never);
 
     expect(result.memoryUsed).toBe(130_000_000); // 150M - 20M inactive_file
+    expect(result.memoryPercent).toBe(1.6); // 130M / 8000M
+  });
+
+  it("returns memoryPercent 0 when memoryLimit is 0", async () => {
+    mockContainerObj.stats.mockResolvedValue({
+      ...BASE_RAW,
+      memory_stats: { usage: 100_000_000, limit: 0, stats: {} },
+    });
+
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result.memoryPercent).toBe(0);
   });
 
   // Network and disk
