@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import type { ServiceStatus } from "@shared";
 
@@ -13,6 +13,8 @@ export const serviceHealthHistory = sqliteTable(
       .notNull()
       .references(() => services.id, { onDelete: "cascade" }),
     status: text("status").$type<ServiceStatus>().notNull(),
+    cpuPercent: real("cpu_percent"),
+    memoryPercent: real("memory_percent"),
     checkedAt: text("checked_at")
       .notNull()
       .default(sql`(datetime('now'))`),

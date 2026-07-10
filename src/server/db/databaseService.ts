@@ -316,12 +316,24 @@ export class DatabaseService {
       }));
   }
 
-  addHealthHistory(serviceId: string, status: ServiceStatus): void {
+  addHealthHistory(
+    serviceId: string,
+    status: ServiceStatus,
+    cpuPercent?: number,
+    memoryPercent?: number,
+  ): void {
     const now = new Date().toISOString();
 
     this.orm
       .insert(serviceHealthHistory)
-      .values({ id: uuidv4(), serviceId, status, checkedAt: now })
+      .values({
+        id: uuidv4(),
+        serviceId,
+        status,
+        cpuPercent: cpuPercent ?? null,
+        memoryPercent: memoryPercent ?? null,
+        checkedAt: now,
+      })
       .run();
   }
 
