@@ -195,6 +195,17 @@ router.get("/services/:id/health-history", (req, res) => {
   res.json(db.getHealthHistory(req.params.id, days, buckets));
 });
 
+router.get("/services/:id/resource-history", (req, res) => {
+  if (!config.resourceMonitorEnabled) {
+    return res.status(403).json({ error: "Resource monitoring is disabled" });
+  }
+
+  const days = Math.max(1, parseInt(req.query.days as string, 10) || 7);
+  const buckets = Math.max(1, Math.min(200, parseInt(req.query.buckets as string, 10) || 80));
+
+  res.json(db.getResourceHistory(req.params.id, days, buckets));
+});
+
 router.get("/services/:id/changelog", async (req, res) => {
   const service = db.getService(req.params.id);
 

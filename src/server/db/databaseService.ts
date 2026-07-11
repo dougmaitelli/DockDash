@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from "uuid";
 import type {
   DashboardData,
   HealthBucket,
+  ResourceBucket,
   Service,
   ServiceLink,
   ServiceMetadata,
@@ -380,6 +381,49 @@ export class DatabaseService {
       if (s.has(ServiceStatus.UNKNOWN)) return ServiceStatus.UNKNOWN;
 
       return ServiceStatus.UP;
+    });
+  }
+
+  getResourceHistory(serviceId: string, days: number, bucketCount: number): ResourceBucket[] {
+    const rangeMs = days * MS_PER_DAY;
+    const cutoff = new Date(Date.now() - rangeMs).toISOString();
+    const rows = this.orm
+      .select({
+        cpuPercent: serviceResourceHistory.cpuPercent,
+        memoryPercent: serviceResourceHistory.memoryPercent,
+        checkedAt: serviceResourceHistory.checkedAt,
+      })
+      .from(serviceResourceHistory)
+      .where(
+        sql`${serviceResourceHistory.serviceId} = ${serviceId} AND ${serviceResourceHistory.checkedAt} >= ${cutoff}`,
+      )
+      .orderBy(asc(serviceResourceHistory.checkedAt))
+      .all();
+
+    const now = Date.now();
+    const start = now - rangeMs;
+    const bucketMs = rangeMs / bucketCount;
+
+    type Sample = { cpu: number; mem: number };
+    const buckets: Sample[][] = Array.from({ length: bucketCount }, () => []);
+
+    for (const row of rows) {
+      const t = new Date(row.checkedAt).getTime();
+      const idx = Math.min(Math.floor((t - start) / bucketMs), bucketCount - 1);
+
+      if (idx >= 0) buckets[idx].push({ cpu: row.cpuPercent, mem: row.memoryPercent });
+    }
+
+    return buckets.map((samples) => {
+      if (samples.length === 0) return null;
+
+      const cpuPercent = samples.reduce((s, r) => s + r.cpu, 0) / samples.length;
+      const memoryPercent = samples.reduce((s, r) => s + r.mem, 0) / samples.length;
+
+      return {
+        cpuPercent: Math.round(cpuPercent * 10) / 10,
+        memoryPercent: Math.round(memoryPercent * 10) / 10,
+      };
     });
   }
 

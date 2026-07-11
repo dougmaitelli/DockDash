@@ -14,6 +14,7 @@ import type {
   FilesResponse,
   HealthBucket,
   PositionUpdate,
+  ResourceBucket,
   SavePositionsRequest,
   SavePositionsResponse,
   Service,
@@ -56,6 +57,8 @@ export const serviceApi = {
   delete: (id: string) => api.delete<ApiSuccess>(`/services/${id}`),
   getHealthHistory: (id: string, days: number, buckets = 80) =>
     api.get<HealthBucket[]>(`/services/${id}/health-history`, { params: { days, buckets } }),
+  getResourceHistory: (id: string, days: number, buckets = 80) =>
+    api.get<ResourceBucket[]>(`/services/${id}/resource-history`, { params: { days, buckets } }),
   getChangelog: (id: string) => api.get<ChangelogResponse>(`/services/${id}/changelog`),
   addToDashboard: (id: string) => api.post<ApiSuccess>(`/services/${id}/dashboard`),
   removeFromDashboard: (id: string) => api.delete<ApiSuccess>(`/services/${id}/dashboard`),

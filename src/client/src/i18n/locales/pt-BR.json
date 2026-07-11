@@ -183,6 +183,10 @@
     "resourceRx": "RX",
     "resourceTx": "TX",
     "resourceRead": "Leitura",
-    "resourceWrite": "Escrita"
+    "resourceWrite": "Escrita",
+    "resourceHistory": "Histórico de Recursos",
+    "resourceHistoryNoData": "Sem dados ainda",
+    "resourceHistoryCpu": "CPU média {{pct}}%",
+    "resourceHistoryMemory": "Memória média {{pct}}%"
   }
 }

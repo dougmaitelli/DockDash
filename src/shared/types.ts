@@ -86,6 +86,8 @@ export interface DashboardData {
 
 export type HealthBucket = ServiceStatus | "mixed" | null;
 
+export type ResourceBucket = { cpuPercent: number; memoryPercent: number } | null;
+
 export interface ChangelogRelease {
   version: string;
   publishedAt: string;

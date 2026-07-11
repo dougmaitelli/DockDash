@@ -14,6 +14,7 @@ import { useFormValidation } from "@/hooks/useFormValidation";
 import { ContainerResourceMonitor } from "./ContainerResourceMonitor";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
 import { FormGroup, Label } from "./modals/BaseModal";
+import { ResourceHistoryGraph } from "./ResourceHistoryGraph";
 
 interface ServiceDetailsProps {
   service: Service;
@@ -82,7 +83,10 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
       <div className="flex-1 overflow-y-auto flex flex-col p-5">
         {(config?.healthHistoryEnabled ?? true) && <HealthHistoryGraph serviceId={service.id!} />}
         {isDocker && (config?.resourceMonitorEnabled ?? true) && (
-          <ContainerResourceMonitor serviceId={service.id!} />
+          <>
+            <ContainerResourceMonitor serviceId={service.id!} />
+            <ResourceHistoryGraph serviceId={service.id!} />
+          </>
         )}
 
         <FormGroup error={errors.name}>
