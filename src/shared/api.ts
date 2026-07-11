@@ -1,3 +1,4 @@
+import type { ClientSchemaConfig } from "./configSchema.js";
 import type {
   ChangelogRelease,
   ServiceLinkType,
@@ -63,20 +64,12 @@ export interface AppUpdateInfo {
 // GET /api/config
 // ---------------------------------------------------------------------------
 
-export interface DashboardConfig {
+interface DashboardConfigBase {
   version: string;
-  dockerHosts: string[];
-  networkCidrs: string[];
-  healthCheckInterval: number;
-  updateCheckInterval: number;
-  healthHistoryTtlDays: number;
   appriseConfigured: boolean;
-  containerControlsEnabled: boolean;
-  healthHistoryEnabled: boolean;
-  resourceMonitorEnabled: boolean;
-  fileExplorerEnabled: boolean;
-  terminalEnabled: boolean;
 }
+
+export type DashboardConfig = DashboardConfigBase & ClientSchemaConfig;
 
 // ---------------------------------------------------------------------------
 // SSE streams — GET /api/docker/scan/stream  &  /api/network/scan/stream

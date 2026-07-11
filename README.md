@@ -160,6 +160,7 @@ All configuration is done via environment variables. Changes require a container
 | `OIDC_REDIRECT_URI` | — | Callback URL override — auto-detected from the request as `<protocol>://<host>/auth/callback`; only needed if your reverse proxy setup causes incorrect detection |
 | `OIDC_SCOPES` | `openid profile email` | Space-separated scopes to request from the provider |
 | `SESSION_SECRET` | — | Secret used to sign session cookies — **required in production when OIDC is enabled** |
+| `SESSION_MAX_AGE` | `28800000` | Session cookie lifetime in milliseconds (default 8 hours) |
 
 ### Docker socket
 

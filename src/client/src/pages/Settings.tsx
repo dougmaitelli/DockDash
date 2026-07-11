@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import {
+  type ClientSchemaConfig,
+  CONFIG_SCHEMA,
+  type ConfigKey,
+  type SchemaEntry,
+} from "@shared/configSchema";
+
 import { Select } from "@/components/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -50,19 +57,20 @@ export default function Settings() {
     }
   };
 
-  const configEntries = [
-    { key: "DOCKER_HOSTS", value: config?.dockerHosts.join(", ") },
-    { key: "NETWORK_CIDRS", value: config?.networkCidrs.join(",") },
-    {
-      key: "HEALTH_CHECK_INTERVAL",
-      value: config?.healthCheckInterval != null ? formatMs(config.healthCheckInterval) : "",
-    },
-    {
-      key: "UPDATE_CHECK_INTERVAL",
-      value: config?.updateCheckInterval != null ? formatMs(config.updateCheckInterval) : "",
-    },
-    { key: "HEALTH_HISTORY_TTL_DAYS", value: String(config?.healthHistoryTtlDays ?? "") },
-  ];
+  const configEntries = (Object.entries(CONFIG_SCHEMA) as [ConfigKey, SchemaEntry][])
+    .filter(([, entry]) => entry.showOnUi && entry.type !== "boolean-disable")
+    .map(([key, entry]) => {
+      const value = config?.[key as keyof ClientSchemaConfig];
+      let formatted = "";
+
+      if (value != null) {
+        if (entry.format === "ms") formatted = formatMs(value as number);
+        else if (entry.type === "string-array") formatted = (value as string[]).join(", ");
+        else formatted = String(value);
+      }
+
+      return { key: entry.env, value: formatted };
+    });
 
   return (
     <div className="p-6 max-w-3xl mx-auto flex flex-col gap-4">

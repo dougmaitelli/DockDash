@@ -1,6 +1,12 @@
 import { Router } from "express";
 
 import type { AppUpdateInfo, DashboardConfig } from "@shared/api";
+import {
+  CONFIG_SCHEMA,
+  type ConfigKey,
+  type SchemaConfig,
+  type SchemaEntry,
+} from "@shared/configSchema.js";
 
 import { config } from "../lib/config.js";
 import { appUpdateService } from "../services/appUpdateService.js";
@@ -8,20 +14,17 @@ import { appUpdateService } from "../services/appUpdateService.js";
 const router = Router();
 
 router.get("/config", (_req, res) => {
+  const schemaValues = Object.fromEntries(
+    (Object.keys(CONFIG_SCHEMA) as ConfigKey[])
+      .filter((k) => (CONFIG_SCHEMA[k] as SchemaEntry).showOnUi)
+      .map((k) => [k, (config as unknown as SchemaConfig)[k]]),
+  );
+
   const cfg: DashboardConfig = {
     version: config.appVersion,
-    dockerHosts: config.dockerHosts,
-    networkCidrs: config.networkCidrs,
-    healthCheckInterval: config.healthCheckInterval,
-    updateCheckInterval: config.updateCheckInterval,
-    healthHistoryTtlDays: config.healthHistoryTtlDays,
     appriseConfigured: config.appriseConfigured,
-    containerControlsEnabled: config.containerControlsEnabled,
-    healthHistoryEnabled: config.healthHistoryEnabled,
-    resourceMonitorEnabled: config.resourceMonitorEnabled,
-    fileExplorerEnabled: config.fileExplorerEnabled,
-    terminalEnabled: config.terminalEnabled,
-  };
+    ...schemaValues,
+  } as DashboardConfig;
 
   res.json(cfg);
 });

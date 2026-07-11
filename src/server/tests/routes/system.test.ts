@@ -13,8 +13,14 @@ const mockConfig = vi.hoisted(() => ({
   containerControlsEnabled: true,
   healthHistoryEnabled: true,
   resourceMonitorEnabled: true,
+  cpuSpikeThreshold: 90,
+  memorySpikeThreshold: 90,
+  spikeDurationThreshold: 300,
   fileExplorerEnabled: true,
   terminalEnabled: true,
+  read(key: string) {
+    return (this as Record<string, unknown>)[key];
+  },
 }));
 
 const mockAppUpdateService = vi.hoisted(() => ({

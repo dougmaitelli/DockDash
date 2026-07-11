@@ -28,7 +28,9 @@ const app = express();
 const PORT = config.port;
 
 // Trust reverse-proxy headers so req.protocol reflects X-Forwarded-Proto
-app.set("trust proxy", config.trustProxy);
+const trustProxy = config.trustProxy;
+
+app.set("trust proxy", trustProxy === "true" ? true : trustProxy);
 
 // Middleware
 app.use(express.json({ limit: "100kb" }));
