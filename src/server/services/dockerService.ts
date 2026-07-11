@@ -314,4 +314,8 @@ export class DockerService {
   }
 }
 
-export const dockerService = new DockerService();
+export let dockerService: DockerService = new DockerService();
+
+export function overrideDockerService(instance: DockerService): void {
+  dockerService = instance;
+}

@@ -444,4 +444,8 @@ export class DatabaseService {
   }
 }
 
-export const db = new DatabaseService();
+export let db: DatabaseService = new DatabaseService();
+
+export function overrideDatabase(instance: DatabaseService): void {
+  db = instance;
+}

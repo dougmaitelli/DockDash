@@ -21,7 +21,6 @@ import notificationRoutes from "./routes/notifications.js";
 import serviceRoutes from "./routes/services.js";
 import systemRoutes from "./routes/system.js";
 import terminalRoutes from "./routes/terminal.js";
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();

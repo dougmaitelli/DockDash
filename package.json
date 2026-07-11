@@ -6,7 +6,8 @@
   "scripts": {
     "dev:server": "tsx --watch --tsconfig tsconfig.server.json src/server/index.ts",
     "dev:client": "vite",
-    "dev": "concurrently \"tsx --watch --tsconfig tsconfig.server.json src/server/index.ts\" \"vite\"",
+    "dev": "concurrently \"yarn dev:server\" \"yarn dev:client\"",
+    "dev:mock": "concurrently \"tsx --watch --tsconfig tsconfig.server.json src/server/mockEntry.ts\" \"yarn dev:client\"",
     "build": "esbuild src/server/index.ts --bundle --platform=node --format=esm --outfile=dist/server/index.js --packages=external --alias:@shared=./src/shared --sourcemap && mkdir -p dist/server/i18n/locales && cp src/server/i18n/locales/*.json dist/server/i18n/locales/ && vite build",
     "start": "node dist/server/index.js",
     "lint": "eslint src/ scripts/ *.ts *.js && prettier --check \"src/\" \"scripts/\" \"*.{js,ts,json}\"",
@@ -14,7 +15,7 @@
     "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "yarn test -- --coverage",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
     "screenshots": "tsx scripts/take-screenshots.ts",
