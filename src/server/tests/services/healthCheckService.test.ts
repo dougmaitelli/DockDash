@@ -458,6 +458,30 @@ describe("HealthCheckService — resource spike monitoring", () => {
     expect(mockNotificationService.notify).not.toHaveBeenCalled();
   });
 
+  it("skips CPU spike notifications when CPU threshold is 0", async () => {
+    mockConfig.cpuSpikeThreshold = 0;
+    const svc = makeDockerSvcWithId("cpu-threshold-zero");
+
+    setupDockerEnv(svc);
+    mockDockerService.getContainerStats.mockResolvedValue(CPU_SPIKE_STATS);
+
+    await healthCheckService.checkAllServices();
+
+    expect(mockNotificationService.notify).not.toHaveBeenCalled();
+  });
+
+  it("skips memory spike notifications when memory threshold is 0", async () => {
+    mockConfig.memorySpikeThreshold = 0;
+    const svc = makeDockerSvcWithId("mem-threshold-zero");
+
+    setupDockerEnv(svc);
+    mockDockerService.getContainerStats.mockResolvedValue(MEM_SPIKE_STATS);
+
+    await healthCheckService.checkAllServices();
+
+    expect(mockNotificationService.notify).not.toHaveBeenCalled();
+  });
+
   it("skips spike notifications when Apprise is not configured", async () => {
     mockNotificationService.configured = false;
     const svc = makeDockerSvcWithId("res-skip-apprise");

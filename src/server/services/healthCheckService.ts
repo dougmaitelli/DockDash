@@ -253,56 +253,62 @@ export class HealthCheckService {
   }
 
   private notifyResourceSpikes(service: Service, stats: ContainerStats): void {
-    const wasCpuSpiking = this.cpuSpiking.get(service.id!) ?? false;
-    const nowCpuSpiking = stats.cpuPercent >= config.cpuSpikeThreshold;
+    const id = service.id!;
 
-    this.cpuSpiking.set(service.id!, nowCpuSpiking);
+    if (config.cpuSpikeThreshold > 0) {
+      const wasCpuSpiking = this.cpuSpiking.get(id) ?? false;
+      const nowCpuSpiking = stats.cpuPercent >= config.cpuSpikeThreshold;
 
-    if (nowCpuSpiking && !wasCpuSpiking) {
-      void notificationService
-        .notify(
-          t("notifications.cpuSpike", { name: service.name }),
-          t("notifications.cpuSpikeBody", {
-            name: service.name,
-            percent: stats.cpuPercent.toFixed(1),
-          }),
-          "warning",
-        )
-        .catch(() => {});
-    } else if (!nowCpuSpiking && wasCpuSpiking) {
-      void notificationService
-        .notify(
-          t("notifications.cpuRecovered", { name: service.name }),
-          t("notifications.cpuRecoveredBody", { name: service.name }),
-          "success",
-        )
-        .catch(() => {});
+      this.cpuSpiking.set(id, nowCpuSpiking);
+
+      if (nowCpuSpiking && !wasCpuSpiking) {
+        void notificationService
+          .notify(
+            t("notifications.cpuSpike", { name: service.name }),
+            t("notifications.cpuSpikeBody", {
+              name: service.name,
+              percent: stats.cpuPercent.toFixed(1),
+            }),
+            "warning",
+          )
+          .catch(() => {});
+      } else if (!nowCpuSpiking && wasCpuSpiking) {
+        void notificationService
+          .notify(
+            t("notifications.cpuRecovered", { name: service.name }),
+            t("notifications.cpuRecoveredBody", { name: service.name }),
+            "success",
+          )
+          .catch(() => {});
+      }
     }
 
-    const wasMemSpiking = this.memorySpiking.get(service.id!) ?? false;
-    const nowMemSpiking = stats.memoryPercent >= config.memorySpikeThreshold;
+    if (config.memorySpikeThreshold > 0) {
+      const wasMemSpiking = this.memorySpiking.get(id) ?? false;
+      const nowMemSpiking = stats.memoryPercent >= config.memorySpikeThreshold;
 
-    this.memorySpiking.set(service.id!, nowMemSpiking);
+      this.memorySpiking.set(id, nowMemSpiking);
 
-    if (nowMemSpiking && !wasMemSpiking) {
-      void notificationService
-        .notify(
-          t("notifications.memorySpike", { name: service.name }),
-          t("notifications.memorySpikeBody", {
-            name: service.name,
-            percent: stats.memoryPercent.toFixed(1),
-          }),
-          "warning",
-        )
-        .catch(() => {});
-    } else if (!nowMemSpiking && wasMemSpiking) {
-      void notificationService
-        .notify(
-          t("notifications.memoryRecovered", { name: service.name }),
-          t("notifications.memoryRecoveredBody", { name: service.name }),
-          "success",
-        )
-        .catch(() => {});
+      if (nowMemSpiking && !wasMemSpiking) {
+        void notificationService
+          .notify(
+            t("notifications.memorySpike", { name: service.name }),
+            t("notifications.memorySpikeBody", {
+              name: service.name,
+              percent: stats.memoryPercent.toFixed(1),
+            }),
+            "warning",
+          )
+          .catch(() => {});
+      } else if (!nowMemSpiking && wasMemSpiking) {
+        void notificationService
+          .notify(
+            t("notifications.memoryRecovered", { name: service.name }),
+            t("notifications.memoryRecoveredBody", { name: service.name }),
+            "success",
+          )
+          .catch(() => {});
+      }
     }
   }
 
