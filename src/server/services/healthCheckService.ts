@@ -24,6 +24,8 @@ const TCP_TIMEOUT = 1000;
 export class HealthCheckService {
   private readonly cpuSpiking = new Map<string, boolean>();
   private readonly memorySpiking = new Map<string, boolean>();
+  // tracks when each service first crossed the CPU threshold (ms); cleared on recovery
+  private readonly cpuSpikeStart = new Map<string, number>();
 
   private async checkSingleDockerService(
     service: Service,
@@ -257,29 +259,40 @@ export class HealthCheckService {
 
     if (config.cpuSpikeThreshold > 0) {
       const wasCpuSpiking = this.cpuSpiking.get(id) ?? false;
-      const nowCpuSpiking = stats.cpuPercent >= config.cpuSpikeThreshold;
+      const nowAboveCpuThreshold = stats.cpuPercent >= config.cpuSpikeThreshold;
+      const durationMs = config.spikeDurationThreshold * 1000;
 
-      this.cpuSpiking.set(id, nowCpuSpiking);
+      if (nowAboveCpuThreshold) {
+        if (!this.cpuSpikeStart.has(id)) this.cpuSpikeStart.set(id, Date.now());
 
-      if (nowCpuSpiking && !wasCpuSpiking) {
-        void notificationService
-          .notify(
-            t("notifications.cpuSpike", { name: service.name }),
-            t("notifications.cpuSpikeBody", {
-              name: service.name,
-              percent: stats.cpuPercent.toFixed(1),
-            }),
-            "warning",
-          )
-          .catch(() => {});
-      } else if (!nowCpuSpiking && wasCpuSpiking) {
-        void notificationService
-          .notify(
-            t("notifications.cpuRecovered", { name: service.name }),
-            t("notifications.cpuRecoveredBody", { name: service.name }),
-            "success",
-          )
-          .catch(() => {});
+        const elapsed = Date.now() - this.cpuSpikeStart.get(id)!;
+
+        if (!wasCpuSpiking && elapsed >= durationMs) {
+          this.cpuSpiking.set(id, true);
+          void notificationService
+            .notify(
+              t("notifications.cpuSpike", { name: service.name }),
+              t("notifications.cpuSpikeBody", {
+                name: service.name,
+                percent: stats.cpuPercent.toFixed(1),
+              }),
+              "warning",
+            )
+            .catch(() => {});
+        }
+      } else {
+        if (wasCpuSpiking) {
+          this.cpuSpiking.set(id, false);
+          void notificationService
+            .notify(
+              t("notifications.cpuRecovered", { name: service.name }),
+              t("notifications.cpuRecoveredBody", { name: service.name }),
+              "success",
+            )
+            .catch(() => {});
+        }
+
+        this.cpuSpikeStart.delete(id);
       }
     }
 

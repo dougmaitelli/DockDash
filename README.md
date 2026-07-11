@@ -147,6 +147,7 @@ All configuration is done via environment variables. Changes require a container
 | `APPRISE_URLS` | — | Optional — comma-separated Apprise notification URLs sent inline (e.g. `slack://token/channel`) |
 | `CPU_SPIKE_THRESHOLD` | `90` | CPU usage percentage at which an Apprise alert is sent (and again when it drops back below). Set to `0` to disable CPU spike alerts |
 | `MEMORY_SPIKE_THRESHOLD` | `90` | Memory usage percentage at which an Apprise alert is sent (and again when it drops back below). Set to `0` to disable memory spike alerts |
+| `SPIKE_DURATION_THRESHOLD` | `300` | How long, **in seconds**, a CPU spike must be sustained before an alert fires. Prevents false alarms from brief bursts. Set to `0` for immediate alerts |
 | `DISABLE_CONTAINER_CONTROLS` | — | Set to `true` to hide the Stop / Start / Restart buttons in the service drawer |
 | `DISABLE_HEALTH_HISTORY` | — | Set to `true` to hide the health history graph in the service drawer and stop recording health check results |
 | `DISABLE_RESOURCE_MONITOR` | — | Set to `true` to hide the CPU / memory / network / disk monitor in the service drawer and stop persisting resource stats history |

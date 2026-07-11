@@ -31,6 +31,7 @@ const mockConfig = vi.hoisted(() => ({
   resourceMonitorEnabled: true,
   cpuSpikeThreshold: 90,
   memorySpikeThreshold: 90,
+  spikeDurationThreshold: 0,
 }));
 
 const mockSocketObj = vi.hoisted(() => ({
@@ -442,6 +443,7 @@ describe("HealthCheckService — resource spike monitoring", () => {
     mockConfig.resourceMonitorEnabled = true;
     mockConfig.cpuSpikeThreshold = 90;
     mockConfig.memorySpikeThreshold = 90;
+    mockConfig.spikeDurationThreshold = 0;
     mockNotificationService.configured = true;
     mockNotificationService.notify.mockResolvedValue(undefined);
   });
@@ -566,6 +568,74 @@ describe("HealthCheckService — resource spike monitoring", () => {
       "success",
     );
   });
+
+  it("CPU: suppresses alert until threshold is exceeded for the configured duration", async () => {
+    mockConfig.spikeDurationThreshold = 300; // 300 s debounce
+    const svc = makeDockerSvcWithId("cpu-duration-debounce");
+
+    setupDockerEnv(svc);
+    vi.useFakeTimers();
+
+    try {
+      // Run 1: CPU spikes but duration has not elapsed → no alert
+      mockDockerService.getContainerStats.mockResolvedValue(CPU_SPIKE_STATS);
+      await healthCheckService.checkAllServices();
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
+
+      // Run 2: CPU still spiking, only 60 s elapsed → still no alert
+      vi.advanceTimersByTime(60_000);
+      await healthCheckService.checkAllServices();
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
+
+      // Run 3: 300 s elapsed → alert fires
+      vi.advanceTimersByTime(240_000);
+      await healthCheckService.checkAllServices();
+      expect(mockNotificationService.notify).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        "warning",
+      );
+
+      vi.clearAllMocks();
+      mockNotificationService.notify.mockResolvedValue(undefined);
+
+      // Run 4: CPU recovers → brief spike that never reached threshold mid-debounce is cleared
+      mockDockerService.getContainerStats.mockResolvedValue(NORMAL_STATS);
+      await healthCheckService.checkAllServices();
+      expect(mockNotificationService.notify).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        "success",
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("CPU: a brief spike that drops before the duration elapses sends no alert and no recovery", async () => {
+    mockConfig.spikeDurationThreshold = 300;
+    const svc = makeDockerSvcWithId("cpu-brief-spike");
+
+    setupDockerEnv(svc);
+    vi.useFakeTimers();
+
+    try {
+      // Spike detected
+      mockDockerService.getContainerStats.mockResolvedValue(CPU_SPIKE_STATS);
+      await healthCheckService.checkAllServices();
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
+
+      // Drops before duration elapses (only 10 s in)
+      vi.advanceTimersByTime(10_000);
+      mockDockerService.getContainerStats.mockResolvedValue(NORMAL_STATS);
+      await healthCheckService.checkAllServices();
+
+      // No alert and no recovery sent
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("HealthCheckService — flag interaction scenarios", () => {
@@ -613,6 +683,7 @@ describe("HealthCheckService — flag interaction scenarios", () => {
     mockConfig.resourceMonitorEnabled = true;
     mockConfig.cpuSpikeThreshold = 90;
     mockConfig.memorySpikeThreshold = 90;
+    mockConfig.spikeDurationThreshold = 0;
     mockNotificationService.configured = true;
     mockNotificationService.notify.mockResolvedValue(undefined);
   });
