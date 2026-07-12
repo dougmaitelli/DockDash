@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ContainerStats } from "@shared";
+import type { ContainerStats, ResourceBucket } from "@shared";
 
+import { cn } from "@/lib/utils";
 import { serviceApi } from "@/services/api";
 
+import { ResourceMetric } from "./ResourceMetric";
+
 const POLL_INTERVAL_MS = 2500;
+const BUCKETS = 80;
+const MS_PER_DAY = 86_400_000;
+const PERIODS = [1, 7, 30] as const;
+
+type Period = (typeof PERIODS)[number];
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
@@ -14,46 +22,6 @@ function formatBytes(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
 
   return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
-}
-
-interface StatBarProps {
-  label: string;
-  value: string;
-  percent: number;
-  color: string;
-}
-
-function StatBar({ label, value, percent, color }: StatBarProps) {
-  return (
-    <div>
-      <div className="flex justify-between items-baseline mb-1">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        <span className="text-xs font-mono text-secondary-foreground">{value}</span>
-      </div>
-      <div className="h-1.5 rounded-full bg-background overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${Math.min(percent, 100)}%`, background: color }}
-        />
-      </div>
-    </div>
-  );
-}
-
-interface SectionProps {
-  title: string;
-  children: React.ReactNode;
-}
-
-function Section({ title, children }: SectionProps) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
-        {title}
-      </span>
-      {children}
-    </div>
-  );
 }
 
 interface StatCellProps {
@@ -79,6 +47,9 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
   const [stats, setStats] = useState<ContainerStats | null>(null);
   const [error, setError] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [period, setPeriod] = useState<Period>(7);
+  const [buckets, setBuckets] = useState<ResourceBucket[] | null>(null);
+  const bucketTimesRef = useRef<Array<{ start: number; end: number }>>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,76 +78,123 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
     };
   }, [serviceId]);
 
+  useEffect(() => {
+    setBuckets(null);
+
+    const now = Date.now();
+    const rangeMs = period * MS_PER_DAY;
+    const bucketMs = rangeMs / BUCKETS;
+
+    bucketTimesRef.current = Array.from({ length: BUCKETS }, (_, i) => ({
+      start: now - rangeMs + i * bucketMs,
+      end: now - rangeMs + (i + 1) * bucketMs,
+    }));
+
+    serviceApi
+      .getResourceHistory(serviceId, period, BUCKETS)
+      .then((res) => setBuckets(res.data))
+      .catch(() => setBuckets([]));
+  }, [serviceId, period]);
+
   if (error) return null;
 
-  return (
-    <div className="mb-5 flex flex-col gap-3">
-      <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
-        {t("modals.resourceMonitor")}
-      </span>
+  const periodSelector = (
+    <div className="flex gap-0.5 bg-background rounded-[5px] p-0.5">
+      {PERIODS.map((p) => (
+        <button
+          key={p}
+          type="button"
+          onClick={() => setPeriod(p)}
+          className={cn(
+            "rounded-sm px-2 py-0.5 text-[0.7rem] hover:text-foreground",
+            period === p
+              ? "bg-card text-foreground font-semibold"
+              : "bg-transparent text-muted-foreground font-normal",
+          )}
+        >
+          {t(`modals.healthHistoryPeriod${p}d` as const)}
+        </button>
+      ))}
+    </div>
+  );
 
-      {!stats ? (
-        <div className="flex flex-col gap-3 animate-pulse">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="flex flex-col gap-1.5">
-              <div className="h-2.5 w-10 rounded bg-border" />
-              <div>
-                <div className="flex justify-between mb-1">
-                  <div className="h-3 w-16 rounded bg-border" />
-                  <div className="h-3 w-8 rounded bg-border" />
+  return (
+    <>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
+            {t("modals.resourceMonitor")}
+          </span>
+          {periodSelector}
+        </div>
+
+        {!stats ? (
+          <div className="flex flex-col gap-3 animate-pulse">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="flex flex-col gap-1.5">
+                <div className="h-2.5 w-10 rounded bg-border" />
+                <div className="h-8 rounded-sm bg-border" />
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <div className="h-3 w-16 rounded bg-border" />
+                    <div className="h-3 w-8 rounded bg-border" />
+                  </div>
+                  <div className="h-1.5 rounded-full bg-border" />
                 </div>
-                <div className="h-1.5 rounded-full bg-border" />
+              </div>
+            ))}
+            <div className="flex flex-col gap-1.5">
+              <div className="h-2.5 w-24 rounded bg-border" />
+              <div className="grid grid-cols-4 gap-2">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="flex flex-col gap-0.5">
+                    <div className="h-2 w-4 rounded bg-border" />
+                    <div className="h-2.5 w-10 rounded bg-border" />
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
-          <div className="flex flex-col gap-1.5">
-            <div className="h-2.5 w-24 rounded bg-border" />
-            <div className="grid grid-cols-4 gap-2">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex flex-col gap-0.5">
-                  <div className="h-2 w-4 rounded bg-border" />
-                  <div className="h-2.5 w-10 rounded bg-border" />
-                </div>
-              ))}
-            </div>
           </div>
-        </div>
-      ) : (
-        <>
-          <Section title={t("modals.resourceCpu")}>
-            <StatBar
-              label={`${stats.cpuPercent.toFixed(1)}%`}
-              value={`${stats.cpuPercent.toFixed(1)}%`}
-              percent={stats.cpuPercent}
-              color="var(--accent-blue)"
+        ) : (
+          <>
+            <ResourceMetric
+              title={t("modals.resourceCpu")}
+              buckets={buckets}
+              getValue={(b) => b.cpuPercent}
+              normalColor="var(--accent-blue)"
+              period={period}
+              bucketTimesRef={bucketTimesRef}
+              barLabel={`${stats.cpuPercent.toFixed(1)}%`}
+              barValue={`${stats.cpuPercent.toFixed(1)}%`}
+              barPercent={stats.cpuPercent}
             />
-          </Section>
 
-          <Section title={t("modals.resourceMemory")}>
-            <StatBar
-              label={`${formatBytes(stats.memoryUsed)} / ${formatBytes(stats.memoryLimit)}`}
-              value={`${stats.memoryPercent.toFixed(1)}%`}
-              percent={stats.memoryPercent}
-              color={
-                stats.memoryPercent >= 90
-                  ? "var(--accent-red)"
-                  : stats.memoryPercent >= 75
-                    ? "var(--accent-yellow)"
-                    : "var(--accent-green)"
-              }
+            <ResourceMetric
+              title={t("modals.resourceMemory")}
+              buckets={buckets}
+              getValue={(b) => b.memoryPercent}
+              normalColor="var(--accent-green)"
+              period={period}
+              bucketTimesRef={bucketTimesRef}
+              barLabel={`${formatBytes(stats.memoryUsed)} / ${formatBytes(stats.memoryLimit)}`}
+              barValue={`${stats.memoryPercent.toFixed(1)}%`}
+              barPercent={stats.memoryPercent}
             />
-          </Section>
 
-          <Section title={`${t("modals.resourceNetwork")} / ${t("modals.resourceDisk")}`}>
-            <div className="grid grid-cols-4 gap-2">
-              <StatCell label={t("modals.resourceRx")} value={formatBytes(stats.networkRx)} />
-              <StatCell label={t("modals.resourceTx")} value={formatBytes(stats.networkTx)} />
-              <StatCell label={t("modals.resourceRead")} value={formatBytes(stats.blockRead)} />
-              <StatCell label={t("modals.resourceWrite")} value={formatBytes(stats.blockWrite)} />
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
+                {`${t("modals.resourceNetwork")} / ${t("modals.resourceDisk")}`}
+              </span>
+              <div className="grid grid-cols-4 gap-2">
+                <StatCell label={t("modals.resourceRx")} value={formatBytes(stats.networkRx)} />
+                <StatCell label={t("modals.resourceTx")} value={formatBytes(stats.networkTx)} />
+                <StatCell label={t("modals.resourceRead")} value={formatBytes(stats.blockRead)} />
+                <StatCell label={t("modals.resourceWrite")} value={formatBytes(stats.blockWrite)} />
+              </div>
             </div>
-          </Section>
-        </>
-      )}
-    </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }
