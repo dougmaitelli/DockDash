@@ -5,8 +5,8 @@ import { v4 as uuidv4 } from "uuid";
 import type { ContainerStats } from "@shared";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
-import { db } from "../db/databaseService.js";
-import { type ContainerStateMap, DOCKER_CONTAINER_STATE, DockerService } from "./dockerService.js";
+import { db } from "../../db/databaseService.js";
+import { type ContainerStateMap, DOCKER_CONTAINER_STATE, DockerService } from "../dockerService.js";
 
 // ---------------------------------------------------------------------------
 // Fake container definitions
@@ -97,10 +97,13 @@ function vary(base: number, variance: number): number {
 }
 
 function varyCpu(base: number): number {
-  const spike = Math.random() < 0.15 ? Math.random() * 55 : 0;
-  const noise = (Math.random() - 0.5) * 40;
+  const r = Math.random();
+  // 15% high spike, 25% elevated, 60% normal — each expressed as a target value
+  const target =
+    r < 0.15 ? 80 + Math.random() * 20 : r < 0.4 ? base + 20 + Math.random() * 35 : base;
+  const noise = (Math.random() - 0.5) * 30;
 
-  return Math.max(0, Math.min(100, Math.round((base + noise + spike) * 10) / 10));
+  return Math.max(0, Math.min(100, Math.round((target + noise) * 10) / 10));
 }
 
 // Stub Docker client — info() returns plausible data; everything else rejects

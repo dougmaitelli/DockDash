@@ -3,8 +3,8 @@
 import { overrideDatabase } from "./db/databaseService.js";
 import { logger } from "./lib/logService.js";
 import { overrideDockerService } from "./services/dockerService.js";
-import { MockDatabaseService } from "./services/mockDatabaseService.js";
-import { mockDockerService } from "./services/mockDockerService.js";
+import { MockDatabaseService } from "./services/mock/mockDatabaseService.js";
+import { mockDockerService } from "./services/mock/mockDockerService.js";
 
 const mockDb = new MockDatabaseService();
 

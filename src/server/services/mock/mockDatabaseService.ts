@@ -3,8 +3,8 @@ import { v4 as uuidv4 } from "uuid";
 
 import { ServiceSource, ServiceStatus } from "@shared";
 
-import { DatabaseService } from "../db/databaseService.js";
-import { DockerService } from "./dockerService.js";
+import { DatabaseService } from "../../db/databaseService.js";
+import { DockerService } from "../dockerService.js";
 import { MOCK_CONTAINER_IDS, MOCK_CONTAINERS } from "./mockDockerService.js";
 
 const MOCK_HOST = "unix:///var/run/docker.sock";
@@ -15,13 +15,6 @@ function vary(base: number, variance: number, timeMs: number, phase: number): nu
   const noise = (Math.random() - 0.5) * (variance * 0.7);
 
   return Math.max(0, Math.min(100, Math.round((base + trend + noise) * 10) / 10));
-}
-
-function varyCpu(base: number): number {
-  const spike = Math.random() < 0.15 ? Math.random() * 55 : 0;
-  const noise = (Math.random() - 0.5) * 40;
-
-  return Math.max(0, Math.min(100, Math.round((base + noise + spike) * 10) / 10));
 }
 
 export class MockDatabaseService extends DatabaseService {
@@ -101,6 +94,10 @@ export class MockDatabaseService extends DatabaseService {
         // Spread phases evenly so each container has a distinct graph shape
         const phase = (i / MOCK_CONTAINERS.length) * 2 * Math.PI;
 
+        // Spike state: once entered, persists until randomly exited
+        let spikeTarget = 0;
+        let inSpike = false;
+
         for (let t = start; t <= now; t += INTERVAL_MS) {
           const ts = new Date(t).toISOString();
 
@@ -109,13 +106,20 @@ export class MockDatabaseService extends DatabaseService {
 
           insertHealth.run(uuidv4(), serviceId, status, ts);
 
-          insertStats.run(
-            uuidv4(),
-            serviceId,
-            varyCpu(c.cpuBase),
-            vary(c.memBase, 20, t, phase),
-            ts,
-          );
+          // Spike state machine: 2% chance to start, 20% chance to end each interval
+          // Average spike duration ~5 intervals (~2.5 hrs), ~1-2 spikes per day
+          if (inSpike) {
+            if (Math.random() < 0.2) inSpike = false;
+          } else if (Math.random() < 0.02) {
+            inSpike = true;
+            spikeTarget = 80 + Math.random() * 20;
+          }
+
+          const cpu = inSpike
+            ? spikeTarget + (Math.random() - 0.5) * 10
+            : vary(c.cpuBase, 20, t, phase);
+
+          insertStats.run(uuidv4(), serviceId, cpu, vary(c.memBase, 20, t, phase), ts);
         }
       }
     })();
