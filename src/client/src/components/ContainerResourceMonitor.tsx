@@ -112,7 +112,7 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
               : "bg-transparent text-muted-foreground font-normal",
           )}
         >
-          {t(`modals.healthHistoryPeriod${p}d` as const)}
+          {t(`drawer.healthHistory.period${p}d` as const)}
         </button>
       ))}
     </div>
@@ -123,7 +123,7 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
-            {t("modals.resourceMonitor")}
+            {t("drawer.resourceMonitor.title")}
           </span>
           {periodSelector}
         </div>
@@ -158,7 +158,7 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
         ) : (
           <>
             <ResourceMetric
-              title={t("modals.resourceCpu")}
+              title={t("drawer.resourceMonitor.cpu")}
               buckets={buckets}
               getValue={(b) => b.cpuPercent}
               normalColor="var(--accent-blue)"
@@ -170,7 +170,7 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
             />
 
             <ResourceMetric
-              title={t("modals.resourceMemory")}
+              title={t("drawer.resourceMonitor.memory")}
               buckets={buckets}
               getValue={(b) => b.memoryPercent}
               normalColor="var(--accent-green)"
@@ -183,13 +183,13 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
 
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
-                {`${t("modals.resourceNetwork")} / ${t("modals.resourceDisk")}`}
+                {`${t("drawer.resourceMonitor.network")} / ${t("drawer.resourceMonitor.disk")}`}
               </span>
               <div className="grid grid-cols-4 gap-2">
-                <StatCell label={t("modals.resourceRx")} value={formatBytes(stats.networkRx)} />
-                <StatCell label={t("modals.resourceTx")} value={formatBytes(stats.networkTx)} />
-                <StatCell label={t("modals.resourceRead")} value={formatBytes(stats.blockRead)} />
-                <StatCell label={t("modals.resourceWrite")} value={formatBytes(stats.blockWrite)} />
+                <StatCell label={t("drawer.resourceMonitor.rx")} value={formatBytes(stats.networkRx)} />
+                <StatCell label={t("drawer.resourceMonitor.tx")} value={formatBytes(stats.networkTx)} />
+                <StatCell label={t("drawer.resourceMonitor.read")} value={formatBytes(stats.blockRead)} />
+                <StatCell label={t("drawer.resourceMonitor.write")} value={formatBytes(stats.blockWrite)} />
               </div>
             </div>
           </>

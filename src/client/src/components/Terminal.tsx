@@ -143,10 +143,10 @@ export function Terminal({ serviceId }: TerminalProps) {
 
   const statusLabel =
     status === "connected"
-      ? t("modals.terminalConnected")
+      ? t("drawer.terminal.connected")
       : status === "disconnected"
-        ? t("modals.terminalDisconnected")
-        : t("modals.terminalConnecting");
+        ? t("drawer.terminal.disconnected")
+        : t("drawer.terminal.connecting");
 
   const statusDotClass = cn(
     "w-[7px] h-[7px] rounded-full shrink-0",
@@ -171,7 +171,7 @@ export function Terminal({ serviceId }: TerminalProps) {
             onClick={() => setConnectKey((k) => k + 1)}
             className="text-[0.7rem] text-muted-foreground border border-border rounded px-2 py-0.5 bg-transparent hover:text-foreground"
           >
-            {t("modals.terminalReconnect")}
+            {t("drawer.terminal.reconnect")}
           </button>
         )}
       </div>

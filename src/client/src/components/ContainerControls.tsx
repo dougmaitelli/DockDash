@@ -45,7 +45,7 @@ export function ContainerControls({ service, onActionComplete }: ContainerContro
           variant="destructive"
           onClick={() => handleAction(ContainerAction.STOP)}
           disabled={activeAction !== null || service.status !== ServiceStatus.UP}
-          title={t("modals.containerStop")}
+          title={t("drawer.container.stop")}
           className={tabClass}
         >
           <Icons.Stop size={13} />
@@ -53,7 +53,7 @@ export function ContainerControls({ service, onActionComplete }: ContainerContro
         <Button
           onClick={() => handleAction(ContainerAction.START)}
           disabled={activeAction !== null || service.status !== ServiceStatus.DOWN}
-          title={t("modals.containerStart")}
+          title={t("drawer.container.start")}
           className={`${tabClass} bg-success text-success-foreground hover:bg-success/90`}
         >
           <Icons.Play size={13} />
@@ -61,7 +61,7 @@ export function ContainerControls({ service, onActionComplete }: ContainerContro
         <Button
           onClick={() => handleAction(ContainerAction.RESTART)}
           disabled={activeAction !== null || service.status !== ServiceStatus.UP}
-          title={t("modals.containerRestart")}
+          title={t("drawer.container.restart")}
           className={`${tabClass} bg-warning text-warning-foreground hover:bg-warning/90`}
         >
           <Icons.Refresh size={13} />
@@ -72,7 +72,7 @@ export function ContainerControls({ service, onActionComplete }: ContainerContro
           className="text-[0.7rem] text-destructive max-w-[220px] whitespace-nowrap overflow-hidden text-ellipsis"
           title={error}
         >
-          {t("modals.containerActionFailed", { error })}
+          {t("drawer.container.actionFailed", { error })}
         </span>
       )}
     </div>

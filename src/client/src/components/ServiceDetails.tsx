@@ -153,7 +153,7 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
               className="flex items-center gap-1.5 w-full bg-transparent border-none py-2 text-muted-foreground text-xs uppercase tracking-wide hover:text-secondary-foreground"
             >
               <span>{metadataExpanded ? "▾" : "▸"}</span>
-              {t("modals.metadata")}
+              {t("drawer.metadata")}
             </button>
             {metadataExpanded && (
               <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 p-2 px-3 bg-background rounded-md mb-3.5">

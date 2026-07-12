@@ -200,7 +200,7 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
         {/* Directory contents */}
         {loading && (
           <div className="text-xs text-muted-foreground text-center py-8">
-            {t("modals.filesLoading")}
+            {t("drawer.files.loading")}
           </div>
         )}
 
@@ -223,7 +223,7 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
 
             {sorted.length === 0 && (
               <div className="text-xs text-muted-foreground text-center py-8">
-                {t("modals.filesEmpty")}
+                {t("drawer.files.empty")}
               </div>
             )}
 
@@ -291,7 +291,7 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
           {/* Content area */}
           {fileLoading && (
             <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground">
-              {t("modals.filesContentLoading")}
+              {t("drawer.files.contentLoading")}
             </div>
           )}
 
@@ -303,7 +303,7 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
 
           {!fileLoading && !fileError && loadedContent !== null && isBinary(loadedContent) && (
             <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground">
-              {t("modals.filesBinary")}
+              {t("drawer.files.binary")}
             </div>
           )}
 
@@ -319,11 +319,11 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
                 {saved && (
                   <span className="text-xs text-success flex items-center gap-1">
                     <Icons.Check size={12} />
-                    {t("modals.filesSaved")}
+                    {t("drawer.files.saved")}
                   </span>
                 )}
                 <Button variant="default" onClick={saveFile} disabled={saving || !isDirty}>
-                  {saving ? t("modals.filesSaving") : t("modals.filesSave")}
+                  {saving ? t("drawer.files.saving") : t("drawer.files.save")}
                 </Button>
               </div>
             </>

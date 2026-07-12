@@ -115,14 +115,14 @@ export function HealthHistoryGraph({ serviceId }: HealthHistoryGraphProps) {
     const display = buckets?.[bucketIndex] ?? null;
     const statusLabel =
       display === null
-        ? t("modals.healthHistoryNoChecks")
+        ? t("drawer.healthHistory.noChecks")
         : display === ServiceStatus.UP
-          ? t("modals.healthHistoryStatusUp")
+          ? t("drawer.healthHistory.statusUp")
           : display === ServiceStatus.DOWN
-            ? t("modals.healthHistoryStatusDown")
+            ? t("drawer.healthHistory.statusDown")
             : display === "mixed"
-              ? t("modals.healthHistoryStatusMixed")
-              : t("modals.healthHistoryStatusUnknown");
+              ? t("drawer.healthHistory.statusMixed")
+              : t("drawer.healthHistory.statusUnknown");
 
     setTooltip({
       x: e.clientX,
@@ -137,12 +137,12 @@ export function HealthHistoryGraph({ serviceId }: HealthHistoryGraphProps) {
       <div className="mb-5">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
-            {t("modals.healthHistory")}
+            {t("drawer.healthHistory.title")}
           </span>
           <div className="flex items-center gap-2.5">
             {uptime !== null && (
               <span className="text-xs text-secondary-foreground">
-                {t("modals.healthHistoryUptime", { pct: uptime })}
+                {t("drawer.healthHistory.uptime", { pct: uptime })}
               </span>
             )}
             <div className="flex gap-0.5 bg-background rounded-[5px] p-0.5">
@@ -158,7 +158,7 @@ export function HealthHistoryGraph({ serviceId }: HealthHistoryGraphProps) {
                       : "bg-transparent text-muted-foreground font-normal",
                   )}
                 >
-                  {t(`modals.healthHistoryPeriod${p}d` as const)}
+                  {t(`drawer.healthHistory.period${p}d` as const)}
                 </button>
               ))}
             </div>
@@ -169,7 +169,7 @@ export function HealthHistoryGraph({ serviceId }: HealthHistoryGraphProps) {
           <div className="text-xs text-muted-foreground text-center py-2">…</div>
         ) : buckets.every((b) => b === null) ? (
           <div className="text-xs text-muted-foreground text-center py-2">
-            {t("modals.healthHistoryNoData")}
+            {t("drawer.healthHistory.noData")}
           </div>
         ) : (
           <div className="flex gap-[1.5px] h-7 rounded-sm">

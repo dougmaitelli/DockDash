@@ -97,10 +97,10 @@ export function DockerLogs({ serviceId, reconnectTrigger }: DockerLogsProps) {
 
   const statusLabel =
     status === "streaming"
-      ? t("modals.logsLive")
+      ? t("drawer.logs.live")
       : status === "disconnected"
-        ? t("modals.logsDisconnected")
-        : t("modals.logsConnecting");
+        ? t("drawer.logs.disconnected")
+        : t("drawer.logs.connecting");
 
   const statusDotClass = cn(
     "w-[7px] h-[7px] rounded-full shrink-0",
@@ -121,7 +121,7 @@ export function DockerLogs({ serviceId, reconnectTrigger }: DockerLogsProps) {
         </div>
         {status === "disconnected" && (
           <Button variant="outline" onClick={() => setConnectKey((k) => k + 1)}>
-            {t("modals.logsReconnect")}
+            {t("drawer.logs.reconnect")}
           </Button>
         )}
       </div>
@@ -132,7 +132,7 @@ export function DockerLogs({ serviceId, reconnectTrigger }: DockerLogsProps) {
         className="flex-1 min-h-0 overflow-y-auto bg-background border border-border rounded-md px-3 py-2.5 font-mono text-[0.72rem] leading-relaxed"
       >
         {lines.length === 0 && status === "streaming" && (
-          <div className="text-muted-foreground text-xs py-2">{t("modals.logsNoOutput")}</div>
+          <div className="text-muted-foreground text-xs py-2">{t("drawer.logs.noOutput")}</div>
         )}
         {lines.map((line, i) => {
           const { ts, msg } = parseLine(line);

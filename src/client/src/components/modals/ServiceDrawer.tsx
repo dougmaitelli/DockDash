@@ -69,7 +69,7 @@ export function ServiceDrawer({
     { label: string; dockerOnly: boolean; enabled: boolean; content: ReactNode }
   > = {
     [Tab.DETAILS]: {
-      label: t("modals.tabDetails"),
+      label: t("drawer.tabs.details"),
       dockerOnly: false,
       enabled: true,
       content: (
@@ -83,25 +83,25 @@ export function ServiceDrawer({
       ),
     },
     [Tab.CHANGELOG]: {
-      label: t("modals.tabChangelog"),
+      label: t("drawer.tabs.changelog"),
       dockerOnly: true,
       enabled: true,
       content: <Changelog serviceId={service.id!} />,
     },
     [Tab.LOGS]: {
-      label: t("modals.tabLogs"),
+      label: t("drawer.tabs.logs"),
       dockerOnly: true,
       enabled: true,
       content: <DockerLogs serviceId={service.id!} reconnectTrigger={logsReconnectTrigger} />,
     },
     [Tab.FILES]: {
-      label: t("modals.tabFiles"),
+      label: t("drawer.tabs.files"),
       dockerOnly: true,
       enabled: config?.fileExplorerEnabled ?? false,
       content: <FileExplorer serviceId={service.id!} />,
     },
     [Tab.TERMINAL]: {
-      label: t("modals.tabTerminal"),
+      label: t("drawer.tabs.terminal"),
       dockerOnly: true,
       enabled: config?.terminalEnabled ?? false,
       content: <Terminal serviceId={service.id!} />,
