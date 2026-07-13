@@ -26,6 +26,14 @@ type UpdateFilter = "all" | "hasUpdate";
 
 type SortColumn = "name" | "host";
 
+function barColor(pct: number, normalColor: string): string {
+  if (pct >= 90) return "var(--accent-red)";
+
+  if (pct >= 75) return "var(--accent-yellow)";
+
+  return normalColor;
+}
+
 function MiniResourceBar({
   cpuPercent,
   memoryPercent,
@@ -41,8 +49,11 @@ function MiniResourceBar({
         <span className="text-[0.6rem] text-muted-foreground w-6 shrink-0">CPU</span>
         <div className="flex-1 h-[4px] bg-border rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full bg-accent-blue transition-all duration-500"
-            style={{ width: `${Math.min(100, cpuPercent)}%` }}
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.min(100, cpuPercent)}%`,
+              background: barColor(cpuPercent, "var(--accent-blue)"),
+            }}
           />
         </div>
         <span className="text-[0.6rem] text-muted-foreground w-7 text-right tabular-nums shrink-0">
@@ -53,8 +64,11 @@ function MiniResourceBar({
         <span className="text-[0.6rem] text-muted-foreground w-6 shrink-0">MEM</span>
         <div className="flex-1 h-[4px] bg-border rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full bg-accent-green transition-all duration-500"
-            style={{ width: `${Math.min(100, memoryPercent)}%` }}
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.min(100, memoryPercent)}%`,
+              background: barColor(memoryPercent, "var(--accent-green)"),
+            }}
           />
         </div>
         <span className="text-[0.6rem] text-muted-foreground w-7 text-right tabular-nums shrink-0">
@@ -147,7 +161,7 @@ export default function Services() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto flex flex-col gap-4">
+    <div className="p-6 max-w-6xl xl:max-w-screen-2xl mx-auto flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-xl font-semibold text-foreground">
           {t("services.title")}
@@ -214,6 +228,7 @@ export default function Services() {
                 <th className="px-4 py-2.5 font-medium">{t("services.colPorts")}</th>
                 <FilterHeader
                   label={t("services.colStatus")}
+                  width="w-40"
                   value={statusFilter}
                   onChange={setStatusFilter}
                   filterCycle={[
@@ -306,7 +321,7 @@ export default function Services() {
                       </div>
                     </td>
                     {resourceMonitorEnabled && (
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 w-36">
                         {isDocker && (
                           <MiniResourceBar
                             cpuPercent={service.cpuPercent}

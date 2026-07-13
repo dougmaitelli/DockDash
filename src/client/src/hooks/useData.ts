@@ -89,6 +89,35 @@ export function useServices() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const applyStatuses = useCallback(async () => {
+    try {
+      const res = await dashboardApi.serviceStatuses();
+      const statusObj: Record<string, ServiceStatusItem> = {};
+
+      for (const s of res.data) {
+        statusObj[s.id] = s;
+      }
+
+      setServices((prev) =>
+        prev.map((s) => {
+          const item = statusObj[s.id!];
+
+          if (!item) return s;
+
+          return {
+            ...s,
+            status: item.status,
+            metadata: { ...s.metadata, ...item.metadata },
+            cpuPercent: item.cpuPercent,
+            memoryPercent: item.memoryPercent,
+          };
+        }),
+      );
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
@@ -96,49 +125,23 @@ export function useServices() {
       const res = await serviceApi.getAll();
 
       setServices(res.data);
+      void applyStatuses();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyStatuses]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await dashboardApi.serviceStatuses();
-        const statusObj: Record<string, ServiceStatusItem> = {};
-
-        for (const s of res.data) {
-          statusObj[s.id] = s;
-        }
-
-        setServices((prev) =>
-          prev.map((s) => {
-            const item = statusObj[s.id!];
-
-            if (!item) return s;
-
-            return {
-              ...s,
-              status: item.status,
-              metadata: { ...s.metadata, ...item.metadata },
-              cpuPercent: item.cpuPercent,
-              memoryPercent: item.memoryPercent,
-            };
-          }),
-        );
-      } catch {
-        // ignore
-      }
-    }, 5000);
+    const interval = setInterval(() => void applyStatuses(), 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [applyStatuses]);
 
   const addService = useCallback(async (data: CreateServiceRequest) => {
     const res = await serviceApi.importService(data);

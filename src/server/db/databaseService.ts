@@ -128,6 +128,25 @@ export class DatabaseService {
       .run();
   }
 
+  private getLatestResourceMap(): Map<string, { cpuPercent: number; memoryPercent: number }> {
+    const rows = this.orm
+      .select({
+        serviceId: serviceResourceHistory.serviceId,
+        cpuPercent: serviceResourceHistory.cpuPercent,
+        memoryPercent: serviceResourceHistory.memoryPercent,
+      })
+      .from(serviceResourceHistory)
+      .where(
+        sql`${serviceResourceHistory.checkedAt} = (
+          SELECT MAX(checked_at) FROM service_resource_history r2
+          WHERE r2.service_id = ${serviceResourceHistory.serviceId}
+        )`,
+      )
+      .all();
+
+    return new Map(rows.map((r) => [r.serviceId, r]));
+  }
+
   getServices(): Service[] {
     const onDashboardIds = new Set(
       this.orm
@@ -308,26 +327,7 @@ export class DatabaseService {
   }
 
   getServiceStatuses(includeResources = false): ServiceStatusItem[] {
-    const resourceMap = new Map<string, { cpuPercent: number; memoryPercent: number }>();
-
-    if (includeResources) {
-      const latestResource = this.orm
-        .select({
-          serviceId: serviceResourceHistory.serviceId,
-          cpuPercent: serviceResourceHistory.cpuPercent,
-          memoryPercent: serviceResourceHistory.memoryPercent,
-        })
-        .from(serviceResourceHistory)
-        .where(
-          sql`${serviceResourceHistory.checkedAt} = (
-            SELECT MAX(checked_at) FROM service_resource_history r2
-            WHERE r2.service_id = ${serviceResourceHistory.serviceId}
-          )`,
-        )
-        .all();
-
-      for (const r of latestResource) resourceMap.set(r.serviceId, r);
-    }
+    const resourceMap = includeResources ? this.getLatestResourceMap() : new Map();
 
     return this.orm
       .select({ id: services.id, status: services.status, metadata: services.metadata })
