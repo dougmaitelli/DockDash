@@ -23,6 +23,7 @@
     "colPorts": "Ports",
     "colStatus": "Status",
     "colVersion": "Version",
+    "colResources": "Resources",
     "colDashboard": "Dashboard",
     "onDashboard": "On dashboard",
     "addToDashboard": "Add to dashboard",

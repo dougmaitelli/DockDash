@@ -186,10 +186,22 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
                 {`${t("drawer.resourceMonitor.network")} / ${t("drawer.resourceMonitor.disk")}`}
               </span>
               <div className="grid grid-cols-4 gap-2">
-                <StatCell label={t("drawer.resourceMonitor.rx")} value={formatBytes(stats.networkRx)} />
-                <StatCell label={t("drawer.resourceMonitor.tx")} value={formatBytes(stats.networkTx)} />
-                <StatCell label={t("drawer.resourceMonitor.read")} value={formatBytes(stats.blockRead)} />
-                <StatCell label={t("drawer.resourceMonitor.write")} value={formatBytes(stats.blockWrite)} />
+                <StatCell
+                  label={t("drawer.resourceMonitor.rx")}
+                  value={formatBytes(stats.networkRx)}
+                />
+                <StatCell
+                  label={t("drawer.resourceMonitor.tx")}
+                  value={formatBytes(stats.networkTx)}
+                />
+                <StatCell
+                  label={t("drawer.resourceMonitor.read")}
+                  value={formatBytes(stats.blockRead)}
+                />
+                <StatCell
+                  label={t("drawer.resourceMonitor.write")}
+                  value={formatBytes(stats.blockWrite)}
+                />
               </div>
             </div>
           </>

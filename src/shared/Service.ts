@@ -12,6 +12,8 @@ export class Service {
   status: ServiceStatus = ServiceStatus.UNKNOWN;
   metadata?: ServiceMetadata;
   onDashboard?: boolean;
+  cpuPercent?: number;
+  memoryPercent?: number;
   createdAt: string;
   updatedAt: string;
 

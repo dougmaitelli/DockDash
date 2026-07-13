@@ -23,6 +23,7 @@
     "colPorts": "Portas",
     "colStatus": "Status",
     "colVersion": "Versão",
+    "colResources": "Recursos",
     "colDashboard": "Painel",
     "onDashboard": "No painel",
     "addToDashboard": "Adicionar ao painel",

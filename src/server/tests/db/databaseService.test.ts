@@ -259,6 +259,63 @@ describe("health history", () => {
   });
 });
 
+describe("getServiceStatuses", () => {
+  it("returns id, status, and metadata for all services", () => {
+    const svc = db.saveService({
+      name: "s",
+      host: "h",
+      ports: [],
+      source: ServiceSource.DOCKER,
+      metadata: { imageTag: "v1.0", hasUpdate: true, latestVersion: "v2.0" },
+    });
+
+    db.updateServiceStatus(svc.id!, ServiceStatus.UP);
+
+    const [status] = db.getServiceStatuses();
+
+    expect(status.id).toBe(svc.id);
+    expect(status.status).toBe(ServiceStatus.UP);
+    expect(status.metadata?.imageTag).toBe("v1.0");
+    expect(status.metadata?.hasUpdate).toBe(true);
+    expect(status.metadata?.latestVersion).toBe("v2.0");
+  });
+
+  it("omits cpuPercent and memoryPercent when includeResources is false", () => {
+    const svc = db.saveService({ name: "s", host: "h", ports: [], source: ServiceSource.DOCKER });
+
+    db.addResourceStatsHistory(svc.id!, 42, 55);
+
+    const [status] = db.getServiceStatuses(false);
+
+    expect(status.cpuPercent).toBeUndefined();
+    expect(status.memoryPercent).toBeUndefined();
+  });
+
+  it("includes cpuPercent and memoryPercent when includeResources is true", () => {
+    const svc = db.saveService({ name: "s", host: "h", ports: [], source: ServiceSource.DOCKER });
+
+    db.addResourceStatsHistory(svc.id!, 42, 55);
+
+    const [status] = db.getServiceStatuses(true);
+
+    expect(status.cpuPercent).toBe(42);
+    expect(status.memoryPercent).toBe(55);
+  });
+
+  it("returns only the latest resource row when multiple exist", async () => {
+    const svc = db.saveService({ name: "s", host: "h", ports: [], source: ServiceSource.DOCKER });
+
+    db.addResourceStatsHistory(svc.id!, 10, 20);
+    await new Promise((r) => setTimeout(r, 5));
+    db.addResourceStatsHistory(svc.id!, 80, 90);
+
+    const [status] = db.getServiceStatuses(true);
+
+    expect(status.cpuPercent).toBe(80);
+    expect(status.memoryPercent).toBe(90);
+  });
+});
+
 describe("getDashboardData", () => {
   it("includes only services with a position and enriches them with that position", () => {
     const s1 = db.saveService({ name: "a", host: "h1", ports: [], source: ServiceSource.NETWORK });

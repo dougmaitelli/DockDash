@@ -307,20 +307,46 @@ export class DatabaseService {
     };
   }
 
-  getServiceStatuses(): ServiceStatusItem[] {
+  getServiceStatuses(includeResources = false): ServiceStatusItem[] {
+    const resourceMap = new Map<string, { cpuPercent: number; memoryPercent: number }>();
+
+    if (includeResources) {
+      const latestResource = this.orm
+        .select({
+          serviceId: serviceResourceHistory.serviceId,
+          cpuPercent: serviceResourceHistory.cpuPercent,
+          memoryPercent: serviceResourceHistory.memoryPercent,
+        })
+        .from(serviceResourceHistory)
+        .where(
+          sql`${serviceResourceHistory.checkedAt} = (
+            SELECT MAX(checked_at) FROM service_resource_history r2
+            WHERE r2.service_id = ${serviceResourceHistory.serviceId}
+          )`,
+        )
+        .all();
+
+      for (const r of latestResource) resourceMap.set(r.serviceId, r);
+    }
+
     return this.orm
       .select({ id: services.id, status: services.status, metadata: services.metadata })
       .from(services)
       .all()
-      .map((row) => ({
-        id: row.id,
-        status: row.status,
-        metadata: {
-          imageTag: row.metadata?.imageTag,
-          hasUpdate: row.metadata?.hasUpdate,
-          latestVersion: row.metadata?.latestVersion,
-        },
-      }));
+      .map((row) => {
+        const res = resourceMap.get(row.id);
+
+        return {
+          id: row.id,
+          status: row.status,
+          metadata: {
+            imageTag: row.metadata?.imageTag,
+            hasUpdate: row.metadata?.hasUpdate,
+            latestVersion: row.metadata?.latestVersion,
+          },
+          ...(res && { cpuPercent: res.cpuPercent, memoryPercent: res.memoryPercent }),
+        };
+      });
   }
 
   addHealthHistory(serviceId: string, status: ServiceStatus): void {

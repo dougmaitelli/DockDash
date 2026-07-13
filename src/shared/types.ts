@@ -42,6 +42,8 @@ export interface ServiceStatusItem {
   id: string;
   status: ServiceStatus;
   metadata?: Partial<ServiceMetadata>;
+  cpuPercent?: number;
+  memoryPercent?: number;
 }
 
 export interface ServiceMetadata {

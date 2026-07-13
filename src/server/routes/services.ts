@@ -23,7 +23,7 @@ router.get("/services", (_req, res) => {
 });
 
 router.get("/serviceStatuses", (_req, res) => {
-  res.json(db.getServiceStatuses());
+  res.json(db.getServiceStatuses(config.resourceMonitorEnabled));
 });
 
 router.get("/services/:id", (req, res) => {

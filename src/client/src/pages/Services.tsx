@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { MiniHealthBar } from "../components/HealthHistoryGraph";
 import { AddServiceModal } from "../components/modals/AddServiceModal";
 import { ServiceDrawer } from "../components/modals/ServiceDrawer";
+import { useConfig } from "../context/ConfigContext";
 import { useServices } from "../hooks/useData";
 
 type SourceFilter = "all" | ServiceSource;
@@ -24,6 +25,45 @@ type StatusFilter = "all" | ServiceStatus;
 type UpdateFilter = "all" | "hasUpdate";
 
 type SortColumn = "name" | "host";
+
+function MiniResourceBar({
+  cpuPercent,
+  memoryPercent,
+}: {
+  cpuPercent?: number;
+  memoryPercent?: number;
+}) {
+  if (cpuPercent === undefined || memoryPercent === undefined) return null;
+
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <div className="flex items-center gap-2">
+        <span className="text-[0.6rem] text-muted-foreground w-6 shrink-0">CPU</span>
+        <div className="flex-1 h-[4px] bg-border rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full bg-accent-blue transition-all duration-500"
+            style={{ width: `${Math.min(100, cpuPercent)}%` }}
+          />
+        </div>
+        <span className="text-[0.6rem] text-muted-foreground w-7 text-right tabular-nums shrink-0">
+          {cpuPercent.toFixed(0)}%
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-[0.6rem] text-muted-foreground w-6 shrink-0">MEM</span>
+        <div className="flex-1 h-[4px] bg-border rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full bg-accent-green transition-all duration-500"
+            style={{ width: `${Math.min(100, memoryPercent)}%` }}
+          />
+        </div>
+        <span className="text-[0.6rem] text-muted-foreground w-7 text-right tabular-nums shrink-0">
+          {memoryPercent.toFixed(0)}%
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function statusVariant(status: ServiceStatus): "success" | "destructive" | "secondary" {
   if (status === ServiceStatus.UP) return "success";
@@ -44,6 +84,9 @@ function compareServices(a: Service, b: Service, column: SortColumn): number {
 
 export default function Services() {
   const { t } = useTranslation();
+  const config = useConfig();
+  const healthHistoryEnabled = config?.healthHistoryEnabled ?? false;
+  const resourceMonitorEnabled = config?.resourceMonitorEnabled ?? false;
   const {
     services,
     loading,
@@ -192,6 +235,9 @@ export default function Services() {
                     },
                   ]}
                 />
+                {resourceMonitorEnabled && (
+                  <th className="px-4 py-2.5 font-medium w-36">{t("services.colResources")}</th>
+                )}
                 <FilterHeader
                   label={t("services.colVersion")}
                   value={updateFilter}
@@ -249,7 +295,7 @@ export default function Services() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <MiniHealthBar serviceId={service.id!} />
+                        {healthHistoryEnabled && <MiniHealthBar serviceId={service.id!} />}
                         <Badge variant={statusVariant(service.status)} className="font-normal">
                           {service.status === ServiceStatus.UP
                             ? t("services.statusUp")
@@ -259,6 +305,16 @@ export default function Services() {
                         </Badge>
                       </div>
                     </td>
+                    {resourceMonitorEnabled && (
+                      <td className="px-4 py-3">
+                        {isDocker && (
+                          <MiniResourceBar
+                            cpuPercent={service.cpuPercent}
+                            memoryPercent={service.memoryPercent}
+                          />
+                        )}
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       {imageTag ? (
                         <div className="flex items-center gap-1 flex-wrap">

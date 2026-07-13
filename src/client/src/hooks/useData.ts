@@ -123,7 +123,13 @@ export function useServices() {
 
             if (!item) return s;
 
-            return { ...s, status: item.status, metadata: { ...s.metadata, ...item.metadata } };
+            return {
+              ...s,
+              status: item.status,
+              metadata: { ...s.metadata, ...item.metadata },
+              cpuPercent: item.cpuPercent,
+              memoryPercent: item.memoryPercent,
+            };
           }),
         );
       } catch {

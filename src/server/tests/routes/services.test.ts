@@ -28,6 +28,7 @@ const mockChangelogService = vi.hoisted(() => ({
 
 const mockConfig = vi.hoisted(() => ({
   healthHistoryEnabled: true,
+  resourceMonitorEnabled: true,
 }));
 
 const mockLogger = vi.hoisted(() => ({
@@ -96,6 +97,18 @@ describe("GET /api/serviceStatuses", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(statuses);
+  });
+
+  it("passes resourceMonitorEnabled flag to getServiceStatuses", async () => {
+    mockDb.getServiceStatuses.mockReturnValue([]);
+    mockConfig.resourceMonitorEnabled = true;
+
+    await request(app).get("/api/serviceStatuses");
+    expect(mockDb.getServiceStatuses).toHaveBeenCalledWith(true);
+
+    mockConfig.resourceMonitorEnabled = false;
+    await request(app).get("/api/serviceStatuses");
+    expect(mockDb.getServiceStatuses).toHaveBeenCalledWith(false);
   });
 });
 
