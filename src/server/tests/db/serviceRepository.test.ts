@@ -1,11 +1,9 @@
-import type { HistoryRepository } from "@server/db/historyRepository.js";
 import type { ServiceRepository } from "@server/db/serviceRepository.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ServiceLinkType, ServiceSource, ServiceStatus } from "@shared";
 
 let svcRepo: ServiceRepository;
-let histRepo: HistoryRepository;
 let connSqlite: { close(): void };
 
 beforeEach(async () => {
@@ -17,7 +15,6 @@ beforeEach(async () => {
 
   connSqlite = connMod.sqlite;
   svcRepo = (await import("@server/db/serviceRepository.js")).serviceRepository;
-  histRepo = (await import("@server/db/historyRepository.js")).historyRepository;
 });
 
 afterEach(() => {
@@ -323,56 +320,6 @@ describe("getServiceStatuses", () => {
     expect(status.metadata?.imageTag).toBe("v1.0");
     expect(status.metadata?.hasUpdate).toBe(true);
     expect(status.metadata?.latestVersion).toBe("v2.0");
-  });
-
-  it("omits cpuPercent and memoryPercent when includeResources is false", () => {
-    const svc = svcRepo.saveService({
-      name: "s",
-      host: "h",
-      ports: [],
-      source: ServiceSource.DOCKER,
-    });
-
-    histRepo.addResourceStatsHistory(svc.id!, 42, 55);
-
-    const [status] = svcRepo.getServiceStatuses(false);
-
-    expect(status.cpuPercent).toBeUndefined();
-    expect(status.memoryPercent).toBeUndefined();
-  });
-
-  it("includes cpuPercent and memoryPercent when includeResources is true", () => {
-    const svc = svcRepo.saveService({
-      name: "s",
-      host: "h",
-      ports: [],
-      source: ServiceSource.DOCKER,
-    });
-
-    histRepo.addResourceStatsHistory(svc.id!, 42, 55);
-
-    const [status] = svcRepo.getServiceStatuses(true);
-
-    expect(status.cpuPercent).toBe(42);
-    expect(status.memoryPercent).toBe(55);
-  });
-
-  it("returns only the latest resource row when multiple exist", async () => {
-    const svc = svcRepo.saveService({
-      name: "s",
-      host: "h",
-      ports: [],
-      source: ServiceSource.DOCKER,
-    });
-
-    histRepo.addResourceStatsHistory(svc.id!, 10, 20);
-    await new Promise((r) => setTimeout(r, 5));
-    histRepo.addResourceStatsHistory(svc.id!, 80, 90);
-
-    const [status] = svcRepo.getServiceStatuses(true);
-
-    expect(status.cpuPercent).toBe(80);
-    expect(status.memoryPercent).toBe(90);
   });
 });
 

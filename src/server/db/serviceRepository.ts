@@ -1,4 +1,4 @@
-import { asc, desc, eq, getTableColumns, or, sql } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { v4 as uuidv4 } from "uuid";
 
@@ -20,12 +20,7 @@ import type {
 } from "@shared/api";
 
 import { orm } from "./connection.js";
-import {
-  serviceLinks,
-  servicePositions,
-  serviceResourceHistory,
-  services,
-} from "./schema/index.js";
+import { serviceLinks, servicePositions, services } from "./schema/index.js";
 
 export class ServiceRepository {
   saveService(data: CreateServiceRequest): Service {
@@ -269,46 +264,20 @@ export class ServiceRepository {
     };
   }
 
-  getServiceStatuses(includeResources = false): ServiceStatusItem[] {
-    const resourceMap = includeResources ? this.getLatestResourceMap() : new Map();
-
+  getServiceStatuses(): ServiceStatusItem[] {
     return orm
       .select({ id: services.id, status: services.status, metadata: services.metadata })
       .from(services)
       .all()
-      .map((row) => {
-        const res = resourceMap.get(row.id);
-
-        return {
-          id: row.id,
-          status: row.status,
-          metadata: {
-            imageTag: row.metadata?.imageTag,
-            hasUpdate: row.metadata?.hasUpdate,
-            latestVersion: row.metadata?.latestVersion,
-          },
-          ...(res && { cpuPercent: res.cpuPercent, memoryPercent: res.memoryPercent }),
-        };
-      });
-  }
-
-  private getLatestResourceMap(): Map<string, { cpuPercent: number; memoryPercent: number }> {
-    const rows = orm
-      .select({
-        serviceId: serviceResourceHistory.serviceId,
-        cpuPercent: serviceResourceHistory.cpuPercent,
-        memoryPercent: serviceResourceHistory.memoryPercent,
-      })
-      .from(serviceResourceHistory)
-      .where(
-        sql`${serviceResourceHistory.checkedAt} = (
-          SELECT MAX(checked_at) FROM service_resource_history r2
-          WHERE r2.service_id = ${serviceResourceHistory.serviceId}
-        )`,
-      )
-      .all();
-
-    return new Map(rows.map((r) => [r.serviceId, r]));
+      .map((row) => ({
+        id: row.id,
+        status: row.status,
+        metadata: {
+          imageTag: row.metadata?.imageTag,
+          hasUpdate: row.metadata?.hasUpdate,
+          latestVersion: row.metadata?.latestVersion,
+        },
+      }));
   }
 }
 

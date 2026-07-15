@@ -29,6 +29,11 @@ const mockChangelogService = vi.hoisted(() => ({
   fetchChangelog: vi.fn(),
 }));
 
+const mockDockerService = vi.hoisted(() => ({
+  getContainerForServiceId: vi.fn(),
+  getContainerStats: vi.fn(),
+}));
+
 const mockConfig = vi.hoisted(() => ({
   healthHistoryEnabled: true,
   resourceMonitorEnabled: true,
@@ -50,6 +55,7 @@ vi.mock("@server/services/healthCheckService.js", () => ({
 vi.mock("@server/services/changelogService.js", () => ({
   changelogService: mockChangelogService,
 }));
+vi.mock("@server/services/dockerService.js", () => ({ dockerService: mockDockerService }));
 vi.mock("@server/lib/logService.js", () => ({ logger: mockLogger }));
 
 const routerModule = await import("@server/routes/services.js");
@@ -90,9 +96,12 @@ describe("GET /api/services", () => {
 });
 
 describe("GET /api/serviceStatuses", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockConfig.resourceMonitorEnabled = false;
+  });
 
-  it("returns 200 with service statuses", async () => {
+  it("returns 200 with base statuses when resourceMonitorEnabled is false", async () => {
     const statuses = [{ id: "svc-1", status: ServiceStatus.UP, metadata: {} }];
 
     mockSvcRepo.getServiceStatuses.mockReturnValue(statuses);
@@ -101,18 +110,38 @@ describe("GET /api/serviceStatuses", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(statuses);
+    expect(mockDockerService.getContainerForServiceId).not.toHaveBeenCalled();
   });
 
-  it("passes resourceMonitorEnabled flag to getServiceStatuses", async () => {
-    mockSvcRepo.getServiceStatuses.mockReturnValue([]);
+  it("fetches live Docker stats and merges them when resourceMonitorEnabled is true", async () => {
+    const statuses = [{ id: "svc-1", status: ServiceStatus.UP, metadata: {} }];
+    const mockContainer = {};
+
+    mockSvcRepo.getServiceStatuses.mockReturnValue(statuses);
+    mockDockerService.getContainerForServiceId.mockReturnValue(mockContainer);
+    mockDockerService.getContainerStats.mockResolvedValue({ cpuPercent: 30, memoryPercent: 50 });
     mockConfig.resourceMonitorEnabled = true;
 
-    await request(app).get("/api/serviceStatuses");
-    expect(mockSvcRepo.getServiceStatuses).toHaveBeenCalledWith(true);
+    const res = await request(app).get("/api/serviceStatuses");
 
-    mockConfig.resourceMonitorEnabled = false;
-    await request(app).get("/api/serviceStatuses");
-    expect(mockSvcRepo.getServiceStatuses).toHaveBeenCalledWith(false);
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({ id: "svc-1", cpuPercent: 30, memoryPercent: 50 });
+  });
+
+  it("omits resource fields for services where Docker stat fetch fails", async () => {
+    const statuses = [{ id: "svc-1", status: ServiceStatus.UP, metadata: {} }];
+
+    mockSvcRepo.getServiceStatuses.mockReturnValue(statuses);
+    mockDockerService.getContainerForServiceId.mockImplementation(() => {
+      throw new Error("Not a Docker service");
+    });
+    mockConfig.resourceMonitorEnabled = true;
+
+    const res = await request(app).get("/api/serviceStatuses");
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].cpuPercent).toBeUndefined();
+    expect(res.body[0].memoryPercent).toBeUndefined();
   });
 });
 
