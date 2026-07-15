@@ -218,9 +218,7 @@ export class DockerService {
     const precpu = raw.precpu_stats;
     const cpuDelta = cpu.cpu_usage.total_usage - precpu.cpu_usage.total_usage;
     const systemDelta = (cpu.system_cpu_usage ?? 0) - (precpu.system_cpu_usage ?? 0);
-    const numCpus = cpu.online_cpus ?? cpu.cpu_usage.percpu_usage?.length ?? 1;
-    const cpuPercent =
-      systemDelta > 0 ? Math.min((cpuDelta / systemDelta) * numCpus * 100, 100 * numCpus) : 0;
+    const cpuPercent = systemDelta > 0 ? Math.min((cpuDelta / systemDelta) * 100, 100) : 0;
 
     const mem = raw.memory_stats;
     // cgroup v2 uses inactive_file; v1 exposes cache — both should be subtracted

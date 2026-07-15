@@ -251,12 +251,12 @@ describe("DockerService.getContainerStats", () => {
 
   // CPU
 
-  it("calculates CPU percent from delta / system_delta * num_cpus", async () => {
-    // cpu_delta = 100_000, system_delta = 1_000_000, num_cpus = 2 → 20.0%
+  it("calculates CPU percent normalised to 0-100% of total CPU budget", async () => {
+    // cpu_delta = 100_000, system_delta = 1_000_000 → 10.0%
     const svc = new DockerService();
     const result = await svc.getContainerStats(mockContainerObj as never);
 
-    expect(result.cpuPercent).toBe(20.0);
+    expect(result.cpuPercent).toBe(10.0);
   });
 
   it("returns 0% CPU when system_delta is zero (container just started)", async () => {
@@ -289,7 +289,7 @@ describe("DockerService.getContainerStats", () => {
     const svc = new DockerService();
     const result = await svc.getContainerStats(mockContainerObj as never);
 
-    expect(result.cpuPercent).toBeLessThanOrEqual(200); // 100 * 2 cpus
+    expect(result.cpuPercent).toBeLessThanOrEqual(100);
   });
 
   it("falls back to percpu_usage length when online_cpus is absent", async () => {
@@ -309,8 +309,8 @@ describe("DockerService.getContainerStats", () => {
     const svc = new DockerService();
     const result = await svc.getContainerStats(mockContainerObj as never);
 
-    // cpu_delta=100k, system_delta=1M, num_cpus=4 → 40%
-    expect(result.cpuPercent).toBe(40.0);
+    // cpu_delta=100k, system_delta=1M → 10.0%
+    expect(result.cpuPercent).toBe(10.0);
   });
 
   // Memory
