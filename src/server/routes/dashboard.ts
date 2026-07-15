@@ -2,14 +2,14 @@ import { Router } from "express";
 
 import type { CheckAllServicesResponse } from "@shared/api";
 
-import { db } from "../db/databaseService.js";
+import { serviceRepository } from "../db/serviceRepository.js";
 import { logger } from "../lib/logService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
 
 const router = Router();
 
 router.get("/dashboard", (_req, res) => {
-  const data = db.getDashboardData();
+  const data = serviceRepository.getDashboardData();
 
   res.json(data);
 });

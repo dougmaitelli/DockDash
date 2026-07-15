@@ -3,9 +3,10 @@ import session from "express-session";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { db } from "./db/databaseService.js";
+import { createSessionStore } from "./db/connection.js";
 import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
 import { HistoryCleanupJob } from "./jobs/HistoryCleanupJob.js";
+import { HistoryRollupJob } from "./jobs/HistoryRollupJob.js";
 import { UpdateCheckJob } from "./jobs/UpdateCheckJob.js";
 import { config } from "./lib/config.js";
 import { APP_NAME } from "./lib/constants.js";
@@ -36,7 +37,7 @@ app.set("trust proxy", trustProxy === "true" ? true : trustProxy);
 app.use(express.json({ limit: "100kb" }));
 app.use(
   session({
-    store: db.createSessionStore(),
+    store: createSessionStore(),
     secret: config.sessionSecret,
     resave: false,
     saveUninitialized: false,
@@ -132,6 +133,7 @@ const server = app.listen(PORT, () => {
 
   new HealthCheckJob().start();
   new HistoryCleanupJob().start();
+  new HistoryRollupJob().start();
 
   // Run one health check immediately so Docker metadata (imageTag, imageDigest) is
   // synced before the update checker fires. Without this, a container updated between

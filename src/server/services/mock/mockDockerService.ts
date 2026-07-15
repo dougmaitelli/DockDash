@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { ContainerStats } from "@shared";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
-import { db } from "../../db/databaseService.js";
+import { serviceRepository } from "../../db/serviceRepository.js";
 import { type ContainerStateMap, DOCKER_CONTAINER_STATE, DockerService } from "../dockerService.js";
 
 // ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ export class MockDockerService extends DockerService {
   override async getContainerStats(container: Docker.Container): Promise<ContainerStats> {
     // Resolve the per-container profile via the service ID stored in the stub
     const serviceId = (container as unknown as Record<string, string>)["_mockServiceId"];
-    const svc = serviceId ? db.getService(serviceId) : undefined;
+    const svc = serviceId ? serviceRepository.getService(serviceId) : undefined;
     const def = MOCK_CONTAINERS.find((c) => c.name === svc?.metadata?.containerName);
 
     const cpuBase = def?.cpuBase ?? 10;

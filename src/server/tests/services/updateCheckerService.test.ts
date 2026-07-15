@@ -17,7 +17,7 @@ const mockNotificationService = vi.hoisted(() => ({
   notify: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@server/db/databaseService.js", () => ({ db: mockDb }));
+vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockDb }));
 vi.mock("@server/services/registryClient.js", () => ({ registryClient: mockRegistryClient }));
 vi.mock("@server/services/notificationService.js", () => ({
   notificationService: mockNotificationService,

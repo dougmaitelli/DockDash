@@ -17,7 +17,7 @@ const mockLogger = vi.hoisted(() => ({
   debug: vi.fn(),
 }));
 
-vi.mock("@server/db/databaseService.js", () => ({ db: mockDb }));
+vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockDb }));
 vi.mock("@server/services/healthCheckService.js", () => ({
   healthCheckService: mockHealthCheckService,
 }));

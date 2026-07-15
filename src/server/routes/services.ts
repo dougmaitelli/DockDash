@@ -9,7 +9,8 @@ import type {
   UpdateServiceRequest,
 } from "@shared/api";
 
-import { db } from "../db/databaseService.js";
+import { historyRepository } from "../db/historyRepository.js";
+import { serviceRepository } from "../db/serviceRepository.js";
 import { config } from "../lib/config.js";
 import { logger } from "../lib/logService.js";
 import { isNonEmptyString, isValidEnumValue, isValidPort } from "../lib/validate.js";
@@ -19,15 +20,15 @@ import { healthCheckService } from "../services/healthCheckService.js";
 const router = Router();
 
 router.get("/services", (_req, res) => {
-  res.json(db.getServices());
+  res.json(serviceRepository.getServices());
 });
 
 router.get("/serviceStatuses", (_req, res) => {
-  res.json(db.getServiceStatuses(config.resourceMonitorEnabled));
+  res.json(serviceRepository.getServiceStatuses(config.resourceMonitorEnabled));
 });
 
 router.get("/services/:id", (req, res) => {
-  const service = db.getServices().find((s) => s.id === req.params.id);
+  const service = serviceRepository.getServices().find((s) => s.id === req.params.id);
 
   if (!service) return res.status(404).json({ error: "Service not found" });
 
@@ -57,7 +58,7 @@ router.post("/services", (req, res) => {
     return res.status(400).json({ error: "checkPort must be an integer between 1 and 65535" });
   }
 
-  const service = db.saveService({
+  const service = serviceRepository.saveService({
     name,
     host,
     ports: Array.isArray(ports) ? ports : [],
@@ -95,7 +96,7 @@ router.put("/services/:id", (req, res) => {
   }
 
   try {
-    const service = db.updateService(req.params.id, {
+    const service = serviceRepository.updateService(req.params.id, {
       name,
       host,
       ports: Array.isArray(ports) ? ports : undefined,
@@ -115,7 +116,7 @@ router.put("/services/:id", (req, res) => {
 });
 
 router.delete("/services/:id", (req, res) => {
-  db.deleteService(req.params.id);
+  serviceRepository.deleteService(req.params.id);
 
   const response: ApiSuccess = { success: true };
 
@@ -123,11 +124,11 @@ router.delete("/services/:id", (req, res) => {
 });
 
 router.post("/services/:id/dashboard", (req, res) => {
-  if (!db.getService(req.params.id)) {
+  if (!serviceRepository.getService(req.params.id)) {
     return res.status(404).json({ error: "Service not found" });
   }
 
-  db.addServiceToDashboard(req.params.id);
+  serviceRepository.addServiceToDashboard(req.params.id);
 
   const response: ApiSuccess = { success: true };
 
@@ -135,7 +136,7 @@ router.post("/services/:id/dashboard", (req, res) => {
 });
 
 router.delete("/services/:id/dashboard", (req, res) => {
-  db.removeServiceFromDashboard(req.params.id);
+  serviceRepository.removeServiceFromDashboard(req.params.id);
 
   const response: ApiSuccess = { success: true };
 
@@ -176,10 +177,10 @@ router.post("/positions", (req, res) => {
   }
 
   for (const p of positions) {
-    db.saveServicePosition(p);
+    serviceRepository.saveServicePosition(p);
   }
 
-  const response: SavePositionsResponse = { positions: db.getServicePositions() };
+  const response: SavePositionsResponse = { positions: serviceRepository.getServicePositions() };
 
   res.json(response);
 });
@@ -192,7 +193,7 @@ router.get("/services/:id/health-history", (req, res) => {
   const days = Math.max(1, parseInt(req.query.days as string, 10) || 7);
   const buckets = Math.max(1, Math.min(200, parseInt(req.query.buckets as string, 10) || 80));
 
-  res.json(db.getHealthHistory(req.params.id, days, buckets));
+  res.json(historyRepository.getHealthHistory(req.params.id, days, buckets));
 });
 
 router.get("/services/:id/resource-history", (req, res) => {
@@ -203,11 +204,11 @@ router.get("/services/:id/resource-history", (req, res) => {
   const days = Math.max(1, parseInt(req.query.days as string, 10) || 7);
   const buckets = Math.max(1, Math.min(200, parseInt(req.query.buckets as string, 10) || 80));
 
-  res.json(db.getResourceHistory(req.params.id, days, buckets));
+  res.json(historyRepository.getResourceHistory(req.params.id, days, buckets));
 });
 
 router.get("/services/:id/changelog", async (req, res) => {
-  const service = db.getService(req.params.id);
+  const service = serviceRepository.getService(req.params.id);
 
   if (!service) return res.status(404).json({ error: "Service not found" });
 

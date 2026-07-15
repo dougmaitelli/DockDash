@@ -1,17 +1,9 @@
-import Database from "better-sqlite3";
-import SqliteStoreFactory from "better-sqlite3-session-store";
-import { asc, desc, eq, getTableColumns, lt, or, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { asc, desc, eq, getTableColumns, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
-import session from "express-session";
-import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
 import type {
   DashboardData,
-  HealthBucket,
-  ResourceBucket,
   Service,
   ServiceLink,
   ServiceMetadata,
@@ -27,45 +19,15 @@ import type {
   UpdateServiceRequest,
 } from "@shared/api";
 
+import { orm } from "./connection.js";
 import {
-  serviceHealthHistory,
   serviceLinks,
   servicePositions,
   serviceResourceHistory,
   services,
 } from "./schema/index.js";
 
-const MIGRATIONS_FOLDER = path.join(process.cwd(), "drizzle");
-const MS_PER_DAY = 86_400_000;
-
-export class DatabaseService {
-  private static instance: DatabaseService | null = null;
-  private readonly orm: ReturnType<typeof drizzle>;
-  private readonly sqlite: Database.Database;
-
-  constructor() {
-    if (DatabaseService.instance) {
-      throw new Error("DatabaseService is a singleton — use the exported db instance");
-    }
-
-    this.sqlite = new Database(process.env.DB_PATH || path.join(process.cwd(), "dockdash.db"));
-
-    this.sqlite.pragma("journal_mode = WAL");
-    this.sqlite.pragma("foreign_keys = ON");
-
-    this.orm = drizzle(this.sqlite);
-
-    migrate(this.orm, { migrationsFolder: MIGRATIONS_FOLDER });
-
-    DatabaseService.instance = this;
-  }
-
-  createSessionStore(): session.Store {
-    const SqliteStore = SqliteStoreFactory(session);
-
-    return new SqliteStore({ client: this.sqlite });
-  }
-
+export class ServiceRepository {
   saveService(data: CreateServiceRequest): Service {
     const now = new Date().toISOString();
 
@@ -82,7 +44,7 @@ export class DatabaseService {
       updatedAt: now,
     };
 
-    this.orm.insert(services).values(service).run();
+    orm.insert(services).values(service).run();
 
     return service;
   }
@@ -90,7 +52,7 @@ export class DatabaseService {
   updateService(id: string, data: UpdateServiceRequest): Service {
     if (!this.getService(id)) throw new Error("Service not found");
 
-    this.orm
+    orm
       .update(services)
       .set({
         name: data.name,
@@ -110,7 +72,7 @@ export class DatabaseService {
 
     if (!service) return;
 
-    this.orm
+    orm
       .update(services)
       .set({
         metadata: { ...(service.metadata ?? {}), ...patch },
@@ -121,42 +83,23 @@ export class DatabaseService {
   }
 
   updateServiceStatus(id: string, status: ServiceStatus): void {
-    this.orm
+    orm
       .update(services)
       .set({ status, updatedAt: new Date().toISOString() })
       .where(eq(services.id, id))
       .run();
   }
 
-  private getLatestResourceMap(): Map<string, { cpuPercent: number; memoryPercent: number }> {
-    const rows = this.orm
-      .select({
-        serviceId: serviceResourceHistory.serviceId,
-        cpuPercent: serviceResourceHistory.cpuPercent,
-        memoryPercent: serviceResourceHistory.memoryPercent,
-      })
-      .from(serviceResourceHistory)
-      .where(
-        sql`${serviceResourceHistory.checkedAt} = (
-          SELECT MAX(checked_at) FROM service_resource_history r2
-          WHERE r2.service_id = ${serviceResourceHistory.serviceId}
-        )`,
-      )
-      .all();
-
-    return new Map(rows.map((r) => [r.serviceId, r]));
-  }
-
   getServices(): Service[] {
     const onDashboardIds = new Set(
-      this.orm
+      orm
         .select({ serviceId: servicePositions.serviceId })
         .from(servicePositions)
         .all()
         .map((r) => r.serviceId),
     );
 
-    return this.orm
+    return orm
       .select()
       .from(services)
       .orderBy(asc(services.name))
@@ -165,17 +108,17 @@ export class DatabaseService {
   }
 
   getService(id: string): Service | undefined {
-    const row = this.orm.select().from(services).where(eq(services.id, id)).get();
+    const row = orm.select().from(services).where(eq(services.id, id)).get();
 
     return row ?? undefined;
   }
 
   deleteService(id: string): void {
-    this.orm.delete(services).where(eq(services.id, id)).run();
+    orm.delete(services).where(eq(services.id, id)).run();
   }
 
   saveServicePosition(position: PositionUpdate): void {
-    this.orm
+    orm
       .insert(servicePositions)
       .values({
         serviceId: position.serviceId,
@@ -201,7 +144,7 @@ export class DatabaseService {
   // Adds a service to the dashboard by creating a default position. No-op if
   // the service already has one (preserves existing coords).
   addServiceToDashboard(serviceId: string): void {
-    this.orm
+    orm
       .insert(servicePositions)
       .values({ serviceId, x: 0, y: 0, parentId: null, w: null, h: null })
       .onConflictDoNothing()
@@ -209,11 +152,11 @@ export class DatabaseService {
   }
 
   removeServiceFromDashboard(serviceId: string): void {
-    this.orm.delete(servicePositions).where(eq(servicePositions.serviceId, serviceId)).run();
+    orm.delete(servicePositions).where(eq(servicePositions.serviceId, serviceId)).run();
   }
 
   getServicePositions(): ServicePosition[] {
-    return this.orm
+    return orm
       .select()
       .from(servicePositions)
       .all()
@@ -229,7 +172,7 @@ export class DatabaseService {
     const source = alias(services, "source_svc");
     const target = alias(services, "target_svc");
 
-    return this.orm
+    return orm
       .select({
         ...getTableColumns(serviceLinks),
         sourceName: source.name,
@@ -260,7 +203,7 @@ export class DatabaseService {
       protocol: data.protocol,
     };
 
-    const result = this.orm.insert(serviceLinks).values(link).onConflictDoNothing().run();
+    const result = orm.insert(serviceLinks).values(link).onConflictDoNothing().run();
 
     if (result.changes === 0) {
       throw new Error("A link between these two services already exists");
@@ -270,7 +213,7 @@ export class DatabaseService {
   }
 
   updateLink(id: string, data: UpdateLinkRequest): ServiceLink {
-    const result = this.orm
+    const result = orm
       .update(serviceLinks)
       .set({
         label: data.label,
@@ -284,7 +227,7 @@ export class DatabaseService {
 
     if (result.changes === 0) throw new Error("Link not found");
 
-    const row = this.orm.select().from(serviceLinks).where(eq(serviceLinks.id, id)).get()!;
+    const row = orm.select().from(serviceLinks).where(eq(serviceLinks.id, id)).get()!;
 
     return {
       ...row,
@@ -295,11 +238,11 @@ export class DatabaseService {
   }
 
   deleteLink(id: string): void {
-    this.orm.delete(serviceLinks).where(eq(serviceLinks.id, id)).run();
+    orm.delete(serviceLinks).where(eq(serviceLinks.id, id)).run();
   }
 
   getLinksForService(serviceId: string): ServiceLink[] {
-    return this.orm
+    return orm
       .select()
       .from(serviceLinks)
       .where(or(eq(serviceLinks.sourceId, serviceId), eq(serviceLinks.targetId, serviceId)))
@@ -329,7 +272,7 @@ export class DatabaseService {
   getServiceStatuses(includeResources = false): ServiceStatusItem[] {
     const resourceMap = includeResources ? this.getLatestResourceMap() : new Map();
 
-    return this.orm
+    return orm
       .select({ id: services.id, status: services.status, metadata: services.metadata })
       .from(services)
       .all()
@@ -349,129 +292,24 @@ export class DatabaseService {
       });
   }
 
-  addHealthHistory(serviceId: string, status: ServiceStatus): void {
-    this.orm
-      .insert(serviceHealthHistory)
-      .values({ id: uuidv4(), serviceId, status, checkedAt: new Date().toISOString() })
-      .run();
-  }
-
-  addResourceStatsHistory(serviceId: string, cpuPercent: number, memoryPercent: number): void {
-    this.orm
-      .insert(serviceResourceHistory)
-      .values({
-        id: uuidv4(),
-        serviceId,
-        cpuPercent,
-        memoryPercent,
-        checkedAt: new Date().toISOString(),
-      })
-      .run();
-  }
-
-  getHealthHistory(serviceId: string, days: number, bucketCount: number): HealthBucket[] {
-    const rangeMs = days * MS_PER_DAY;
-    const cutoff = new Date(Date.now() - rangeMs).toISOString();
-    const rows = this.orm
-      .select({ status: serviceHealthHistory.status, checkedAt: serviceHealthHistory.checkedAt })
-      .from(serviceHealthHistory)
-      .where(
-        sql`${serviceHealthHistory.serviceId} = ${serviceId} AND ${serviceHealthHistory.checkedAt} >= ${cutoff}`,
-      )
-      .orderBy(asc(serviceHealthHistory.checkedAt))
-      .all();
-
-    const now = Date.now();
-    const start = now - rangeMs;
-    const bucketMs = rangeMs / bucketCount;
-
-    const seen: Set<string>[] = Array.from({ length: bucketCount }, () => new Set<string>());
-
-    for (const row of rows) {
-      const t = new Date(row.checkedAt).getTime();
-      const idx = Math.min(Math.floor((t - start) / bucketMs), bucketCount - 1);
-
-      if (idx >= 0) seen[idx].add(row.status);
-    }
-
-    return seen.map((s) => {
-      if (s.size === 0) return null;
-
-      const hasUp = s.has(ServiceStatus.UP);
-      const hasDown = s.has(ServiceStatus.DOWN);
-
-      if (hasUp && hasDown) return "mixed";
-
-      if (hasDown) return ServiceStatus.DOWN;
-
-      if (s.has(ServiceStatus.UNKNOWN)) return ServiceStatus.UNKNOWN;
-
-      return ServiceStatus.UP;
-    });
-  }
-
-  getResourceHistory(serviceId: string, days: number, bucketCount: number): ResourceBucket[] {
-    const rangeMs = days * MS_PER_DAY;
-    const cutoff = new Date(Date.now() - rangeMs).toISOString();
-    const rows = this.orm
+  private getLatestResourceMap(): Map<string, { cpuPercent: number; memoryPercent: number }> {
+    const rows = orm
       .select({
+        serviceId: serviceResourceHistory.serviceId,
         cpuPercent: serviceResourceHistory.cpuPercent,
         memoryPercent: serviceResourceHistory.memoryPercent,
-        checkedAt: serviceResourceHistory.checkedAt,
       })
       .from(serviceResourceHistory)
       .where(
-        sql`${serviceResourceHistory.serviceId} = ${serviceId} AND ${serviceResourceHistory.checkedAt} >= ${cutoff}`,
+        sql`${serviceResourceHistory.checkedAt} = (
+          SELECT MAX(checked_at) FROM service_resource_history r2
+          WHERE r2.service_id = ${serviceResourceHistory.serviceId}
+        )`,
       )
-      .orderBy(asc(serviceResourceHistory.checkedAt))
       .all();
 
-    const now = Date.now();
-    const start = now - rangeMs;
-    const bucketMs = rangeMs / bucketCount;
-
-    type Sample = { cpu: number; mem: number };
-    const buckets: Sample[][] = Array.from({ length: bucketCount }, () => []);
-
-    for (const row of rows) {
-      const t = new Date(row.checkedAt).getTime();
-      const idx = Math.min(Math.floor((t - start) / bucketMs), bucketCount - 1);
-
-      if (idx >= 0) buckets[idx].push({ cpu: row.cpuPercent, mem: row.memoryPercent });
-    }
-
-    return buckets.map((samples) => {
-      if (samples.length === 0) return null;
-
-      const cpuPercent = samples.reduce((s, r) => s + r.cpu, 0) / samples.length;
-      const memoryPercent = samples.reduce((s, r) => s + r.mem, 0) / samples.length;
-
-      return {
-        cpuPercent: Math.round(cpuPercent * 10) / 10,
-        memoryPercent: Math.round(memoryPercent * 10) / 10,
-      };
-    });
-  }
-
-  cleanOldHistory(ttlDays: number): number {
-    const cutoff = new Date(Date.now() - ttlDays * MS_PER_DAY).toISOString();
-
-    const health = this.orm
-      .delete(serviceHealthHistory)
-      .where(lt(serviceHealthHistory.checkedAt, cutoff))
-      .run();
-
-    const resource = this.orm
-      .delete(serviceResourceHistory)
-      .where(lt(serviceResourceHistory.checkedAt, cutoff))
-      .run();
-
-    return health.changes + resource.changes;
+    return new Map(rows.map((r) => [r.serviceId, r]));
   }
 }
 
-export let db: DatabaseService = new DatabaseService();
-
-export function overrideDatabase(instance: DatabaseService): void {
-  db = instance;
-}
+export const serviceRepository = new ServiceRepository();

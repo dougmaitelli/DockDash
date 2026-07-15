@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ServiceSource, ServiceStatus } from "@shared";
 
-const mockDb = vi.hoisted(() => ({
+const mockSvcRepo = vi.hoisted(() => ({
   getServices: vi.fn(),
   getService: vi.fn(),
   getServiceStatuses: vi.fn(),
@@ -15,6 +15,9 @@ const mockDb = vi.hoisted(() => ({
   removeServiceFromDashboard: vi.fn(),
   saveServicePosition: vi.fn(),
   getServicePositions: vi.fn(),
+}));
+
+const mockHistRepo = vi.hoisted(() => ({
   getHealthHistory: vi.fn(),
 }));
 
@@ -39,7 +42,8 @@ const mockLogger = vi.hoisted(() => ({
 }));
 
 vi.mock("@server/lib/config.js", () => ({ config: mockConfig }));
-vi.mock("@server/db/databaseService.js", () => ({ db: mockDb }));
+vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockSvcRepo }));
+vi.mock("@server/db/historyRepository.js", () => ({ historyRepository: mockHistRepo }));
 vi.mock("@server/services/healthCheckService.js", () => ({
   healthCheckService: mockHealthCheckService,
 }));
@@ -76,7 +80,7 @@ describe("GET /api/services", () => {
   it("returns 200 with array from db.getServices()", async () => {
     const services = [makeService()];
 
-    mockDb.getServices.mockReturnValue(services);
+    mockSvcRepo.getServices.mockReturnValue(services);
 
     const res = await request(app).get("/api/services");
 
@@ -91,7 +95,7 @@ describe("GET /api/serviceStatuses", () => {
   it("returns 200 with service statuses", async () => {
     const statuses = [{ id: "svc-1", status: ServiceStatus.UP, metadata: {} }];
 
-    mockDb.getServiceStatuses.mockReturnValue(statuses);
+    mockSvcRepo.getServiceStatuses.mockReturnValue(statuses);
 
     const res = await request(app).get("/api/serviceStatuses");
 
@@ -100,15 +104,15 @@ describe("GET /api/serviceStatuses", () => {
   });
 
   it("passes resourceMonitorEnabled flag to getServiceStatuses", async () => {
-    mockDb.getServiceStatuses.mockReturnValue([]);
+    mockSvcRepo.getServiceStatuses.mockReturnValue([]);
     mockConfig.resourceMonitorEnabled = true;
 
     await request(app).get("/api/serviceStatuses");
-    expect(mockDb.getServiceStatuses).toHaveBeenCalledWith(true);
+    expect(mockSvcRepo.getServiceStatuses).toHaveBeenCalledWith(true);
 
     mockConfig.resourceMonitorEnabled = false;
     await request(app).get("/api/serviceStatuses");
-    expect(mockDb.getServiceStatuses).toHaveBeenCalledWith(false);
+    expect(mockSvcRepo.getServiceStatuses).toHaveBeenCalledWith(false);
   });
 });
 
@@ -118,7 +122,7 @@ describe("GET /api/services/:id", () => {
   it("returns 200 when service found", async () => {
     const service = makeService();
 
-    mockDb.getServices.mockReturnValue([service]);
+    mockSvcRepo.getServices.mockReturnValue([service]);
 
     const res = await request(app).get("/api/services/svc-1");
 
@@ -127,7 +131,7 @@ describe("GET /api/services/:id", () => {
   });
 
   it("returns 404 when service not found", async () => {
-    mockDb.getServices.mockReturnValue([]);
+    mockSvcRepo.getServices.mockReturnValue([]);
 
     const res = await request(app).get("/api/services/nonexistent");
 
@@ -142,7 +146,7 @@ describe("POST /api/services", () => {
   it("returns 201 with valid body { name, host }", async () => {
     const saved = makeService({ name: "New Service", host: "10.0.0.1" });
 
-    mockDb.saveService.mockReturnValue(saved);
+    mockSvcRepo.saveService.mockReturnValue(saved);
     mockHealthCheckService.checkSingleService.mockResolvedValue(undefined);
 
     const res = await request(app)
@@ -192,7 +196,7 @@ describe("PUT /api/services/:id", () => {
   it("returns 200 with valid update", async () => {
     const updated = makeService({ name: "Updated" });
 
-    mockDb.updateService.mockReturnValue(updated);
+    mockSvcRepo.updateService.mockReturnValue(updated);
     mockHealthCheckService.checkSingleService.mockResolvedValue(undefined);
 
     const res = await request(app).put("/api/services/svc-1").send({ name: "Updated" });
@@ -202,7 +206,7 @@ describe("PUT /api/services/:id", () => {
   });
 
   it("returns 404 when service not found (db.updateService throws)", async () => {
-    mockDb.updateService.mockImplementation(() => {
+    mockSvcRepo.updateService.mockImplementation(() => {
       throw new Error("Service not found");
     });
 
@@ -224,7 +228,7 @@ describe("DELETE /api/services/:id", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns 200", async () => {
-    mockDb.deleteService.mockReturnValue(undefined);
+    mockSvcRepo.deleteService.mockReturnValue(undefined);
 
     const res = await request(app).delete("/api/services/svc-1");
 
@@ -237,8 +241,8 @@ describe("POST /api/services/:id/dashboard", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns 200 when service exists", async () => {
-    mockDb.getService.mockReturnValue(makeService());
-    mockDb.addServiceToDashboard.mockReturnValue(undefined);
+    mockSvcRepo.getService.mockReturnValue(makeService());
+    mockSvcRepo.addServiceToDashboard.mockReturnValue(undefined);
 
     const res = await request(app).post("/api/services/svc-1/dashboard");
 
@@ -247,7 +251,7 @@ describe("POST /api/services/:id/dashboard", () => {
   });
 
   it("returns 404 when service not found", async () => {
-    mockDb.getService.mockReturnValue(undefined);
+    mockSvcRepo.getService.mockReturnValue(undefined);
 
     const res = await request(app).post("/api/services/nonexistent/dashboard");
 
@@ -260,7 +264,7 @@ describe("DELETE /api/services/:id/dashboard", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns 200", async () => {
-    mockDb.removeServiceFromDashboard.mockReturnValue(undefined);
+    mockSvcRepo.removeServiceFromDashboard.mockReturnValue(undefined);
 
     const res = await request(app).delete("/api/services/svc-1/dashboard");
 
@@ -273,8 +277,8 @@ describe("POST /api/positions", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns 200 with valid positions array", async () => {
-    mockDb.saveServicePosition.mockReturnValue(undefined);
-    mockDb.getServicePositions.mockReturnValue([{ serviceId: "svc-1", x: 10, y: 20 }]);
+    mockSvcRepo.saveServicePosition.mockReturnValue(undefined);
+    mockSvcRepo.getServicePositions.mockReturnValue([{ serviceId: "svc-1", x: 10, y: 20 }]);
 
     const res = await request(app)
       .post("/api/positions")
@@ -308,7 +312,7 @@ describe("GET /api/services/:id/health-history", () => {
   });
 
   it("returns 200", async () => {
-    mockDb.getHealthHistory.mockReturnValue([]);
+    mockHistRepo.getHealthHistory.mockReturnValue([]);
 
     const res = await request(app).get("/api/services/svc-1/health-history");
 
@@ -321,7 +325,7 @@ describe("GET /api/services/:id/changelog", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns 200 when service found", async () => {
-    mockDb.getService.mockReturnValue(makeService());
+    mockSvcRepo.getService.mockReturnValue(makeService());
     mockChangelogService.fetchChangelog.mockResolvedValue({ available: false, reason: "No repo" });
 
     const res = await request(app).get("/api/services/svc-1/changelog");
@@ -330,7 +334,7 @@ describe("GET /api/services/:id/changelog", () => {
   });
 
   it("returns 404 when service not found", async () => {
-    mockDb.getService.mockReturnValue(undefined);
+    mockSvcRepo.getService.mockReturnValue(undefined);
 
     const res = await request(app).get("/api/services/nonexistent/changelog");
 

@@ -4,7 +4,8 @@ import net from "net";
 import type { ContainerStats, ServiceMetadata } from "@shared";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
-import { db } from "../db/databaseService.js";
+import { historyRepository } from "../db/historyRepository.js";
+import { serviceRepository } from "../db/serviceRepository.js";
 import { t } from "../i18n/index.js";
 import { config } from "../lib/config.js";
 import { detectProtocolByPort, HTTP_PROTOCOLS, USER_AGENT } from "../lib/constants.js";
@@ -75,7 +76,7 @@ export class HealthCheckService {
             patch.latestVersion = "";
           }
 
-          db.updateServiceMetadata(service.id!, patch);
+          serviceRepository.updateServiceMetadata(service.id!, patch);
         }
       }
 
@@ -103,7 +104,7 @@ export class HealthCheckService {
   }
 
   async checkSingleService(serviceId: string): Promise<ServiceStatus | null> {
-    const service = db.getService(serviceId);
+    const service = serviceRepository.getService(serviceId);
 
     if (!service) return null;
 
@@ -118,7 +119,7 @@ export class HealthCheckService {
   }
 
   async checkAllServices(): Promise<{ updated: number; errors: number }> {
-    const services = db.getServices();
+    const services = serviceRepository.getServices();
     let updated = 0;
     let errors = 0;
 
@@ -328,14 +329,14 @@ export class HealthCheckService {
   private commitStatus(service: Service, status: ServiceStatus, stats?: ContainerStats): void {
     this.logStatusChange(service.name, service.status, status);
     this.notifyStatusChange(service.name, service.status, status);
-    db.updateServiceStatus(service.id!, status);
+    serviceRepository.updateServiceStatus(service.id!, status);
 
     if (config.healthHistoryEnabled) {
-      db.addHealthHistory(service.id!, status);
+      historyRepository.addHealthHistory(service.id!, status);
     }
 
     if (stats && config.resourceMonitorEnabled) {
-      db.addResourceStatsHistory(service.id!, stats.cpuPercent, stats.memoryPercent);
+      historyRepository.addResourceStatsHistory(service.id!, stats.cpuPercent, stats.memoryPercent);
     }
 
     if (stats && notificationService.configured) this.notifyResourceSpikes(service, stats);

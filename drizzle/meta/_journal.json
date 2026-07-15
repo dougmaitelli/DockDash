@@ -57,6 +57,13 @@
       "when": 1783675414861,
       "tag": "0007_flowery_spot",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1784005684196,
+      "tag": "0008_fast_stone_men",
+      "breakpoints": true
     }
   ]
 }

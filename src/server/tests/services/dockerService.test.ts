@@ -27,8 +27,8 @@ vi.mock("dockerode", () => ({
   }),
 }));
 
-vi.mock("@server/db/databaseService.js", () => ({
-  db: { getService: vi.fn() },
+vi.mock("@server/db/serviceRepository.js", () => ({
+  serviceRepository: { getService: vi.fn() },
 }));
 
 const { DockerService, DOCKER_STREAM_HEADER_SIZE } =

@@ -3,7 +3,7 @@ import { Router } from "express";
 import { ServiceLinkType, ServiceProtocol } from "@shared";
 import type { ApiSuccess, CreateLinkRequest, UpdateLinkRequest } from "@shared/api";
 
-import { db } from "../db/databaseService.js";
+import { serviceRepository } from "../db/serviceRepository.js";
 import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
 
 const router = Router();
@@ -29,7 +29,7 @@ router.post("/links", (req, res) => {
   }
 
   try {
-    const link = db.saveLink({
+    const link = serviceRepository.saveLink({
       sourceId,
       targetId,
       label: label || "",
@@ -57,7 +57,7 @@ router.put("/links/:id", (req, res) => {
   }
 
   try {
-    const link = db.updateLink(req.params.id, {
+    const link = serviceRepository.updateLink(req.params.id, {
       label,
       type,
       description,
@@ -72,7 +72,7 @@ router.put("/links/:id", (req, res) => {
 });
 
 router.delete("/links/:id", (req, res) => {
-  db.deleteLink(req.params.id);
+  serviceRepository.deleteLink(req.params.id);
 
   const response: ApiSuccess = { success: true };
 

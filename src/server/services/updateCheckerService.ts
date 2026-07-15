@@ -1,6 +1,6 @@
 import { ServiceSource } from "@shared";
 
-import { db } from "../db/databaseService.js";
+import { serviceRepository } from "../db/serviceRepository.js";
 import { t } from "../i18n/index.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 import { logger } from "../lib/logService.js";
@@ -8,11 +8,11 @@ import { TagParser } from "../lib/tagParser.js";
 import { notificationService } from "./notificationService.js";
 import { registryClient } from "./registryClient.js";
 
-type Service = ReturnType<typeof db.getServices>[number];
+type Service = ReturnType<typeof serviceRepository.getServices>[number];
 
 export class UpdateCheckerService {
   async checkAllServicesForUpdates(): Promise<void> {
-    const services = db.getServices();
+    const services = serviceRepository.getServices();
     const dockerServices = services.filter((s) => s.source === ServiceSource.DOCKER);
 
     const newUpdates: { name: string; currentVersion: string; latestVersion: string }[] = [];
@@ -115,7 +115,7 @@ export class UpdateCheckerService {
 
     const previousHasUpdate = service.metadata?.hasUpdate;
 
-    db.updateServiceMetadata(service.id!, {
+    serviceRepository.updateServiceMetadata(service.id!, {
       hasUpdate,
       ...(latestVersion !== undefined ? { latestVersion } : {}),
       updateCheckedAt: new Date().toISOString(),

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { ContainerStats, Service, ServiceSource, ServiceStatus } from "@shared";
 
-import { db } from "../db/databaseService.js";
+import { serviceRepository } from "../db/serviceRepository.js";
 import { config } from "../lib/config.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 
@@ -48,7 +48,7 @@ export class DockerService {
   }
 
   getContainerForServiceId(serviceId: string): Docker.Container {
-    const service = db.getService(serviceId);
+    const service = serviceRepository.getService(serviceId);
 
     if (!service) throw new Error("Service not found");
 

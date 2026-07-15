@@ -58,7 +58,8 @@ vi.mock("net", () => ({
 }));
 
 vi.mock("@server/lib/config.js", () => ({ config: mockConfig }));
-vi.mock("@server/db/databaseService.js", () => ({ db: mockDb }));
+vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockDb }));
+vi.mock("@server/db/historyRepository.js", () => ({ historyRepository: mockDb }));
 
 vi.mock("@server/services/dockerService.js", () => ({
   dockerService: mockDockerService,

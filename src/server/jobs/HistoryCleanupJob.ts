@@ -1,4 +1,4 @@
-import { db } from "../db/databaseService.js";
+import { historyRepository } from "../db/historyRepository.js";
 import { config } from "../lib/config.js";
 import { logger } from "../lib/logService.js";
 import { BackgroundJob } from "./BackgroundJob.js";
@@ -10,7 +10,7 @@ export class HistoryCleanupJob extends BackgroundJob {
   readonly intervalMs = ONE_DAY_MS;
 
   run(): void {
-    const removed = db.cleanOldHistory(config.healthHistoryTtlDays);
+    const removed = historyRepository.cleanOldHistory(config.healthHistoryTtlDays);
 
     if (removed > 0) {
       logger.info(`Health history cleanup: removed ${removed} old entries`);

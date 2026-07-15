@@ -17,7 +17,7 @@ const mockLogger = vi.hoisted(() => ({
   debug: vi.fn(),
 }));
 
-vi.mock("@server/db/databaseService.js", () => ({ db: mockDb }));
+vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockDb }));
 vi.mock("@server/lib/logService.js", () => ({ logger: mockLogger }));
 
 const routerModule = await import("@server/routes/links.js");
