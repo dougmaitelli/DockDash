@@ -27,6 +27,11 @@ export class HealthCheckService {
   private readonly memorySpiking = new Map<string, boolean>();
   // tracks when each service first crossed the CPU threshold (ms); cleared on recovery
   private readonly cpuSpikeStart = new Map<string, number>();
+  private readonly latestStats = new Map<string, { cpuPercent: number; memoryPercent: number }>();
+
+  getLatestStats(): ReadonlyMap<string, { cpuPercent: number; memoryPercent: number }> {
+    return this.latestStats;
+  }
 
   private async checkSingleDockerService(
     service: Service,
@@ -337,6 +342,10 @@ export class HealthCheckService {
 
     if (stats && config.resourceMonitorEnabled) {
       historyRepository.addResourceStatsHistory(service.id!, stats.cpuPercent, stats.memoryPercent);
+      this.latestStats.set(service.id!, {
+        cpuPercent: stats.cpuPercent,
+        memoryPercent: stats.memoryPercent,
+      });
     }
 
     if (stats && notificationService.configured) this.notifyResourceSpikes(service, stats);

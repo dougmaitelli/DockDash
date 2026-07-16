@@ -15,7 +15,6 @@ import { config } from "../lib/config.js";
 import { logger } from "../lib/logService.js";
 import { isNonEmptyString, isValidEnumValue, isValidPort } from "../lib/validate.js";
 import { changelogService } from "../services/changelogService.js";
-import { dockerService } from "../services/dockerService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
 
 const router = Router();
@@ -24,25 +23,21 @@ router.get("/services", (_req, res) => {
   res.json(serviceRepository.getServices());
 });
 
-router.get("/serviceStatuses", async (_req, res) => {
+router.get("/serviceStatuses", (_req, res) => {
   const statuses = serviceRepository.getServiceStatuses();
 
   if (!config.resourceMonitorEnabled) {
     return res.json(statuses);
   }
 
-  const enriched = await Promise.all(
-    statuses.map(async (status) => {
-      try {
-        const container = dockerService.getContainerForServiceId(status.id);
-        const stats = await dockerService.getContainerStats(container);
+  const resourceMap = healthCheckService.getLatestStats();
+  const enriched = statuses.map((status) => {
+    const stats = resourceMap.get(status.id);
 
-        return { ...status, cpuPercent: stats.cpuPercent, memoryPercent: stats.memoryPercent };
-      } catch {
-        return status;
-      }
-    }),
-  );
+    return stats
+      ? { ...status, cpuPercent: stats.cpuPercent, memoryPercent: stats.memoryPercent }
+      : status;
+  });
 
   return res.json(enriched);
 });

@@ -404,6 +404,36 @@ describe("HealthCheckService.checkAllServices", () => {
     expect(result.updated).toBeGreaterThanOrEqual(1);
     expect(result.errors).toBe(0);
   });
+
+  it("populates latestStats cache for Docker services after fetching resource stats", async () => {
+    const svc = makeDockerSvc("running");
+
+    svc.id = "cache-test-svc";
+    mockDb.getServices.mockReturnValue([svc]);
+    mockDockerService.resolveHost.mockReturnValue("tcp://host:2375");
+    mockDockerService.createDockerClientForHost.mockReturnValue({});
+    mockDockerService.getContainersStateMap.mockResolvedValue(
+      new Map([["nginx", { state: "running" }]]),
+    );
+    mockDockerService.getContainerForServiceId.mockReturnValue({});
+    mockDockerService.getContainerStats.mockResolvedValue({
+      cpuPercent: 42,
+      memoryPercent: 55,
+      memoryUsed: 0,
+      memoryLimit: 1_000_000_000,
+      networkRx: 0,
+      networkTx: 0,
+      blockRead: 0,
+      blockWrite: 0,
+    });
+
+    await healthCheckService.checkAllServices();
+
+    expect(healthCheckService.getLatestStats().get("cache-test-svc")).toMatchObject({
+      cpuPercent: 42,
+      memoryPercent: 55,
+    });
+  });
 });
 
 describe("HealthCheckService — resource spike monitoring", () => {
