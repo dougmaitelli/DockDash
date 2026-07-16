@@ -191,12 +191,15 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
       );
     });
 
-    it("skips non-semver tags entirely", async () => {
+    it("skips update check when tag cannot be parsed as semver but has no local digest", async () => {
+      // Non-semver tags fall through to digest comparison; without a local digest stored,
+      // there is nothing to compare against so the check is skipped entirely.
       const svc = makeDockerService({
-        metadata: { image: "nginx", imageTag: "main", hasUpdate: false },
+        metadata: { image: "nginx", imageTag: "main", imageDigest: undefined, hasUpdate: false },
       });
 
       mockDb.getServices.mockReturnValue([svc]);
+      mockRegistryClient.getManifestDigest.mockResolvedValue("sha256:newdigest");
 
       await updateCheckerService.checkAllServicesForUpdates();
 
@@ -213,6 +216,63 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
       await updateCheckerService.checkAllServicesForUpdates();
 
       expect(mockDb.updateServiceMetadata).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("non-semver floating tag (e.g. 'dev', 'stable')", () => {
+    it("detects an update via digest comparison when the registry digest differs", async () => {
+      const svc = makeDockerService({
+        metadata: {
+          image: "ghcr.io/org/app",
+          imageTag: "dev",
+          imageDigest: "sha256:04219006c1a38fd2bb961554718c1c684e4c6442d7871619bfc1d1665288c33a",
+          hasUpdate: false,
+        },
+      });
+
+      mockDb.getServices.mockReturnValue([svc]);
+      mockRegistryClient.parseImageRef.mockReturnValue({
+        registry: "ghcr.io",
+        repository: "org/app",
+        tag: "dev",
+      });
+      mockRegistryClient.getManifestDigest.mockResolvedValue("sha256:newdigest999newdigest999");
+
+      await updateCheckerService.checkAllServicesForUpdates();
+
+      expect(mockRegistryClient.getRepositoryTags).not.toHaveBeenCalled();
+      expect(mockDb.updateServiceMetadata).toHaveBeenCalledWith(
+        "svc-1",
+        expect.objectContaining({ hasUpdate: true }),
+      );
+    });
+
+    it("does not set hasUpdate when the digest is unchanged", async () => {
+      const digest = "sha256:04219006c1a38fd2bb961554718c1c684e4c6442d7871619bfc1d1665288c33a";
+      const svc = makeDockerService({
+        metadata: {
+          image: "ghcr.io/org/app",
+          imageTag: "dev",
+          imageDigest: digest,
+          hasUpdate: false,
+        },
+      });
+
+      mockDb.getServices.mockReturnValue([svc]);
+      mockRegistryClient.parseImageRef.mockReturnValue({
+        registry: "ghcr.io",
+        repository: "org/app",
+        tag: "dev",
+      });
+      mockRegistryClient.getManifestDigest.mockResolvedValue(digest);
+
+      await updateCheckerService.checkAllServicesForUpdates();
+
+      expect(mockDb.updateServiceMetadata).toHaveBeenCalledWith(
+        "svc-1",
+        expect.objectContaining({ hasUpdate: false }),
+      );
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
     });
   });
 

@@ -56,23 +56,9 @@ export class UpdateCheckerService {
     let latestVersion: string | undefined;
 
     try {
-      if (imageTag === DOCKER_LATEST_TAG) {
-        const localDigest = service.metadata?.imageDigest;
-        const registryDigest = await registryClient.getManifestDigest(ref);
+      const parsed = imageTag === DOCKER_LATEST_TAG ? null : TagParser.extractSemVer(imageTag);
 
-        if (!localDigest || !registryDigest) return null;
-
-        hasUpdate = localDigest !== registryDigest;
-
-        if (hasUpdate) {
-          currentVersion = `${localDigest.slice(7, 19)}…`;
-          latestVersion = `${registryDigest.slice(7, 19)}…`;
-        }
-      } else {
-        const parsed = TagParser.extractSemVer(imageTag);
-
-        if (!parsed) return null; // Non-SemVer tag, nothing to compare
-
+      if (parsed) {
         const allTags = await registryClient.getRepositoryTags(ref, parsed.prefix);
 
         if (allTags.length === 0) return null; // Can't determine — preserve existing status
@@ -103,6 +89,19 @@ export class UpdateCheckerService {
           hasUpdate = true;
           currentVersion = imageTag;
           latestVersion = highestTag;
+        }
+      } else {
+        // Digest comparison for "latest" and non-semver floating tags (e.g. "dev", "stable")
+        const localDigest = service.metadata?.imageDigest;
+        const registryDigest = await registryClient.getManifestDigest(ref);
+
+        if (!localDigest || !registryDigest) return null;
+
+        hasUpdate = localDigest !== registryDigest;
+
+        if (hasUpdate) {
+          currentVersion = `${localDigest.slice(7, 19)}…`;
+          latestVersion = `${registryDigest.slice(7, 19)}…`;
         }
       }
     } catch (err) {
