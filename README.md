@@ -97,7 +97,7 @@ DockDash ships with no authentication enforced by default. You **must** put it b
 
 ### Docker socket exposure
 
-Mounting `/var/run/docker.sock` gives DockDash (and anyone who reaches its UI) full control of the Docker daemon — which on most setups means root on the host. For a hardened deployment, route Docker access through a restricted proxy such as [tecnativa/docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy) and point `DOCKER_HOST` at it:
+Mounting `/var/run/docker.sock` gives DockDash (and anyone who reaches its UI) full control of the Docker daemon — which on most setups means root on the host. For a hardened deployment, route Docker access through a restricted proxy such as [tecnativa/docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy) and point `DOCKER_HOSTS` at it:
 
 ```yaml
 services:
@@ -118,7 +118,7 @@ services:
   dockdash:
     image: dockdash
     environment:
-      - DOCKER_HOST=tcp://docker-proxy:2375
+      - DOCKER_HOSTS=tcp://docker-proxy:2375
     # No docker.sock mount needed here
     depends_on:
       - docker-proxy
@@ -134,7 +134,7 @@ All configuration is done via environment variables. Changes require a container
 |---|---|---|
 | `LOG_LEVEL` | `info` | Logging verbosity: `error`, `warn`, `info`, or `debug`. Set to `debug` to trace registry provider selection and pagination |
 | `PORT` | `3001` | Port the server listens on |
-| `DOCKER_HOST` | `unix:///var/run/docker.sock` | Docker daemon socket or TCP address |
+| `DOCKER_HOSTS` | `unix:///var/run/docker.sock` | Docker daemon socket or TCP address |
 | `NETWORK_CIDRS` | `192.168.0.1/24` | Comma-separated CIDR ranges to scan |
 | `DB_PATH` | `/app/data/dockdash.db` | Path to the SQLite database file |
 | `HEALTH_CHECK_INTERVAL` | `30000` | How often the server re-checks service health (ms) |
@@ -172,10 +172,10 @@ Mount the host socket into the container so DockDash can inspect running contain
 
 ### Remote Docker host
 
-To connect to a remote Docker daemon instead of the local socket, set `DOCKER_HOST`:
+To connect to a remote Docker daemon instead of the local socket, set `DOCKER_HOSTS`:
 
 ```
-DOCKER_HOST=tcp://192.168.1.100:2375
+DOCKER_HOSTS=tcp://192.168.1.100:2375
 ```
 
 TLS is supported via the standard `DOCKER_TLS_CERTDIR` variable.
