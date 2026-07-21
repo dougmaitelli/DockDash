@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -10,7 +10,12 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "../context/AuthContext";
 import { discoveryApi } from "../services/api";
 import { Icons } from "./Icons";
-import { AppChangelogModal } from "./modals/AppChangelogModal";
+
+const AppChangelogModal = lazy(() =>
+  import("./modals/AppChangelogModal").then(({ AppChangelogModal }) => ({
+    default: AppChangelogModal,
+  })),
+);
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -208,7 +213,9 @@ function Layout({ children }: LayoutProps) {
           </div>
         )}
         {changelogOpen && updateInfo && (
-          <AppChangelogModal release={updateInfo} onClose={() => setChangelogOpen(false)} />
+          <Suspense fallback={null}>
+            <AppChangelogModal release={updateInfo} onClose={() => setChangelogOpen(false)} />
+          </Suspense>
         )}
         {children}
       </main>

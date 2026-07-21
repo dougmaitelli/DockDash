@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useState } from "react";
+import { lazy, type ReactNode, Suspense, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
@@ -10,17 +10,21 @@ import { Icons } from "@/components/Icons";
 import { cn } from "@/lib/utils";
 
 import { useConfig } from "../../context/ConfigContext";
-import { Changelog } from "../Changelog";
 import { ContainerControls } from "../ContainerControls";
 import { DockerLogs } from "../DockerLogs";
-import { FileExplorer } from "../FileExplorer";
 import { ServiceDetails } from "../ServiceDetails";
-import { Terminal } from "../Terminal";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 import "./ServiceDrawer.css";
 
 const ANIM_MS = 220;
+const Changelog = lazy(() =>
+  import("../Changelog").then(({ Changelog }) => ({ default: Changelog })),
+);
+const FileExplorer = lazy(() =>
+  import("../FileExplorer").then(({ FileExplorer }) => ({ default: FileExplorer })),
+);
+const Terminal = lazy(() => import("../Terminal").then(({ Terminal }) => ({ default: Terminal })));
 
 export enum Tab {
   DETAILS = "details",
@@ -192,7 +196,15 @@ export function ServiceDrawer({
         </div>
 
         <div className="flex-1 flex flex-col overflow-hidden overscroll-contain">
-          {tabs[tab].content}
+          <Suspense
+            fallback={
+              <div className="flex-1 grid place-items-center" aria-busy="true">
+                <span className="text-sm text-muted-foreground">Loading…</span>
+              </div>
+            }
+          >
+            {tabs[tab].content}
+          </Suspense>
         </div>
       </div>
     </>,
