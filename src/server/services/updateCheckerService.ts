@@ -5,23 +5,26 @@ import { t } from "../i18n/index.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
+import { ConcurrentService } from "./ConcurrentService.js";
 import { notificationService } from "./notificationService.js";
 import { registryClient } from "./registryClient.js";
 
 type Service = ReturnType<typeof serviceRepository.getServices>[number];
 
-export class UpdateCheckerService {
+export class UpdateCheckerService extends ConcurrentService {
+  protected readonly concurrencyLimit = 5;
+
   async checkAllServicesForUpdates(): Promise<void> {
     const services = serviceRepository.getServices();
     const dockerServices = services.filter((s) => s.source === ServiceSource.DOCKER);
 
-    const newUpdates: { name: string; currentVersion: string; latestVersion: string }[] = [];
-
-    for (const service of dockerServices) {
-      const update = await this.checkServiceForUpdate(service);
-
-      if (update) newUpdates.push(update);
-    }
+    const results = await this.mapWithConcurrency(dockerServices, (service) =>
+      this.checkServiceForUpdate(service),
+    );
+    const newUpdates = results.filter(
+      (update): update is { name: string; currentVersion: string; latestVersion: string } =>
+        update !== null,
+    );
 
     if (newUpdates.length === 0) return;
 

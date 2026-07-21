@@ -137,6 +137,37 @@ describe("ResourceStatsService.fetchAndCacheAllStats", () => {
     await refresh;
   });
 
+  it("limits concurrent Docker stats requests", async () => {
+    const services = Array.from({ length: 11 }, (_, i) => makeDockerSvc(`svc-${i}`));
+    let active = 0;
+    let maxActive = 0;
+    let release: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    mockDb.getServices.mockReturnValue(services);
+    mockDockerService.getContainerForServiceId.mockImplementation((id: string) => ({ id }));
+    mockDockerService.getContainerStats.mockImplementation(async () => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      await gate;
+      active--;
+
+      return NORMAL_STATS;
+    });
+
+    const refresh = resourceStatsService.fetchAndCacheAllStats();
+
+    await expect.poll(() => active).toBe(10);
+    expect(mockDockerService.getContainerStats).toHaveBeenCalledTimes(10);
+    release!();
+    await refresh;
+
+    expect(maxActive).toBe(10);
+    expect(mockDockerService.getContainerStats).toHaveBeenCalledTimes(11);
+  });
+
   it("skips non-Docker services", async () => {
     mockDb.getServices.mockReturnValue([
       {

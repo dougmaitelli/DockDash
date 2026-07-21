@@ -332,4 +332,36 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
       expect(mockDb.updateServiceMetadata).not.toHaveBeenCalled();
     });
   });
+
+  it("limits concurrent registry update checks", async () => {
+    const services = Array.from({ length: 6 }, (_, i) =>
+      makeDockerService({ id: `svc-${i}`, name: `service-${i}` }),
+    );
+    let active = 0;
+    let maxActive = 0;
+    let release: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    mockDb.getServices.mockReturnValue(services);
+    mockRegistryClient.getRepositoryTags.mockImplementation(async () => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      await gate;
+      active--;
+
+      return ["1.25"];
+    });
+
+    const check = updateCheckerService.checkAllServicesForUpdates();
+
+    await expect.poll(() => active).toBe(5);
+    expect(mockRegistryClient.getRepositoryTags).toHaveBeenCalledTimes(5);
+    release!();
+    await check;
+
+    expect(maxActive).toBe(5);
+    expect(mockRegistryClient.getRepositoryTags).toHaveBeenCalledTimes(6);
+  });
 });

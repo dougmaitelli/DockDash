@@ -11,6 +11,7 @@ import { config } from "../lib/config.js";
 import { detectProtocolByPort, HTTP_PROTOCOLS, USER_AGENT } from "../lib/constants.js";
 import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
+import { ConcurrentService } from "./ConcurrentService.js";
 import {
   type ContainerStateMap,
   DOCKER_CONTAINER_DOWN_STATES,
@@ -22,10 +23,13 @@ import { notificationService } from "./notificationService.js";
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
 
-export class HealthCheckService {
+export class HealthCheckService extends ConcurrentService {
+  protected readonly concurrencyLimit = 20;
+  private readonly dockerHostConcurrencyLimit = 5;
+
   private async checkSingleDockerService(
     service: Service,
-    stateMap?: ContainerStateMap,
+    stateMap?: ContainerStateMap | null,
   ): Promise<ServiceStatus | null> {
     const dockerHostId = service.metadata?.dockerHostId;
     const resolvedHost = dockerHostId ? dockerService.resolveHost(dockerHostId) : undefined;
@@ -34,7 +38,7 @@ export class HealthCheckService {
     try {
       let status: ServiceStatus;
 
-      if (!resolvedHost || !containerName) {
+      if (!resolvedHost || !containerName || stateMap === null) {
         status = ServiceStatus.UNKNOWN;
       } else {
         const map =
@@ -131,24 +135,28 @@ export class HealthCheckService {
         return map;
       }, new Map<string, string>());
 
-    const stateMapByHostId = new Map<string, ContainerStateMap>();
-
-    for (const [dockerHostId, resolvedHost] of hostById) {
-      try {
-        stateMapByHostId.set(
-          dockerHostId,
-          await dockerService.getContainersStateMap(
+    const hostStates = await this.mapWithConcurrency(
+      [...hostById],
+      async ([dockerHostId, resolvedHost]): Promise<[string, ContainerStateMap | null]> => {
+        try {
+          const stateMap = await dockerService.getContainersStateMap(
             dockerService.createDockerClientForHost(resolvedHost),
-          ),
-        );
-      } catch (err) {
-        logger.error(
-          `Failed to fetch container states for Docker host ${resolvedHost}: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
+          );
 
-    for (const service of services) {
+          return [dockerHostId, stateMap];
+        } catch (err) {
+          logger.error(
+            `Failed to fetch container states for Docker host ${resolvedHost}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+
+          return [dockerHostId, null];
+        }
+      },
+      this.dockerHostConcurrencyLimit,
+    );
+    const stateMapByHostId = new Map(hostStates);
+
+    const statuses = await this.mapWithConcurrency(services, async (service) => {
       let status: ServiceStatus | null;
 
       if (service.source === ServiceSource.DOCKER) {
@@ -164,11 +172,12 @@ export class HealthCheckService {
 
       if (status !== null) this.commitStatus(service, status);
 
-      if (status === null) {
-        errors++;
-      } else if (status !== service.status) {
-        updated++;
-      }
+      return { previousStatus: service.status, status };
+    });
+
+    for (const { previousStatus, status } of statuses) {
+      if (status === null) errors++;
+      else if (status !== previousStatus) updated++;
     }
 
     return { updated, errors };

@@ -403,6 +403,38 @@ describe("HealthCheckService.checkAllServices", () => {
     expect(result.updated).toBeGreaterThanOrEqual(1);
     expect(result.errors).toBe(0);
   });
+
+  it("limits concurrent service health checks", async () => {
+    const services = Array.from({ length: 21 }, (_, i) =>
+      makeNetworkService({ id: `svc-${i}`, host: `192.168.1.${i + 1}` }),
+    );
+    let active = 0;
+    let maxActive = 0;
+    let release: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    mockDb.getServices.mockReturnValue(services);
+    mockAxios.get.mockImplementation(async () => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      await gate;
+      active--;
+
+      return { status: 200 };
+    });
+
+    const check = healthCheckService.checkAllServices();
+
+    await expect.poll(() => active).toBe(20);
+    expect(mockAxios.get).toHaveBeenCalledTimes(20);
+    release!();
+    await check;
+
+    expect(maxActive).toBe(20);
+    expect(mockAxios.get).toHaveBeenCalledTimes(21);
+  });
 });
 
 describe("HealthCheckService — flag interaction scenarios", () => {
