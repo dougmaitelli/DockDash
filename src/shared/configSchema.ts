@@ -22,6 +22,7 @@ export const CONFIG_SCHEMA = {
   dockerHosts:              { env: "DOCKER_HOSTS",              type: "string-array",   default: [],                   showOnUi: true },
   networkCidrs:             { env: "NETWORK_CIDRS",             type: "string-array",   default: ["192.168.0.0/24"],   showOnUi: true },
   healthCheckInterval:      { env: "HEALTH_CHECK_INTERVAL",     type: "number",         default: 30_000,               showOnUi: true, format: "ms" },
+  resourceMonitorInterval:  { env: "RESOURCE_MONITOR_INTERVAL", type: "number",         default: 5_000,                showOnUi: true, format: "ms" },
   updateCheckInterval:      { env: "UPDATE_CHECK_INTERVAL",     type: "number",         default: 3_600_000,            showOnUi: true, format: "ms" },
   containerControlsEnabled: { env: "DISABLE_CONTAINER_CONTROLS",type: "boolean-disable",                               showOnUi: true },
   healthHistoryEnabled:     { env: "DISABLE_HEALTH_HISTORY",    type: "boolean-disable",                               showOnUi: true },

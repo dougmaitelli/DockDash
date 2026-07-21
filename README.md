@@ -138,6 +138,7 @@ All configuration is done via environment variables. Changes require a container
 | `NETWORK_CIDRS` | `192.168.0.1/24` | Comma-separated CIDR ranges to scan |
 | `DB_PATH` | `/app/data/dockdash.db` | Path to the SQLite database file |
 | `HEALTH_CHECK_INTERVAL` | `30000` | How often the server re-checks service health (ms) |
+| `RESOURCE_MONITOR_INTERVAL` | `5000` | How often the resource stats job fetches CPU / memory from Docker and refreshes the service table (ms) |
 | `UPDATE_CHECK_INTERVAL` | `3600000` | How often to check Docker images for updates (ms) |
 | `HEALTH_HISTORY_TTL_DAYS` | `30` | How many days of health check history to retain |
 | `LOCALE` | `en` | Language used for server-side notification messages |

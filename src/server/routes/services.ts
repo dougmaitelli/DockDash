@@ -16,6 +16,7 @@ import { logger } from "../lib/logService.js";
 import { isNonEmptyString, isValidEnumValue, isValidPort } from "../lib/validate.js";
 import { changelogService } from "../services/changelogService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
+import { resourceStatsService } from "../services/resourceStatsService.js";
 
 const router = Router();
 
@@ -30,7 +31,7 @@ router.get("/serviceStatuses", (_req, res) => {
     return res.json(statuses);
   }
 
-  const resourceMap = healthCheckService.getLatestStats();
+  const resourceMap = resourceStatsService.getLatestStats();
   const enriched = statuses.map((status) => {
     const stats = resourceMap.get(status.id);
 

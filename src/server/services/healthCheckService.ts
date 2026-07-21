@@ -1,7 +1,7 @@
 import axios from "axios";
 import net from "net";
 
-import type { ContainerStats, ServiceMetadata } from "@shared";
+import type { ServiceMetadata } from "@shared";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 import { historyRepository } from "../db/historyRepository.js";
@@ -23,16 +23,6 @@ const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
 
 export class HealthCheckService {
-  private readonly cpuSpiking = new Map<string, boolean>();
-  private readonly memorySpiking = new Map<string, boolean>();
-  // tracks when each service first crossed the CPU threshold (ms); cleared on recovery
-  private readonly cpuSpikeStart = new Map<string, number>();
-  private readonly latestStats = new Map<string, { cpuPercent: number; memoryPercent: number }>();
-
-  getLatestStats(): ReadonlyMap<string, { cpuPercent: number; memoryPercent: number }> {
-    return this.latestStats;
-  }
-
   private async checkSingleDockerService(
     service: Service,
     stateMap?: ContainerStateMap,
@@ -160,7 +150,6 @@ export class HealthCheckService {
 
     for (const service of services) {
       let status: ServiceStatus | null;
-      let stats: ContainerStats | undefined;
 
       if (service.source === ServiceSource.DOCKER) {
         const dockerHostId = service.metadata?.dockerHostId;
@@ -169,23 +158,11 @@ export class HealthCheckService {
           service,
           dockerHostId ? stateMapByHostId.get(dockerHostId) : undefined,
         );
-
-        if (config.resourceMonitorEnabled) {
-          try {
-            const container = dockerService.getContainerForServiceId(service.id!);
-
-            stats = await dockerService.getContainerStats(container);
-          } catch (err) {
-            logger.debug(
-              `Resource monitor: skipping ${service.name}: ${err instanceof Error ? err.message : String(err)}`,
-            );
-          }
-        }
       } else {
         status = await this.checkSingleNetworkService(service);
       }
 
-      if (status !== null) this.commitStatus(service, status, stats);
+      if (status !== null) this.commitStatus(service, status);
 
       if (status === null) {
         errors++;
@@ -260,78 +237,7 @@ export class HealthCheckService {
     return (await this.checkTcp(service.host, port)) ? ServiceStatus.UP : ServiceStatus.DOWN;
   }
 
-  private notifyResourceSpikes(service: Service, stats: ContainerStats): void {
-    const id = service.id!;
-
-    if (config.cpuSpikeThreshold > 0) {
-      const wasCpuSpiking = this.cpuSpiking.get(id) ?? false;
-      const nowAboveCpuThreshold = stats.cpuPercent >= config.cpuSpikeThreshold;
-      const durationMs = config.spikeDurationThreshold * 1000;
-
-      if (nowAboveCpuThreshold) {
-        if (!this.cpuSpikeStart.has(id)) this.cpuSpikeStart.set(id, Date.now());
-
-        const elapsed = Date.now() - this.cpuSpikeStart.get(id)!;
-
-        if (!wasCpuSpiking && elapsed >= durationMs) {
-          this.cpuSpiking.set(id, true);
-          void notificationService
-            .notify(
-              t("notifications.cpuSpike", { name: service.name }),
-              t("notifications.cpuSpikeBody", {
-                name: service.name,
-                percent: stats.cpuPercent.toFixed(1),
-              }),
-              "warning",
-            )
-            .catch(() => {});
-        }
-      } else {
-        if (wasCpuSpiking) {
-          this.cpuSpiking.set(id, false);
-          void notificationService
-            .notify(
-              t("notifications.cpuRecovered", { name: service.name }),
-              t("notifications.cpuRecoveredBody", { name: service.name }),
-              "success",
-            )
-            .catch(() => {});
-        }
-
-        this.cpuSpikeStart.delete(id);
-      }
-    }
-
-    if (config.memorySpikeThreshold > 0) {
-      const wasMemSpiking = this.memorySpiking.get(id) ?? false;
-      const nowMemSpiking = stats.memoryPercent >= config.memorySpikeThreshold;
-
-      this.memorySpiking.set(id, nowMemSpiking);
-
-      if (nowMemSpiking && !wasMemSpiking) {
-        void notificationService
-          .notify(
-            t("notifications.memorySpike", { name: service.name }),
-            t("notifications.memorySpikeBody", {
-              name: service.name,
-              percent: stats.memoryPercent.toFixed(1),
-            }),
-            "warning",
-          )
-          .catch(() => {});
-      } else if (!nowMemSpiking && wasMemSpiking) {
-        void notificationService
-          .notify(
-            t("notifications.memoryRecovered", { name: service.name }),
-            t("notifications.memoryRecoveredBody", { name: service.name }),
-            "success",
-          )
-          .catch(() => {});
-      }
-    }
-  }
-
-  private commitStatus(service: Service, status: ServiceStatus, stats?: ContainerStats): void {
+  private commitStatus(service: Service, status: ServiceStatus): void {
     this.logStatusChange(service.name, service.status, status);
     this.notifyStatusChange(service.name, service.status, status);
     serviceRepository.updateServiceStatus(service.id!, status);
@@ -339,16 +245,6 @@ export class HealthCheckService {
     if (config.healthHistoryEnabled) {
       historyRepository.addHealthHistory(service.id!, status);
     }
-
-    if (stats && config.resourceMonitorEnabled) {
-      historyRepository.addResourceStatsHistory(service.id!, stats.cpuPercent, stats.memoryPercent);
-      this.latestStats.set(service.id!, {
-        cpuPercent: stats.cpuPercent,
-        memoryPercent: stats.memoryPercent,
-      });
-    }
-
-    if (stats && notificationService.configured) this.notifyResourceSpikes(service, stats);
   }
 
   private logStatusChange(name: string, oldStatus: ServiceStatus, newStatus: ServiceStatus): void {

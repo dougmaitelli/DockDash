@@ -23,6 +23,9 @@ const mockHistRepo = vi.hoisted(() => ({
 
 const mockHealthCheckService = vi.hoisted(() => ({
   checkSingleService: vi.fn(),
+}));
+
+const mockResourceStatsService = vi.hoisted(() => ({
   getLatestStats: vi.fn(),
 }));
 
@@ -47,6 +50,9 @@ vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockSvcRe
 vi.mock("@server/db/historyRepository.js", () => ({ historyRepository: mockHistRepo }));
 vi.mock("@server/services/healthCheckService.js", () => ({
   healthCheckService: mockHealthCheckService,
+}));
+vi.mock("@server/services/resourceStatsService.js", () => ({
+  resourceStatsService: mockResourceStatsService,
 }));
 vi.mock("@server/services/changelogService.js", () => ({
   changelogService: mockChangelogService,
@@ -105,14 +111,14 @@ describe("GET /api/serviceStatuses", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(statuses);
-    expect(mockHealthCheckService.getLatestStats).not.toHaveBeenCalled();
+    expect(mockResourceStatsService.getLatestStats).not.toHaveBeenCalled();
   });
 
   it("merges cached stats from health check service when resourceMonitorEnabled is true", async () => {
     const statuses = [{ id: "svc-1", status: ServiceStatus.UP, metadata: {} }];
 
     mockSvcRepo.getServiceStatuses.mockReturnValue(statuses);
-    mockHealthCheckService.getLatestStats.mockReturnValue(
+    mockResourceStatsService.getLatestStats.mockReturnValue(
       new Map([["svc-1", { cpuPercent: 30, memoryPercent: 50 }]]),
     );
     mockConfig.resourceMonitorEnabled = true;
@@ -127,7 +133,7 @@ describe("GET /api/serviceStatuses", () => {
     const statuses = [{ id: "svc-1", status: ServiceStatus.UP, metadata: {} }];
 
     mockSvcRepo.getServiceStatuses.mockReturnValue(statuses);
-    mockHealthCheckService.getLatestStats.mockReturnValue(new Map());
+    mockResourceStatsService.getLatestStats.mockReturnValue(new Map());
     mockConfig.resourceMonitorEnabled = true;
 
     const res = await request(app).get("/api/serviceStatuses");

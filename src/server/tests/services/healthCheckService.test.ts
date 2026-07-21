@@ -385,7 +385,6 @@ describe("HealthCheckService.checkAllServices", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockConfig.healthHistoryEnabled = true;
-    mockConfig.resourceMonitorEnabled = true;
     mockNotificationService.notify.mockResolvedValue(undefined);
   });
 
@@ -404,283 +403,9 @@ describe("HealthCheckService.checkAllServices", () => {
     expect(result.updated).toBeGreaterThanOrEqual(1);
     expect(result.errors).toBe(0);
   });
-
-  it("populates latestStats cache for Docker services after fetching resource stats", async () => {
-    const svc = makeDockerSvc("running");
-
-    svc.id = "cache-test-svc";
-    mockDb.getServices.mockReturnValue([svc]);
-    mockDockerService.resolveHost.mockReturnValue("tcp://host:2375");
-    mockDockerService.createDockerClientForHost.mockReturnValue({});
-    mockDockerService.getContainersStateMap.mockResolvedValue(
-      new Map([["nginx", { state: "running" }]]),
-    );
-    mockDockerService.getContainerForServiceId.mockReturnValue({});
-    mockDockerService.getContainerStats.mockResolvedValue({
-      cpuPercent: 42,
-      memoryPercent: 55,
-      memoryUsed: 0,
-      memoryLimit: 1_000_000_000,
-      networkRx: 0,
-      networkTx: 0,
-      blockRead: 0,
-      blockWrite: 0,
-    });
-
-    await healthCheckService.checkAllServices();
-
-    expect(healthCheckService.getLatestStats().get("cache-test-svc")).toMatchObject({
-      cpuPercent: 42,
-      memoryPercent: 55,
-    });
-  });
-});
-
-describe("HealthCheckService — resource spike monitoring", () => {
-  const BASE_STATS = {
-    cpuPercent: 50,
-    memoryUsed: 0,
-    memoryLimit: 1_000_000_000,
-    memoryPercent: 50,
-    networkRx: 0,
-    networkTx: 0,
-    blockRead: 0,
-    blockWrite: 0,
-  };
-  const CPU_SPIKE_STATS = { ...BASE_STATS, cpuPercent: 95 };
-  const MEM_SPIKE_STATS = { ...BASE_STATS, memoryPercent: 95 };
-  const NORMAL_STATS = BASE_STATS;
-
-  function makeDockerSvcWithId(id: string) {
-    return {
-      ...makeDockerSvc("running"),
-      id,
-    };
-  }
-
-  function setupDockerEnv(svc: ReturnType<typeof makeDockerSvc>) {
-    mockDb.getServices.mockReturnValue([svc]);
-    mockDb.getService.mockReturnValue(svc);
-    mockDockerService.resolveHost.mockReturnValue("tcp://host:2375");
-    mockDockerService.createDockerClientForHost.mockReturnValue({});
-    mockDockerService.getContainersStateMap.mockResolvedValue(
-      new Map([["nginx", { state: "running" }]]),
-    );
-    mockDockerService.getContainerForServiceId.mockReturnValue({});
-  }
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockConfig.resourceMonitorEnabled = true;
-    mockConfig.cpuSpikeThreshold = 90;
-    mockConfig.memorySpikeThreshold = 90;
-    mockConfig.spikeDurationThreshold = 0;
-    mockNotificationService.configured = true;
-    mockNotificationService.notify.mockResolvedValue(undefined);
-  });
-
-  it("skips resource checks and notifications when resourceMonitorEnabled is false", async () => {
-    mockConfig.resourceMonitorEnabled = false;
-    const svc = makeDockerSvcWithId("res-skip-disabled");
-
-    setupDockerEnv(svc);
-
-    await healthCheckService.checkAllServices();
-
-    expect(mockDockerService.getContainerStats).not.toHaveBeenCalled();
-    expect(mockNotificationService.notify).not.toHaveBeenCalled();
-  });
-
-  it("skips CPU spike notifications when CPU threshold is 0", async () => {
-    mockConfig.cpuSpikeThreshold = 0;
-    const svc = makeDockerSvcWithId("cpu-threshold-zero");
-
-    setupDockerEnv(svc);
-    mockDockerService.getContainerStats.mockResolvedValue(CPU_SPIKE_STATS);
-
-    await healthCheckService.checkAllServices();
-
-    expect(mockNotificationService.notify).not.toHaveBeenCalled();
-  });
-
-  it("skips memory spike notifications when memory threshold is 0", async () => {
-    mockConfig.memorySpikeThreshold = 0;
-    const svc = makeDockerSvcWithId("mem-threshold-zero");
-
-    setupDockerEnv(svc);
-    mockDockerService.getContainerStats.mockResolvedValue(MEM_SPIKE_STATS);
-
-    await healthCheckService.checkAllServices();
-
-    expect(mockNotificationService.notify).not.toHaveBeenCalled();
-  });
-
-  it("skips spike notifications when Apprise is not configured", async () => {
-    mockNotificationService.configured = false;
-    const svc = makeDockerSvcWithId("res-skip-apprise");
-
-    setupDockerEnv(svc);
-    mockDockerService.getContainerStats.mockResolvedValue(CPU_SPIKE_STATS);
-
-    await healthCheckService.checkAllServices();
-
-    expect(mockDockerService.getContainerStats).toHaveBeenCalled();
-    expect(mockNotificationService.notify).not.toHaveBeenCalled();
-  });
-
-  it("CPU: sends warning on spike, suppresses while sustained, sends recovery when resolved", async () => {
-    const svc = makeDockerSvcWithId("cpu-lifecycle");
-
-    setupDockerEnv(svc);
-
-    // Run 1: CPU normal → no notification
-    mockDockerService.getContainerStats.mockResolvedValue(NORMAL_STATS);
-    await healthCheckService.checkAllServices();
-    expect(mockNotificationService.notify).not.toHaveBeenCalled();
-
-    // Run 2: CPU spikes → warning
-    mockDockerService.getContainerStats.mockResolvedValue(CPU_SPIKE_STATS);
-    await healthCheckService.checkAllServices();
-    expect(mockNotificationService.notify).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      "warning",
-    );
-
-    vi.clearAllMocks();
-    mockNotificationService.notify.mockResolvedValue(undefined);
-
-    // Run 3: CPU still spiking → no repeat notification
-    await healthCheckService.checkAllServices();
-    expect(mockNotificationService.notify).not.toHaveBeenCalled();
-
-    // Run 4: CPU recovers → recovery notification
-    mockDockerService.getContainerStats.mockResolvedValue(NORMAL_STATS);
-    await healthCheckService.checkAllServices();
-    expect(mockNotificationService.notify).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      "success",
-    );
-  });
-
-  it("Memory: sends warning on spike, suppresses while sustained, sends recovery when resolved", async () => {
-    const svc = makeDockerSvcWithId("mem-lifecycle");
-
-    setupDockerEnv(svc);
-
-    // Run 1: memory normal → no notification
-    mockDockerService.getContainerStats.mockResolvedValue(NORMAL_STATS);
-    await healthCheckService.checkAllServices();
-    expect(mockNotificationService.notify).not.toHaveBeenCalled();
-
-    // Run 2: memory spikes → warning
-    mockDockerService.getContainerStats.mockResolvedValue(MEM_SPIKE_STATS);
-    await healthCheckService.checkAllServices();
-    expect(mockNotificationService.notify).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      "warning",
-    );
-
-    vi.clearAllMocks();
-    mockNotificationService.notify.mockResolvedValue(undefined);
-
-    // Run 3: memory still spiking → no repeat notification
-    await healthCheckService.checkAllServices();
-    expect(mockNotificationService.notify).not.toHaveBeenCalled();
-
-    // Run 4: memory recovers → recovery notification
-    mockDockerService.getContainerStats.mockResolvedValue(NORMAL_STATS);
-    await healthCheckService.checkAllServices();
-    expect(mockNotificationService.notify).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      "success",
-    );
-  });
-
-  it("CPU: suppresses alert until threshold is exceeded for the configured duration", async () => {
-    mockConfig.spikeDurationThreshold = 300; // 300 s debounce
-    const svc = makeDockerSvcWithId("cpu-duration-debounce");
-
-    setupDockerEnv(svc);
-    vi.useFakeTimers();
-
-    try {
-      // Run 1: CPU spikes but duration has not elapsed → no alert
-      mockDockerService.getContainerStats.mockResolvedValue(CPU_SPIKE_STATS);
-      await healthCheckService.checkAllServices();
-      expect(mockNotificationService.notify).not.toHaveBeenCalled();
-
-      // Run 2: CPU still spiking, only 60 s elapsed → still no alert
-      vi.advanceTimersByTime(60_000);
-      await healthCheckService.checkAllServices();
-      expect(mockNotificationService.notify).not.toHaveBeenCalled();
-
-      // Run 3: 300 s elapsed → alert fires
-      vi.advanceTimersByTime(240_000);
-      await healthCheckService.checkAllServices();
-      expect(mockNotificationService.notify).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(String),
-        "warning",
-      );
-
-      vi.clearAllMocks();
-      mockNotificationService.notify.mockResolvedValue(undefined);
-
-      // Run 4: CPU recovers → brief spike that never reached threshold mid-debounce is cleared
-      mockDockerService.getContainerStats.mockResolvedValue(NORMAL_STATS);
-      await healthCheckService.checkAllServices();
-      expect(mockNotificationService.notify).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(String),
-        "success",
-      );
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("CPU: a brief spike that drops before the duration elapses sends no alert and no recovery", async () => {
-    mockConfig.spikeDurationThreshold = 300;
-    const svc = makeDockerSvcWithId("cpu-brief-spike");
-
-    setupDockerEnv(svc);
-    vi.useFakeTimers();
-
-    try {
-      // Spike detected
-      mockDockerService.getContainerStats.mockResolvedValue(CPU_SPIKE_STATS);
-      await healthCheckService.checkAllServices();
-      expect(mockNotificationService.notify).not.toHaveBeenCalled();
-
-      // Drops before duration elapses (only 10 s in)
-      vi.advanceTimersByTime(10_000);
-      mockDockerService.getContainerStats.mockResolvedValue(NORMAL_STATS);
-      await healthCheckService.checkAllServices();
-
-      // No alert and no recovery sent
-      expect(mockNotificationService.notify).not.toHaveBeenCalled();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
 });
 
 describe("HealthCheckService — flag interaction scenarios", () => {
-  const SPIKE_STATS = {
-    cpuPercent: 95,
-    memoryUsed: 0,
-    memoryLimit: 1_000_000_000,
-    memoryPercent: 95,
-    networkRx: 0,
-    networkTx: 0,
-    blockRead: 0,
-    blockWrite: 0,
-  };
-
   // Docker service that is currently DOWN so DOWN→UP triggers a status notification.
   function makeDownDockerSvc(id: string) {
     return {
@@ -704,22 +429,16 @@ describe("HealthCheckService — flag interaction scenarios", () => {
     mockDockerService.getContainersStateMap.mockResolvedValue(
       new Map([["nginx", { state: "running" }]]),
     );
-    mockDockerService.getContainerForServiceId.mockReturnValue({});
-    mockDockerService.getContainerStats.mockResolvedValue(SPIKE_STATS);
   }
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockConfig.healthHistoryEnabled = true;
-    mockConfig.resourceMonitorEnabled = true;
-    mockConfig.cpuSpikeThreshold = 90;
-    mockConfig.memorySpikeThreshold = 90;
-    mockConfig.spikeDurationThreshold = 0;
     mockNotificationService.configured = true;
     mockNotificationService.notify.mockResolvedValue(undefined);
   });
 
-  it("persists health history and resource stats independently when Apprise is disabled", async () => {
+  it("persists health history when Apprise is disabled", async () => {
     mockNotificationService.configured = false;
     const svc = makeDownDockerSvc("flag-apprise-disabled-history");
 
@@ -728,39 +447,21 @@ describe("HealthCheckService — flag interaction scenarios", () => {
     await healthCheckService.checkAllServices();
 
     expect(mockDb.addHealthHistory).toHaveBeenCalledWith(svc.id, ServiceStatus.UP);
-    expect(mockDb.addResourceStatsHistory).toHaveBeenCalledWith(
-      svc.id,
-      SPIKE_STATS.cpuPercent,
-      SPIKE_STATS.memoryPercent,
-    );
   });
 
-  it("persists health history but not resource stats when resource monitoring is disabled", async () => {
-    mockConfig.resourceMonitorEnabled = false;
-    const svc = makeDownDockerSvc("flag-resmon-disabled-history");
+  it("skips health history when healthHistoryEnabled is false", async () => {
+    mockConfig.healthHistoryEnabled = false;
+    const svc = makeDownDockerSvc("flag-history-disabled");
 
     setupDockerEnv(svc);
 
     await healthCheckService.checkAllServices();
 
-    expect(mockDb.addHealthHistory).toHaveBeenCalledWith(svc.id, ServiceStatus.UP);
-    expect(mockDb.addResourceStatsHistory).not.toHaveBeenCalled();
+    expect(mockDb.addHealthHistory).not.toHaveBeenCalled();
   });
 
-  it("skips all notifications when Apprise is disabled, even when status and stats would trigger them", async () => {
-    mockNotificationService.configured = false;
-    const svc = makeDownDockerSvc("flag-apprise-disabled-no-notify");
-
-    setupDockerEnv(svc);
-
-    await healthCheckService.checkAllServices();
-
-    expect(mockNotificationService.notify).not.toHaveBeenCalled();
-  });
-
-  it("emits status notification but not spike notification when resource monitoring is disabled", async () => {
-    mockConfig.resourceMonitorEnabled = false;
-    const svc = makeDownDockerSvc("flag-resmon-disabled-notify");
+  it("sends status notification but not spike notification (resource stats are a separate job)", async () => {
+    const svc = makeDownDockerSvc("flag-status-notify");
 
     setupDockerEnv(svc);
 
@@ -776,26 +477,5 @@ describe("HealthCheckService — flag interaction scenarios", () => {
       expect.any(String),
       "warning",
     );
-  });
-
-  it("fires both status and spike notifications when health history is disabled", async () => {
-    mockConfig.healthHistoryEnabled = false;
-    const svc = makeDownDockerSvc("flag-history-disabled-notify");
-
-    setupDockerEnv(svc);
-
-    await healthCheckService.checkAllServices();
-
-    expect(mockNotificationService.notify).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      "success",
-    );
-    expect(mockNotificationService.notify).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      "warning",
-    );
-    expect(mockDb.addHealthHistory).not.toHaveBeenCalled();
   });
 });

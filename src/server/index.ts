@@ -7,6 +7,7 @@ import { createSessionStore } from "./db/connection.js";
 import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
 import { HistoryCleanupJob } from "./jobs/HistoryCleanupJob.js";
 import { HistoryRollupJob } from "./jobs/HistoryRollupJob.js";
+import { ResourceStatsJob } from "./jobs/ResourceStatsJob.js";
 import { UpdateCheckJob } from "./jobs/UpdateCheckJob.js";
 import { config } from "./lib/config.js";
 import { APP_NAME } from "./lib/constants.js";
@@ -23,6 +24,7 @@ import serviceRoutes from "./routes/services.js";
 import systemRoutes from "./routes/system.js";
 import terminalRoutes from "./routes/terminal.js";
 import { healthCheckService } from "./services/healthCheckService.js";
+import { resourceStatsService } from "./services/resourceStatsService.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
@@ -134,12 +136,14 @@ const server = app.listen(PORT, () => {
   new HealthCheckJob().start();
   new HistoryCleanupJob().start();
   new HistoryRollupJob().start();
+  new ResourceStatsJob().start();
 
   // Run one health check immediately so Docker metadata (imageTag, imageDigest) is
   // synced before the update checker fires. Without this, a container updated between
   // restarts would still carry the old imageTag in the DB and trigger a false
   // "update available" notification on startup.
   void healthCheckService.checkAllServices().finally(() => new UpdateCheckJob().start());
+  void resourceStatsService.fetchAndCacheAllStats();
 });
 
 server.on("error", (err: NodeJS.ErrnoException) => {
