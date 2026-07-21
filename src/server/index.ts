@@ -3,7 +3,8 @@ import session from "express-session";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { createSessionStore } from "./db/connection.js";
+import { closeConnection, createSessionStore } from "./db/connection.js";
+import type { BackgroundJob } from "./jobs/BackgroundJob.js";
 import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
 import { HistoryCleanupJob } from "./jobs/HistoryCleanupJob.js";
 import { HistoryRollupJob } from "./jobs/HistoryRollupJob.js";
@@ -11,6 +12,7 @@ import { ResourceStatsJob } from "./jobs/ResourceStatsJob.js";
 import { UpdateCheckJob } from "./jobs/UpdateCheckJob.js";
 import { config } from "./lib/config.js";
 import { APP_NAME } from "./lib/constants.js";
+import { createGracefulShutdown } from "./lib/gracefulShutdown.js";
 import { logger } from "./lib/logService.js";
 import { requireAuth } from "./middleware/auth.js";
 import authRoutes from "./routes/auth.js";
@@ -23,12 +25,27 @@ import notificationRoutes from "./routes/notifications.js";
 import serviceRoutes from "./routes/services.js";
 import systemRoutes from "./routes/system.js";
 import terminalRoutes from "./routes/terminal.js";
+import { dockerService } from "./services/dockerService.js";
 import { healthCheckService } from "./services/healthCheckService.js";
+import { networkScanner } from "./services/networkScanner.js";
 import { resourceStatsService } from "./services/resourceStatsService.js";
+import { terminalService } from "./services/terminalService.js";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const PORT = config.port;
+const jobs: BackgroundJob[] = [
+  new HealthCheckJob(),
+  new HistoryCleanupJob(),
+  new HistoryRollupJob(),
+  new ResourceStatsJob(),
+];
+const updateCheckJob = new UpdateCheckJob();
+
+jobs.push(updateCheckJob);
+const startupTasks: Promise<unknown>[] = [];
+let shuttingDown = false;
 
 // Trust reverse-proxy headers so req.protocol reflects X-Forwarded-Proto
 const trustProxy = config.trustProxy;
@@ -124,6 +141,8 @@ app.use(
 );
 
 const server = app.listen(PORT, () => {
+  if (shuttingDown) return;
+
   logger.info(`${APP_NAME} server running on http://localhost:${PORT}`);
   logger.info(`Docker hosts: ${config.dockerHosts.join(", ")}`);
   logger.info(`Network CIDRs: ${config.networkCidrs.join(",")}`);
@@ -132,18 +151,37 @@ const server = app.listen(PORT, () => {
   logger.info(`Update check interval: ${config.updateCheckInterval}ms`);
   logger.info(`Auth: ${config.oidcEnabled ? "OIDC enabled" : "disabled (unsecured)"}`);
 
-  new HealthCheckJob().start();
-  new HistoryCleanupJob().start();
-  new HistoryRollupJob().start();
-  new ResourceStatsJob().start();
+  jobs.slice(0, -1).forEach((job) => job.start());
 
   // Run one health check immediately so Docker metadata (imageTag, imageDigest) is
   // synced before the update checker fires. Without this, a container updated between
   // restarts would still carry the old imageTag in the DB and trigger a false
   // "update available" notification on startup.
-  void healthCheckService.checkAllServices().finally(() => new UpdateCheckJob().start());
-  void resourceStatsService.fetchAndCacheAllStats();
+  const initialHealthCheck = healthCheckService
+    .checkAllServices()
+    .finally(() => !shuttingDown && updateCheckJob.start());
+
+  startupTasks.push(initialHealthCheck, resourceStatsService.fetchAndCacheAllStats());
 });
+
+const shutdown = createGracefulShutdown({
+  server,
+  jobs,
+  startupTasks,
+  closeActiveResources: () => {
+    networkScanner.shutdown();
+    dockerService.closeLogStreams();
+    terminalService.shutdown();
+  },
+  closeDatabase: closeConnection,
+});
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.once(signal, () => {
+    shuttingDown = true;
+    void shutdown(signal);
+  });
+}
 
 server.on("error", (err: NodeJS.ErrnoException) => {
   if (err.code === "EADDRINUSE") {

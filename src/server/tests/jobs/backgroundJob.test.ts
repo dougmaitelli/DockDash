@@ -84,4 +84,42 @@ describe("BackgroundJob", () => {
     await vi.advanceTimersByTimeAsync(2100);
     expect(job.run).toHaveBeenCalledTimes(2);
   });
+
+  it("stops future executions", async () => {
+    const job = new TestJob();
+
+    job.run.mockResolvedValue(undefined);
+    job.start();
+    await job.stop();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(job.run).not.toHaveBeenCalled();
+  });
+
+  it("waits for an active execution to finish when stopped", async () => {
+    let finishRun: (() => void) | undefined;
+    const job = new ImmediateJob();
+
+    job.run.mockImplementation(() => new Promise<void>((resolve) => (finishRun = resolve)));
+    job.start();
+    const stopped = job.stop();
+    let stopFinished = false;
+
+    void stopped.then(() => (stopFinished = true));
+    await Promise.resolve();
+    expect(stopFinished).toBe(false);
+
+    finishRun?.();
+    await stopped;
+    expect(stopFinished).toBe(true);
+  });
+
+  it("does not start duplicate schedules", async () => {
+    const job = new TestJob();
+
+    job.run.mockResolvedValue(undefined);
+    job.start();
+    job.start();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(job.run).toHaveBeenCalledOnce();
+  });
 });

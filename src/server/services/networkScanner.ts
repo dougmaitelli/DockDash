@@ -41,6 +41,8 @@ function isAbortError(error: unknown): boolean {
 }
 
 export class NetworkScanner {
+  private readonly activeScans = new Set<AbortController>();
+
   parseCIDRConfig(): CIDRConfig[] {
     return config.networkCidrs.map((cidr) => ({ cidr }));
   }
@@ -48,138 +50,158 @@ export class NetworkScanner {
   async *scanNetworkStream(
     cidr: string,
     deepScan = false,
-    signal?: AbortSignal,
+    externalSignal?: AbortSignal,
   ): AsyncGenerator<Service[]> {
     const validationError = validateNetworkCidr(cidr);
 
     if (validationError) throw new Error(`${cidr}: ${validationError}`);
 
-    if (signal?.aborted) return;
+    if (externalSignal?.aborted) return;
 
-    logger.info(`[NetworkScanner] Starting ${deepScan ? "deep" : "standard"} scan for ${cidr}`);
+    const controller = new AbortController();
+    const signal = controller.signal;
+    const abort = () => controller.abort();
 
-    // Queue for completed results + a notify handle to wake the generator
-    const queue: Service[] = [];
-    let pingSweepDone = false;
-    let pendingScans = 0;
-    let notify: (() => void) | null = null;
-    const wake = () => {
-      const fn = notify;
+    externalSignal?.addEventListener("abort", abort, { once: true });
+    this.activeScans.add(controller);
 
-      notify = null;
-      fn?.();
-    };
+    try {
+      logger.info(`[NetworkScanner] Starting ${deepScan ? "deep" : "standard"} scan for ${cidr}`);
 
-    // Semaphore to cap concurrent nmap port-scan processes and avoid exhausting
-    // file descriptors. Deep scan (-p-) is much heavier so gets a tighter limit.
-    const maxConcurrent = deepScan ? DEEP_SCAN_CONCURRENCY : SCAN_CONCURRENCY;
-    let running = 0;
-    const semQueue: (() => void)[] = [];
-    const acquire = () =>
-      new Promise<void>((resolve) => {
-        if (running < maxConcurrent) {
-          running++;
-          resolve();
-        } else {
-          semQueue.push(resolve);
-        }
-      });
-    const release = () => {
-      const next = semQueue.shift();
+      // Queue for completed results + a notify handle to wake the generator
+      const queue: Service[] = [];
+      let pingSweepDone = false;
+      let pendingScans = 0;
+      let notify: (() => void) | null = null;
+      const wake = () => {
+        const fn = notify;
 
-      if (next) {
-        next();
-      } else {
-        running--;
-      }
-    };
-    const releaseQueuedScans = () => {
-      while (semQueue.length > 0) semQueue.shift()!();
+        notify = null;
+        fn?.();
+      };
 
-      wake();
-    };
-
-    signal?.addEventListener("abort", releaseQueuedScans, { once: true });
-
-    // Stream the ping sweep line-by-line, firing a port scan for each live host
-    // immediately rather than waiting for the full sweep to finish.
-    const pingProc = spawn("nmap", ["-sn", "-T4", cidr, "-oG", "-"]);
-    const pingRl = createInterface({ input: pingProc.stdout, crlfDelay: Infinity });
-    let pingSweepStderr = "";
-    const abortPingSweep = () => {
-      pingRl.close();
-
-      if (!pingProc.killed) pingProc.kill();
-    };
-
-    signal?.addEventListener("abort", abortPingSweep, { once: true });
-
-    pingProc.stderr.on("data", (d: Buffer) => (pingSweepStderr += d.toString()));
-
-    void (async () => {
-      try {
-        for await (const line of pingRl) {
-          if (signal?.aborted) break;
-
-          const match = line.match(/Host:\s+(\S+)\s+\(([^)]*)\)\s+Status:\s+Up/);
-
-          if (!match) continue;
-
-          pendingScans++;
-          void (async () => {
-            try {
-              await acquire();
-
-              if (signal?.aborted) return;
-
-              const service = await this.scanHost(
-                match[1],
-                match[2] || undefined,
-                deepScan,
-                signal,
-              );
-
-              if (service && !signal?.aborted) queue.push(service);
-            } catch (err) {
-              if (!isAbortError(err)) {
-                logger.error(
-                  `[NetworkScanner] Failed to scan host ${match[1]}: ${err instanceof Error ? err.message : String(err)}`,
-                );
-              }
-            } finally {
-              release();
-              pendingScans--;
-              wake();
-            }
-          })();
-        }
-
-        if (pingSweepStderr) logger.warn(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
-      } catch (err) {
-        if (!isAbortError(err) && !signal?.aborted) {
-          logger.error(
-            `[NetworkScanner] Ping sweep failed: ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-      } finally {
-        pingSweepDone = true;
-        wake();
-      }
-    })();
-
-    // Yield results as they arrive while work is still in progress
-    while (!pingSweepDone || pendingScans > 0 || queue.length > 0) {
-      while (queue.length > 0) yield [queue.shift()!];
-
-      if (!pingSweepDone || pendingScans > 0) {
-        await new Promise<void>((resolve) => {
-          notify = resolve;
+      // Semaphore to cap concurrent nmap port-scan processes and avoid exhausting
+      // file descriptors. Deep scan (-p-) is much heavier so gets a tighter limit.
+      const maxConcurrent = deepScan ? DEEP_SCAN_CONCURRENCY : SCAN_CONCURRENCY;
+      let running = 0;
+      const semQueue: (() => void)[] = [];
+      const acquire = () =>
+        new Promise<void>((resolve) => {
+          if (running < maxConcurrent) {
+            running++;
+            resolve();
+          } else {
+            semQueue.push(resolve);
+          }
         });
-      }
-    }
+      const release = () => {
+        const next = semQueue.shift();
 
-    signal?.removeEventListener("abort", releaseQueuedScans);
-    signal?.removeEventListener("abort", abortPingSweep);
+        if (next) {
+          next();
+        } else {
+          running--;
+        }
+      };
+      const releaseQueuedScans = () => {
+        while (semQueue.length > 0) semQueue.shift()!();
+
+        wake();
+      };
+
+      signal?.addEventListener("abort", releaseQueuedScans, { once: true });
+
+      // Stream the ping sweep line-by-line, firing a port scan for each live host
+      // immediately rather than waiting for the full sweep to finish.
+      const pingProc = spawn("nmap", ["-sn", "-T4", cidr, "-oG", "-"]);
+      const pingRl = createInterface({ input: pingProc.stdout, crlfDelay: Infinity });
+      let pingSweepStderr = "";
+      const abortPingSweep = () => {
+        pingRl.close();
+
+        if (!pingProc.killed) pingProc.kill();
+      };
+
+      signal?.addEventListener("abort", abortPingSweep, { once: true });
+
+      pingProc.stderr.on("data", (d: Buffer) => (pingSweepStderr += d.toString()));
+
+      void (async () => {
+        try {
+          for await (const line of pingRl) {
+            if (signal?.aborted) break;
+
+            const match = line.match(/Host:\s+(\S+)\s+\(([^)]*)\)\s+Status:\s+Up/);
+
+            if (!match) continue;
+
+            pendingScans++;
+            void (async () => {
+              try {
+                await acquire();
+
+                if (signal?.aborted) return;
+
+                const service = await this.scanHost(
+                  match[1],
+                  match[2] || undefined,
+                  deepScan,
+                  signal,
+                );
+
+                if (service && !signal?.aborted) queue.push(service);
+              } catch (err) {
+                if (!isAbortError(err)) {
+                  logger.error(
+                    `[NetworkScanner] Failed to scan host ${match[1]}: ${err instanceof Error ? err.message : String(err)}`,
+                  );
+                }
+              } finally {
+                release();
+                pendingScans--;
+                wake();
+              }
+            })();
+          }
+
+          if (pingSweepStderr)
+            logger.warn(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
+        } catch (err) {
+          if (!isAbortError(err) && !signal?.aborted) {
+            logger.error(
+              `[NetworkScanner] Ping sweep failed: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        } finally {
+          pingSweepDone = true;
+          wake();
+        }
+      })();
+
+      // Yield results as they arrive while work is still in progress
+      while (!pingSweepDone || pendingScans > 0 || queue.length > 0) {
+        while (queue.length > 0) yield [queue.shift()!];
+
+        if (!pingSweepDone || pendingScans > 0) {
+          await new Promise<void>((resolve) => {
+            notify = resolve;
+          });
+        }
+      }
+
+      signal.removeEventListener("abort", releaseQueuedScans);
+      signal.removeEventListener("abort", abortPingSweep);
+    } finally {
+      controller.abort();
+      externalSignal?.removeEventListener("abort", abort);
+      this.activeScans.delete(controller);
+    }
+  }
+
+  shutdown(): void {
+    for (const controller of this.activeScans) controller.abort();
+
+    this.activeScans.clear();
   }
 
   private async scanHost(

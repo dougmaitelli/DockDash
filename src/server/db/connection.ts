@@ -31,3 +31,7 @@ export function createSessionStore(): session.Store {
 
   return new SqliteStore({ client: sqlite });
 }
+
+export function closeConnection(): void {
+  if (sqlite.open) sqlite.close();
+}

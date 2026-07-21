@@ -33,6 +33,7 @@ export const DOCKER_CONTAINER_DOWN_STATES: string[] = [
 ];
 
 export class DockerService {
+  private readonly logStreams = new Set<PassThrough>();
   private readonly clients: Map<string, Docker>;
 
   constructor() {
@@ -268,6 +269,9 @@ export class DockerService {
     const isTty = inspect.Config?.Tty ?? false;
     const output = new PassThrough();
 
+    this.logStreams.add(output);
+    output.once("close", () => this.logStreams.delete(output));
+
     container.logs(
       { follow: true, stdout: true, stderr: true, tail: 100, timestamps: true },
       (err, stream) => {
@@ -276,6 +280,10 @@ export class DockerService {
 
           return;
         }
+
+        output.once("close", () =>
+          (stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy?.(),
+        );
 
         const emitLines = (chunk: Buffer) =>
           chunk
@@ -316,6 +324,12 @@ export class DockerService {
     );
 
     return output;
+  }
+
+  closeLogStreams(): void {
+    for (const stream of this.logStreams) stream.destroy();
+
+    this.logStreams.clear();
   }
 }
 

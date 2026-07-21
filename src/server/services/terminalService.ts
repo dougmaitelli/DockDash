@@ -13,9 +13,11 @@ interface TerminalSession {
 
 class TerminalService {
   private readonly sessions = new Map<string, TerminalSession>();
+  private readonly sweepTimer: ReturnType<typeof setInterval>;
 
   constructor() {
-    setInterval(() => this.sweepExpired(), 60_000).unref();
+    this.sweepTimer = setInterval(() => this.sweepExpired(), 60_000);
+    this.sweepTimer.unref();
   }
 
   async openSession(
@@ -79,6 +81,12 @@ class TerminalService {
       session.stream.end();
       this.sessions.delete(sessionId);
     }
+  }
+
+  shutdown(): void {
+    clearInterval(this.sweepTimer);
+
+    for (const sessionId of this.sessions.keys()) this.closeSession(sessionId);
   }
 
   private sweepExpired(): void {
