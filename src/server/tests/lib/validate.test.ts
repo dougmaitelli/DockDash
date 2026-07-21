@@ -3,6 +3,7 @@ import {
   isValidContainerPath,
   isValidEnumValue,
   isValidPort,
+  validateNetworkCidr,
 } from "@server/lib/validate.js";
 import { describe, expect, it } from "vitest";
 
@@ -105,5 +106,23 @@ describe("isValidPort", () => {
     expect(isValidPort("80")).toBe(false);
     expect(isValidPort(null)).toBe(false);
     expect(isValidPort(undefined)).toBe(false);
+  });
+});
+
+describe("validateNetworkCidr", () => {
+  it("accepts valid IPv4 CIDRs of any size", () => {
+    expect(validateNetworkCidr("192.168.1.0/24")).toBeNull();
+    expect(validateNetworkCidr("10.0.0.1/32")).toBeNull();
+    expect(validateNetworkCidr("10.0.0.0/8")).toBeNull();
+    expect(validateNetworkCidr("0.0.0.0/0")).toBeNull();
+  });
+
+  it("rejects malformed CIDRs and non-canonical IPv4 addresses", () => {
+    expect(validateNetworkCidr("192.168.1.0")).toBe("Invalid IPv4 CIDR");
+    expect(validateNetworkCidr("192.168.1.256/24")).toBe("Invalid IPv4 CIDR");
+    expect(validateNetworkCidr("192.168.01.0/24")).toBe("Invalid IPv4 CIDR");
+    expect(validateNetworkCidr("192.168.1.0/33")).toBe("Invalid IPv4 CIDR");
+    expect(validateNetworkCidr("192.168.1.0/024")).toBe("Invalid IPv4 CIDR");
+    expect(validateNetworkCidr("--script=bad/24")).toBe("Invalid IPv4 CIDR");
   });
 });

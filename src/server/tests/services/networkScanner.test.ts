@@ -25,10 +25,19 @@ function makePingSweepProcess(lines: string[], stderrText = "") {
   const proc = new EventEmitter() as NodeJS.EventEmitter & {
     stdout: Readable;
     stderr: Readable;
+    killed: boolean;
+    kill: ReturnType<typeof vi.fn>;
   };
 
   proc.stdout = stdout;
   proc.stderr = stderr;
+  proc.killed = false;
+  proc.kill = vi.fn(() => {
+    proc.killed = true;
+    stdout.push(null);
+
+    return true;
+  });
 
   setImmediate(() => {
     for (const line of lines) stdout.push(`${line}\n`);
@@ -51,10 +60,19 @@ function makePortScanProcess(stdoutData: string, stderrData = "") {
   const proc = new EventEmitter() as NodeJS.EventEmitter & {
     stdout: EventEmitter;
     stderr: EventEmitter;
+    killed: boolean;
+    kill: ReturnType<typeof vi.fn>;
   };
 
   proc.stdout = new EventEmitter();
   proc.stderr = new EventEmitter();
+  proc.killed = false;
+  proc.kill = vi.fn(() => {
+    proc.killed = true;
+    proc.emit("close");
+
+    return true;
+  });
 
   setImmediate(() => {
     if (stdoutData) proc.stdout.emit("data", Buffer.from(stdoutData));
@@ -62,6 +80,27 @@ function makePortScanProcess(stdoutData: string, stderrData = "") {
     if (stderrData) proc.stderr.emit("data", Buffer.from(stderrData));
 
     setImmediate(() => proc.emit("close"));
+  });
+
+  return proc;
+}
+
+function makeHangingPortScanProcess() {
+  const proc = new EventEmitter() as NodeJS.EventEmitter & {
+    stdout: EventEmitter;
+    stderr: EventEmitter;
+    killed: boolean;
+    kill: ReturnType<typeof vi.fn>;
+  };
+
+  proc.stdout = new EventEmitter();
+  proc.stderr = new EventEmitter();
+  proc.killed = false;
+  proc.kill = vi.fn(() => {
+    proc.killed = true;
+    proc.emit("close");
+
+    return true;
   });
 
   return proc;
@@ -222,5 +261,42 @@ describe("NetworkScanner.scanNetworkStream", () => {
     expect(results).toHaveLength(1);
     expect((results[0] as { host: string }).host).toBe("192.168.1.10");
     expect((results[0] as { ports: number[] }).ports).toHaveLength(0);
+  });
+
+  it("rejects an invalid target without spawning nmap", async () => {
+    const consume = async () => {
+      for await (const _batch of networkScanner.scanNetworkStream("not-a-cidr")) {
+        // no-op
+      }
+    };
+
+    await expect(consume()).rejects.toThrow("Invalid IPv4 CIDR");
+    expect(mockSpawn).not.toHaveBeenCalled();
+  });
+
+  it("kills active nmap processes when the scan is aborted", async () => {
+    const pingProcess = makePingSweepProcess(["Host: 192.168.1.5 (myhost.local) Status: Up"]);
+    const portProcess = makeHangingPortScanProcess();
+    const controller = new AbortController();
+    let spawnCallCount = 0;
+
+    mockSpawn.mockImplementation(() => (spawnCallCount++ === 0 ? pingProcess : portProcess));
+
+    const consume = async () => {
+      for await (const _batch of networkScanner.scanNetworkStream(
+        "192.168.1.0/24",
+        false,
+        controller.signal,
+      )) {
+        // no-op
+      }
+    };
+    const scan = consume();
+
+    await vi.waitFor(() => expect(mockSpawn).toHaveBeenCalledTimes(2));
+    controller.abort();
+    await scan;
+
+    expect(portProcess.kill).toHaveBeenCalled();
   });
 });

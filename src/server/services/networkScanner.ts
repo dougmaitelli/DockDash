@@ -13,6 +13,7 @@ import {
   USER_AGENT,
 } from "../lib/constants.js";
 import { logger } from "../lib/logService.js";
+import { validateNetworkCidr } from "../lib/validate.js";
 
 const SCAN_CONCURRENCY = 15;
 const DEEP_SCAN_CONCURRENCY = 5;
@@ -27,12 +28,34 @@ interface PortInfo {
   serviceName?: string;
 }
 
+function createAbortError(): Error {
+  const error = new Error("Network scan aborted");
+
+  error.name = "AbortError";
+
+  return error;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
 export class NetworkScanner {
   parseCIDRConfig(): CIDRConfig[] {
     return config.networkCidrs.map((cidr) => ({ cidr }));
   }
 
-  async *scanNetworkStream(cidr: string, deepScan = false): AsyncGenerator<Service[]> {
+  async *scanNetworkStream(
+    cidr: string,
+    deepScan = false,
+    signal?: AbortSignal,
+  ): AsyncGenerator<Service[]> {
+    const validationError = validateNetworkCidr(cidr);
+
+    if (validationError) throw new Error(`${cidr}: ${validationError}`);
+
+    if (signal?.aborted) return;
+
     logger.info(`[NetworkScanner] Starting ${deepScan ? "deep" : "standard"} scan for ${cidr}`);
 
     // Queue for completed results + a notify handle to wake the generator
@@ -70,18 +93,34 @@ export class NetworkScanner {
         running--;
       }
     };
+    const releaseQueuedScans = () => {
+      while (semQueue.length > 0) semQueue.shift()!();
+
+      wake();
+    };
+
+    signal?.addEventListener("abort", releaseQueuedScans, { once: true });
 
     // Stream the ping sweep line-by-line, firing a port scan for each live host
     // immediately rather than waiting for the full sweep to finish.
     const pingProc = spawn("nmap", ["-sn", "-T4", cidr, "-oG", "-"]);
     const pingRl = createInterface({ input: pingProc.stdout, crlfDelay: Infinity });
     let pingSweepStderr = "";
+    const abortPingSweep = () => {
+      pingRl.close();
+
+      if (!pingProc.killed) pingProc.kill();
+    };
+
+    signal?.addEventListener("abort", abortPingSweep, { once: true });
 
     pingProc.stderr.on("data", (d: Buffer) => (pingSweepStderr += d.toString()));
 
     void (async () => {
       try {
         for await (const line of pingRl) {
+          if (signal?.aborted) break;
+
           const match = line.match(/Host:\s+(\S+)\s+\(([^)]*)\)\s+Status:\s+Up/);
 
           if (!match) continue;
@@ -90,13 +129,23 @@ export class NetworkScanner {
           void (async () => {
             try {
               await acquire();
-              const service = await this.scanHost(match[1], match[2] || undefined, deepScan);
 
-              if (service) queue.push(service);
-            } catch (err) {
-              logger.error(
-                `[NetworkScanner] Failed to scan host ${match[1]}: ${err instanceof Error ? err.message : String(err)}`,
+              if (signal?.aborted) return;
+
+              const service = await this.scanHost(
+                match[1],
+                match[2] || undefined,
+                deepScan,
+                signal,
               );
+
+              if (service && !signal?.aborted) queue.push(service);
+            } catch (err) {
+              if (!isAbortError(err)) {
+                logger.error(
+                  `[NetworkScanner] Failed to scan host ${match[1]}: ${err instanceof Error ? err.message : String(err)}`,
+                );
+              }
             } finally {
               release();
               pendingScans--;
@@ -107,9 +156,11 @@ export class NetworkScanner {
 
         if (pingSweepStderr) logger.warn(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
       } catch (err) {
-        logger.error(
-          `[NetworkScanner] Ping sweep failed: ${err instanceof Error ? err.message : String(err)}`,
-        );
+        if (!isAbortError(err) && !signal?.aborted) {
+          logger.error(
+            `[NetworkScanner] Ping sweep failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
       } finally {
         pingSweepDone = true;
         wake();
@@ -126,15 +177,19 @@ export class NetworkScanner {
         });
       }
     }
+
+    signal?.removeEventListener("abort", releaseQueuedScans);
+    signal?.removeEventListener("abort", abortPingSweep);
   }
 
   private async scanHost(
     ip: string,
     hostname: string | undefined,
     deepScan: boolean,
+    signal?: AbortSignal,
   ): Promise<Service | null> {
     const now = new Date().toISOString();
-    const openPorts = await this.nmapPortScan(ip, deepScan);
+    const openPorts = await this.nmapPortScan(ip, deepScan, signal);
 
     logger.debug(`[NetworkScanner] ${ip} open ports: ${openPorts.join(", ")}`);
 
@@ -145,7 +200,7 @@ export class NetworkScanner {
         )
           ? detectProtocolByPort(port)
           : ServiceProtocol.TCP;
-        const name = await this.detectService(ip, port, protocol);
+        const name = await this.detectService(ip, port, protocol, signal);
 
         return { port, protocol, serviceName: name || protocol };
       }),
@@ -168,21 +223,44 @@ export class NetworkScanner {
     };
   }
 
-  private nmapPortScan(ip: string, deepScan: boolean): Promise<number[]> {
+  private nmapPortScan(ip: string, deepScan: boolean, signal?: AbortSignal): Promise<number[]> {
     return new Promise((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(createAbortError());
+
+        return;
+      }
+
       let stdout = "";
       let stderr = "";
+      let settled = false;
       const args = ["-sT", "-T4", ...(deepScan ? ["-p-"] : []), "--open", ip, "-oG", "-"];
       const proc = spawn("nmap", args);
+      const finish = (callback: () => void) => {
+        if (settled) return;
+
+        settled = true;
+        signal?.removeEventListener("abort", abort);
+        callback();
+      };
+      const abort = () => {
+        if (!proc.killed) proc.kill();
+
+        finish(() => reject(createAbortError()));
+      };
+
+      signal?.addEventListener("abort", abort, { once: true });
 
       proc.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
       proc.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
       proc.on("close", () => {
-        if (stderr) logger.warn(`[NetworkScanner] port scan ${ip} stderr:\n${stderr}`);
+        finish(() => {
+          if (stderr) logger.warn(`[NetworkScanner] port scan ${ip} stderr:\n${stderr}`);
 
-        resolve(this.parseNmapOpenPorts(stdout));
+          resolve(this.parseNmapOpenPorts(stdout));
+        });
       });
-      proc.on("error", reject);
+      proc.on("error", (error) => finish(() => reject(error)));
     });
   }
 
@@ -210,6 +288,7 @@ export class NetworkScanner {
     ip: string,
     port: number,
     protocol: ServiceProtocol,
+    signal?: AbortSignal,
   ): Promise<string | undefined> {
     try {
       const timeout = 2000;
@@ -219,6 +298,7 @@ export class NetworkScanner {
         try {
           const baseUrl = `${protocol}://${ip}:${port}`;
           const resp = await axios.get(baseUrl, {
+            signal,
             timeout,
             validateStatus: () => true,
             headers: { "User-Agent": USER_AGENT },
@@ -233,7 +313,7 @@ export class NetworkScanner {
 
           for (const ep of endpoints) {
             try {
-              const healthResp = await axios.get(`${baseUrl}${ep}`, { timeout: 1000 });
+              const healthResp = await axios.get(`${baseUrl}${ep}`, { signal, timeout: 1000 });
 
               if (healthResp.status === 200 && healthResp.data) {
                 const healthTitle = healthResp.data?.match(/<title>([^<]+)/i);

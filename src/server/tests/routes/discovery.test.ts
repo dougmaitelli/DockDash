@@ -89,3 +89,52 @@ describe("GET /api/docker/health", () => {
     expect(res.body).toEqual([]);
   });
 });
+
+describe("GET /api/network/scan/stream", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockNetworkScanner.parseCIDRConfig.mockReturnValue([{ cidr: "192.168.1.0/24" }]);
+    mockNetworkScanner.scanNetworkStream.mockImplementation(async function* () {});
+  });
+
+  it("rejects malformed scan targets before starting a scan", async () => {
+    const res = await request(app).get("/api/network/scan/stream?cidrs=--script=unsafe/24");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Invalid IPv4 CIDR");
+    expect(mockNetworkScanner.scanNetworkStream).not.toHaveBeenCalled();
+  });
+
+  it("accepts large but syntactically valid scan targets", async () => {
+    const res = await request(app).get("/api/network/scan/stream?cidrs=10.0.0.0/8");
+
+    expect(res.status).toBe(200);
+    expect(mockNetworkScanner.scanNetworkStream).toHaveBeenCalledWith(
+      "10.0.0.0/8",
+      false,
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("uses configured CIDRs when the request does not provide any", async () => {
+    const res = await request(app).get("/api/network/scan/stream?cidrs=");
+
+    expect(res.status).toBe(200);
+    expect(mockNetworkScanner.scanNetworkStream).toHaveBeenCalledWith(
+      "192.168.1.0/24",
+      false,
+      expect.any(AbortSignal),
+    );
+  });
+
+  it("passes a cancellation signal to valid scans", async () => {
+    const res = await request(app).get("/api/network/scan/stream?cidrs=192.168.1.0/24");
+
+    expect(res.status).toBe(200);
+    expect(mockNetworkScanner.scanNetworkStream).toHaveBeenCalledWith(
+      "192.168.1.0/24",
+      false,
+      expect.any(AbortSignal),
+    );
+  });
+});

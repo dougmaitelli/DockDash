@@ -3,6 +3,7 @@ import { Router } from "express";
 import type { DockerHostHealth, SseScanDonePayload, SseScanErrorPayload } from "@shared/api";
 import { SSE_EVENT } from "@shared/api";
 
+import { validateNetworkCidr } from "../lib/validate.js";
 import { dockerService } from "../services/dockerService.js";
 import { networkScanner } from "../services/networkScanner.js";
 
@@ -81,20 +82,33 @@ router.get("/docker/scan/stream", async (req, res) => {
 
 // Stream network scan results via SSE
 router.get("/network/scan/stream", async (req, res) => {
+  const cidrParam = typeof req.query.cidrs === "string" ? req.query.cidrs : undefined;
+  const requestedCidrs = (cidrParam?.split(",") ?? []).map((cidr) => cidr.trim()).filter(Boolean);
+  const cidrList =
+    requestedCidrs.length > 0
+      ? requestedCidrs
+      : networkScanner.parseCIDRConfig().map((config) => config.cidr);
+
+  for (const cidr of cidrList) {
+    const error = validateNetworkCidr(cidr);
+
+    if (error) return res.status(400).json({ error: `${cidr}: ${error}` });
+  }
+
+  const abortController = new AbortController();
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  const cidrParam = req.query.cidrs as string | undefined;
-  const cidrList =
-    cidrParam?.split(",").filter(Boolean) ?? networkScanner.parseCIDRConfig().map((c) => c.cidr);
   const deepScan = req.query.deepScan === "true";
 
   let closed = false;
 
   req.on("close", () => {
     closed = true;
+    abortController.abort();
   });
 
   let count = 0;
@@ -103,7 +117,11 @@ router.get("/network/scan/stream", async (req, res) => {
     for (const cidr of cidrList) {
       if (closed) break;
 
-      for await (const services of networkScanner.scanNetworkStream(cidr, deepScan)) {
+      for await (const services of networkScanner.scanNetworkStream(
+        cidr,
+        deepScan,
+        abortController.signal,
+      )) {
         if (closed) break;
 
         for (const svc of services) {
