@@ -14,12 +14,14 @@ import { config } from "./lib/config.js";
 import { APP_NAME } from "./lib/constants.js";
 import { createGracefulShutdown } from "./lib/gracefulShutdown.js";
 import { logger } from "./lib/logService.js";
+import { serverHealth } from "./lib/serverHealth.js";
 import { requireAuth } from "./middleware/auth.js";
 import authRoutes from "./routes/auth.js";
 import containerRoutes from "./routes/container.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import discoveryRoutes from "./routes/discovery.js";
 import fileRoutes from "./routes/files.js";
+import healthRoutes from "./routes/health.js";
 import linkRoutes from "./routes/links.js";
 import notificationRoutes from "./routes/notifications.js";
 import serviceRoutes from "./routes/services.js";
@@ -72,10 +74,8 @@ app.use(
 // Auth routes (no auth required)
 app.use("/auth", authRoutes);
 
-// Health check (no auth required — used by container orchestrators)
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
-});
+// Health checks (no auth required — used by container orchestrators)
+app.use("/api", healthRoutes);
 
 // CSRF defense: reject browser requests initiated from a different site so
 // cross-origin GETs with side effects (e.g. opening a terminal/log SSE stream)
@@ -143,6 +143,7 @@ app.use(
 const server = app.listen(PORT, () => {
   if (shuttingDown) return;
 
+  serverHealth.markReady();
   logger.info(`${APP_NAME} server running on http://localhost:${PORT}`);
   logger.info(`Docker hosts: ${config.dockerHosts.join(", ")}`);
   logger.info(`Network CIDRs: ${config.networkCidrs.join(",")}`);
@@ -179,6 +180,7 @@ const shutdown = createGracefulShutdown({
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.once(signal, () => {
     shuttingDown = true;
+    serverHealth.markNotReady();
     void shutdown(signal);
   });
 }

@@ -35,3 +35,13 @@ export function createSessionStore(): session.Store {
 export function closeConnection(): void {
   if (sqlite.open) sqlite.close();
 }
+
+export function isConnectionHealthy(): boolean {
+  try {
+    sqlite.prepare("SELECT 1").get();
+
+    return true;
+  } catch {
+    return false;
+  }
+}

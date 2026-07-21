@@ -21,7 +21,14 @@ services:
       - dockdash-data:/app/data
     healthcheck:
       test:
-        ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3001/api/health/ready",
+        ]
       interval: 30s
       timeout: 5s
       start_period: 10s
