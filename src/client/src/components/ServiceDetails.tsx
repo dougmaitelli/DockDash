@@ -1,8 +1,9 @@
 import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Service, UpdateServiceRequest } from "@shared";
+import type { Service } from "@shared";
 import { ServiceSource } from "@shared";
+import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
 import { NumberInput } from "@/components/NumberInput";
 import { NumberTagArrayInput } from "@/components/TagArrayInput";

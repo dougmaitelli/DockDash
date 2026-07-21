@@ -6,25 +6,27 @@ import type {
   CheckAllServicesResponse,
   ContainerAction,
   ContainerStats,
-  CreateLinkRequest,
-  CreateServiceRequest,
   DashboardData,
   DockerHostHealth,
   FileContentResponse,
   FilesResponse,
   HealthBucket,
-  PositionUpdate,
   ResourceBucket,
-  SavePositionsRequest,
   SavePositionsResponse,
   Service,
   ServiceLink,
   ServiceStatusItem,
+} from "@shared";
+import type { AppUpdateInfo } from "@shared/api";
+import type {
+  CreateLinkRequest,
+  CreateServiceRequest,
+  PositionUpdate,
+  SavePositionsRequest,
   TerminalInputRequest,
   UpdateLinkRequest,
   UpdateServiceRequest,
-} from "@shared";
-import type { AppUpdateInfo } from "@shared/api";
+} from "@shared/requestSchemas.js";
 
 const api = axios.create({
   baseURL: "/api",

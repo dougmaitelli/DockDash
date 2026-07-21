@@ -10,14 +10,14 @@ import type {
   ServicePosition,
   ServiceStatusItem,
 } from "@shared";
-import { ServiceLinkType, ServiceStatus } from "@shared";
+import { ServiceLinkType, ServiceSource, ServiceStatus } from "@shared";
 import type {
   CreateLinkRequest,
   CreateServiceRequest,
   PositionUpdate,
   UpdateLinkRequest,
   UpdateServiceRequest,
-} from "@shared/api";
+} from "@shared/requestSchemas.js";
 
 import { orm } from "./connection.js";
 import { serviceLinks, servicePositions, services } from "./schema/index.js";
@@ -32,7 +32,7 @@ export class ServiceRepository {
       host: data.host,
       ports: data.ports ?? [],
       checkPort: data.checkPort,
-      source: data.source,
+      source: data.source ?? ServiceSource.NETWORK,
       status: ServiceStatus.UNKNOWN,
       metadata: data.metadata,
       createdAt: now,

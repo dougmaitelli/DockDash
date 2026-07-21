@@ -1,9 +1,11 @@
 import express, { Router } from "express";
 
 import type { ApiSuccess, FileContentResponse } from "@shared/api";
+import { fileContentRequestSchema } from "@shared/requestSchemas.js";
 
 import { config } from "../lib/config.js";
 import { isValidContainerPath } from "../lib/validate.js";
+import { validateBody } from "../middleware/validateRequest.js";
 import { dockerService } from "../services/dockerService.js";
 import { fileService } from "../services/fileService.js";
 
@@ -21,7 +23,7 @@ router.get("/services/:id/files", async (req, res) => {
   }
 
   try {
-    const container = dockerService.getContainerForServiceId(req.params.id);
+    const container = dockerService.getContainerForServiceId(String(req.params.id));
     const entries = await fileService.listFiles(container, rawPath);
 
     res.json({ path: rawPath, entries });
@@ -51,32 +53,38 @@ router.get("/services/:id/files/content", async (req, res) => {
   }
 });
 
-router.put("/services/:id/files/content", express.json({ limit: "10mb" }), async (req, res) => {
-  if (!config.fileExplorerEnabled) {
-    return res.status(403).json({ error: "File explorer is disabled" });
-  }
+router.put(
+  "/services/:id/files/content",
+  express.json({ limit: "10mb" }),
+  (_req, res, next) => {
+    if (!config.fileExplorerEnabled) {
+      res.status(403).json({ error: "File explorer is disabled" });
 
-  const { path: filePath, content } = req.body as { path?: string; content?: string };
+      return;
+    }
 
-  if (!isValidContainerPath(filePath)) {
-    return res.status(400).json({ error: "Invalid path" });
-  }
+    next();
+  },
+  validateBody(fileContentRequestSchema),
+  async (req, res) => {
+    const { path: filePath, content } = req.body as { path: string; content: string };
 
-  if (typeof content !== "string") {
-    return res.status(400).json({ error: "content must be a string" });
-  }
+    if (!isValidContainerPath(filePath)) {
+      return res.status(400).json({ error: "Invalid path" });
+    }
 
-  try {
-    const container = dockerService.getContainerForServiceId(req.params.id);
+    try {
+      const container = dockerService.getContainerForServiceId(String(req.params.id));
 
-    await fileService.writeFile(container, filePath, content);
+      await fileService.writeFile(container, filePath, content);
 
-    const response: ApiSuccess = { success: true };
+      const response: ApiSuccess = { success: true };
 
-    res.json(response);
-  } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
-  }
-});
+      res.json(response);
+    } catch (err) {
+      res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  },
+);
 
 export default router;

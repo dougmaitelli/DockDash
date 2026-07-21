@@ -51,7 +51,8 @@
     "rehype-sanitize": "^6.0.0",
     "remark-emoji": "^5.0.2",
     "tailwind-merge": "^3.6.0",
-    "uuid": "^14.0.1"
+    "uuid": "^14.0.1",
+    "zod": "^4.4.3"
   },
   "resolutions": {
     "form-data": "^4.0.6",

@@ -2,8 +2,9 @@ import { type ReactNode, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
-import type { Service, UpdateServiceRequest } from "@shared";
+import type { Service } from "@shared";
 import { ContainerAction, ServiceSource } from "@shared";
+import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
 import { Icons } from "@/components/Icons";
 import { cn } from "@/lib/utils";

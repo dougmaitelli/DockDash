@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Service, UpdateServiceRequest } from "@shared";
+import type { Service } from "@shared";
 import { ServiceSource, ServiceStatus } from "@shared";
+import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
 import { Icons } from "@/components/Icons";
 import { PortTag } from "@/components/PortTag";

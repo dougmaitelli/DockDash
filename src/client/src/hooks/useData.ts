@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-  CreateLinkRequest,
-  CreateServiceRequest,
+import type {
   DockerHostHealth,
   Service,
   ServiceLink,
   ServicePosition,
   ServiceStatusItem,
+} from "@shared";
+import type {
+  CreateLinkRequest,
+  CreateServiceRequest,
   UpdateLinkRequest,
   UpdateServiceRequest,
-} from "@shared";
+} from "@shared/requestSchemas.js";
 
 import { dashboardApi, discoveryApi, linkApi, positionApi, serviceApi } from "../services/api";
 

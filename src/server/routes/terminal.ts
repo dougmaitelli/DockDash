@@ -1,9 +1,11 @@
 import { Router } from "express";
 
-import type { ApiSuccess, SseTerminalSessionPayload, TerminalInputRequest } from "@shared/api";
+import type { ApiSuccess, SseTerminalSessionPayload } from "@shared/api";
 import { SSE_EVENT } from "@shared/api";
+import { type TerminalInputRequest, terminalInputRequestSchema } from "@shared/requestSchemas.js";
 
 import { config } from "../lib/config.js";
+import { validateBody } from "../middleware/validateRequest.js";
 import { dockerService } from "../services/dockerService.js";
 import { terminalService } from "../services/terminalService.js";
 
@@ -97,33 +99,38 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
   }
 });
 
-router.post("/services/:id/terminal/input", (req, res) => {
-  if (!config.terminalEnabled) {
-    return res.status(403).json({ error: "Terminal is disabled" });
-  }
+router.post(
+  "/services/:id/terminal/input",
+  (_req, res, next) => {
+    if (!config.terminalEnabled) {
+      res.status(403).json({ error: "Terminal is disabled" });
 
-  const { sessionId, data } = req.body as TerminalInputRequest;
+      return;
+    }
 
-  if (typeof sessionId !== "string" || typeof data !== "string") {
-    return res.status(400).json({ error: "sessionId and data are required" });
-  }
+    next();
+  },
+  validateBody(terminalInputRequestSchema),
+  (req, res) => {
+    const { sessionId, data } = req.body as TerminalInputRequest;
 
-  const session = terminalService.getSession(req.sessionID, sessionId);
+    const session = terminalService.getSession(req.sessionID, sessionId);
 
-  if (!session) {
-    return res.status(404).json({ error: "Session not found" });
-  }
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
 
-  try {
-    terminalService.touch(sessionId);
-    session.stream.write(data);
-  } catch {
-    return res.status(410).json({ error: "Session stream is closed" });
-  }
+    try {
+      terminalService.touch(sessionId);
+      session.stream.write(data);
+    } catch {
+      return res.status(410).json({ error: "Session stream is closed" });
+    }
 
-  const response: ApiSuccess = { success: true };
+    const response: ApiSuccess = { success: true };
 
-  res.json(response);
-});
+    res.json(response);
+  },
+);
 
 export default router;

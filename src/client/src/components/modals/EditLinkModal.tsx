@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import type { ServiceLink } from "@shared";
 import { ServiceLinkType, ServiceProtocol } from "@shared";
-import type { UpdateLinkRequest } from "@shared/api";
+import type { UpdateLinkRequest } from "@shared/requestSchemas.js";
 
 import { Icons } from "@/components/Icons";
 import { NumberInput } from "@/components/NumberInput";

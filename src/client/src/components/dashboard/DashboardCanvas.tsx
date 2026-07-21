@@ -8,7 +8,7 @@ import type {
   CreateServiceRequest,
   UpdateLinkRequest,
   UpdateServiceRequest,
-} from "@shared/api";
+} from "@shared/requestSchemas.js";
 
 import { Icons } from "@/components/Icons";
 import { Button } from "@/components/ui/Button";

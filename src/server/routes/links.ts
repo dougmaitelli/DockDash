@@ -1,32 +1,22 @@
 import { Router } from "express";
 
-import { ServiceLinkType, ServiceProtocol } from "@shared";
-import type { ApiSuccess, CreateLinkRequest, UpdateLinkRequest } from "@shared/api";
+import { ServiceLinkType } from "@shared";
+import type { ApiSuccess } from "@shared/api";
+import {
+  type CreateLinkRequest,
+  createLinkRequestSchema,
+  type UpdateLinkRequest,
+  updateLinkRequestSchema,
+} from "@shared/requestSchemas.js";
 
 import { serviceRepository } from "../db/serviceRepository.js";
-import { isNonEmptyString, isValidEnumValue } from "../lib/validate.js";
+import { validateBody } from "../middleware/validateRequest.js";
 
 const router = Router();
 
-router.post("/links", (req, res) => {
+router.post("/links", validateBody(createLinkRequestSchema), (req, res) => {
   const { sourceId, targetId, label, type, description, targetPort, protocol } =
     req.body as CreateLinkRequest;
-
-  if (!isNonEmptyString(sourceId)) {
-    return res.status(400).json({ error: "sourceId is required" });
-  }
-
-  if (!isNonEmptyString(targetId)) {
-    return res.status(400).json({ error: "targetId is required" });
-  }
-
-  if (sourceId === targetId) {
-    return res.status(400).json({ error: "source and target cannot be the same" });
-  }
-
-  if (protocol != null && !isValidEnumValue(ServiceProtocol, protocol)) {
-    return res.status(400).json({ error: "invalid protocol" });
-  }
 
   try {
     const link = serviceRepository.saveLink({
@@ -45,19 +35,11 @@ router.post("/links", (req, res) => {
   }
 });
 
-router.put("/links/:id", (req, res) => {
+router.put("/links/:id", validateBody(updateLinkRequestSchema), (req, res) => {
   const { label, type, description, targetPort, protocol } = req.body as UpdateLinkRequest;
 
-  if (type !== undefined && !isValidEnumValue(ServiceLinkType, type)) {
-    return res.status(400).json({ error: "invalid type" });
-  }
-
-  if (protocol != null && !isValidEnumValue(ServiceProtocol, protocol)) {
-    return res.status(400).json({ error: "invalid protocol" });
-  }
-
   try {
-    const link = serviceRepository.updateLink(req.params.id, {
+    const link = serviceRepository.updateLink(String(req.params.id), {
       label,
       type,
       description,
