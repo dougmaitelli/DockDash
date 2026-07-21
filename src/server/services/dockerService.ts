@@ -211,8 +211,15 @@ export class DockerService {
   }
 
   async getContainerStats(container: Docker.Container): Promise<ContainerStats> {
-    // stream: false fetches a single snapshot instead of a continuous stream
-    const raw = await container.stats({ stream: false });
+    // stream: false fetches a single snapshot instead of a continuous stream.
+    // Race against a timeout so a restarting/paused container can't block the caller indefinitely.
+    const STATS_TIMEOUT_MS = 3_000;
+    const raw = await Promise.race([
+      container.stats({ stream: false }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("stats timeout")), STATS_TIMEOUT_MS),
+      ),
+    ]);
 
     const cpu = raw.cpu_stats;
     const precpu = raw.precpu_stats;
