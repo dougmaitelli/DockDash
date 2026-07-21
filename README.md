@@ -179,8 +179,6 @@ To connect to a remote Docker daemon instead of the local socket, set `DOCKER_HO
 DOCKER_HOSTS=tcp://192.168.1.100:2375
 ```
 
-TLS is supported via the standard `DOCKER_TLS_CERTDIR` variable.
-
 ### Network scanning
 
 Set `NETWORK_CIDRS` to one or more comma-separated CIDR ranges. DockDash uses nmap to first discover live hosts via a ping sweep, then scans all 65535 TCP ports on each host:
