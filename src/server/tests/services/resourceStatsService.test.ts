@@ -110,6 +110,33 @@ describe("ResourceStatsService.fetchAndCacheAllStats", () => {
     expect(mockDb.addResourceStatsHistory).toHaveBeenCalledWith("svc-cache", 42, 55);
   });
 
+  it("fetches container stats concurrently so one slow container cannot delay the rest", async () => {
+    const first = makeDockerSvc("svc-slow");
+    const second = makeDockerSvc("svc-fast");
+    let resolveSlow: ((stats: typeof NORMAL_STATS) => void) | undefined;
+
+    mockDb.getServices.mockReturnValue([first, second]);
+    mockDockerService.getContainerForServiceId.mockImplementation((id: string) => ({ id }));
+    mockDockerService.getContainerStats.mockImplementation(({ id }: { id: string }) => {
+      if (id === "svc-slow") {
+        return new Promise((resolve) => {
+          resolveSlow = resolve;
+        });
+      }
+
+      return Promise.resolve({ ...NORMAL_STATS, cpuPercent: 75 });
+    });
+
+    const refresh = resourceStatsService.fetchAndCacheAllStats();
+
+    await vi.waitFor(() => {
+      expect(resourceStatsService.getLatestStats().get("svc-fast")?.cpuPercent).toBe(75);
+    });
+
+    resolveSlow?.(NORMAL_STATS);
+    await refresh;
+  });
+
   it("skips non-Docker services", async () => {
     mockDb.getServices.mockReturnValue([
       {

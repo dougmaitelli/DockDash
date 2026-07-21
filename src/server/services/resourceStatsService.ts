@@ -27,29 +27,31 @@ export class ResourceStatsService {
       .getServices()
       .filter((s) => s.source === ServiceSource.DOCKER);
 
-    for (const service of services) {
-      try {
-        const container = dockerService.getContainerForServiceId(service.id!);
-        const stats = await dockerService.getContainerStats(container);
+    await Promise.all(
+      services.map(async (service) => {
+        try {
+          const container = dockerService.getContainerForServiceId(service.id!);
+          const stats = await dockerService.getContainerStats(container);
 
-        this.latestStats.set(service.id!, {
-          cpuPercent: stats.cpuPercent,
-          memoryPercent: stats.memoryPercent,
-        });
+          this.latestStats.set(service.id!, {
+            cpuPercent: stats.cpuPercent,
+            memoryPercent: stats.memoryPercent,
+          });
 
-        historyRepository.addResourceStatsHistory(
-          service.id!,
-          stats.cpuPercent,
-          stats.memoryPercent,
-        );
+          historyRepository.addResourceStatsHistory(
+            service.id!,
+            stats.cpuPercent,
+            stats.memoryPercent,
+          );
 
-        if (notificationService.configured) this.notifyResourceSpikes(service, stats);
-      } catch (err) {
-        logger.debug(
-          `Resource stats: skipping ${service.name}: ${err instanceof Error ? err.message : String(err)}`,
-        );
-      }
-    }
+          if (notificationService.configured) this.notifyResourceSpikes(service, stats);
+        } catch (err) {
+          logger.debug(
+            `Resource stats: skipping ${service.name}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+      }),
+    );
   }
 
   private notifyResourceSpikes(service: Service, stats: ContainerStats): void {
