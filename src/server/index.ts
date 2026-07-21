@@ -128,10 +128,9 @@ const server = app.listen(PORT, () => {
   logger.info(`Docker hosts: ${config.dockerHosts.join(", ")}`);
   logger.info(`Network CIDRs: ${config.networkCidrs.join(",")}`);
   logger.info(`Health check interval: ${config.healthCheckInterval}ms`);
+  logger.info(`Resource monitor interval: ${config.resourceMonitorInterval}ms`);
   logger.info(`Update check interval: ${config.updateCheckInterval}ms`);
-  logger.info(
-    `Auth: ${config.oidcEnabled ? `OIDC (${config.oidcIssuer})` : "disabled (unsecured)"}`,
-  );
+  logger.info(`Auth: ${config.oidcEnabled ? "OIDC enabled" : "disabled (unsecured)"}`);
 
   new HealthCheckJob().start();
   new HistoryCleanupJob().start();
