@@ -1,4 +1,6 @@
-# DockDash
+<p align="center">
+  <img src="assets/banner.png" alt="DockDash — container and service monitoring dashboard" width="900">
+</p>
 
 [![CI](https://github.com/dougmaitelli/DockDash/actions/workflows/ci.yml/badge.svg)](https://github.com/dougmaitelli/DockDash/actions/workflows/ci.yml)
 [![GitHub release](https://img.shields.io/github/v/release/dougmaitelli/DockDash)](https://github.com/dougmaitelli/DockDash/releases)
