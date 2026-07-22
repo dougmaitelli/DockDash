@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible problem in DockDash
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting a problem. Remove secrets, private addresses, and other sensitive homelab data before submitting.
+  - type: checkboxes
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true
+  - type: input
+    attributes:
+      label: DockDash version
+      description: Release tag, Docker image tag, or commit hash
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Installation method
+      options:
+        - Docker Compose
+        - Docker
+        - Local development
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Description
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open ...
+        2. Configure ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Relevant logs
+      description: Paste sanitized logs or error messages. This field is rendered as code.
+      render: shell
+  - type: textarea
+    attributes:
+      label: Environment
+      description: Browser, operating system, Docker version, reverse proxy, and other relevant details

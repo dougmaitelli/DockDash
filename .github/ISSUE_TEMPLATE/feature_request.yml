@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose an improvement to DockDash
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: checkboxes
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and did not find this proposal.
+          required: true
+  - type: textarea
+    attributes:
+      label: Problem
+      description: What problem or limitation are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed solution
+      description: Describe the desired behavior and user experience.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Alternatives considered
+      description: Describe workarounds or alternative designs you considered.
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: Add mockups, examples, related projects, or implementation considerations.

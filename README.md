@@ -1,21 +1,37 @@
 # DockDash
 
+[![CI](https://github.com/dougmaitelli/DockDash/actions/workflows/ci.yml/badge.svg)](https://github.com/dougmaitelli/DockDash/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/v/release/dougmaitelli/DockDash)](https://github.com/dougmaitelli/DockDash/releases)
+[![GHCR](https://img.shields.io/badge/container-ghcr.io-blue)](https://github.com/dougmaitelli/DockDash/pkgs/container/dockdash)
+
 A self-hosted dashboard for visualizing Docker containers and network services. DockDash discovers services automatically, tracks their health, monitors container image updates, and lets you map connections between them on an interactive canvas.
+
+## Documentation
+
+- [Configuration reference](docs/CONFIGURATION.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Release process](docs/RELEASING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## Features
 
-- **Docker discovery** — scans running containers and exposes their ports as services
-- **Network scanning** — port-scans CIDR ranges to find services not managed by Docker
-- **Health monitoring** — periodically checks every service and shows live status
-- **Health history** — visualizes uptime over the last 1, 7, or 30 days as a color-coded timeline per service
-- **Docker logs** — streams live container logs directly in the UI with timestamp parsing and ANSI stripping
-- **File explorer** — browse a container's filesystem, view text files, and edit them in place directly from the service drawer
-- **Terminal** — interactive shell inside any container via xterm.js; inherits the active UI theme
-- **Update monitoring** — checks Docker images against registries and flags outdated containers; update badges refresh automatically without a full page reload
-- **Changelog** — fetches GitHub release notes for the running (or available) version of a Docker image and displays them in the service drawer; resolves the GitHub repository via OCI image labels, GHCR URLs, or Docker Hub owner/image heuristics
-- **Interactive canvas** — drag nodes, draw connections between services, zoom and pan
-- **Themes** — multiple built-in UI themes selectable from the Settings page
-- **OIDC authentication** — optional SSO via any standard OpenID Connect provider (Keycloak, Authentik, Authelia, Google, etc.)
+- **Multi-host Docker discovery** — scans one or more local or remote Docker daemons and imports containers and their exposed ports as services
+- **Network discovery** — scans configurable CIDR ranges, with quick and deep scan modes, to find services not managed by Docker
+- **Service management** — add services manually or import scan results, then search, filter, sort, edit, and choose which services appear on the dashboard
+- **Health monitoring and history** — checks every service periodically and visualizes uptime over the last 1, 7, or 30 days
+- **Resource monitoring and history** — tracks container CPU, memory, network, and disk I/O with current readings and historical charts
+- **Container controls** — start, stop, and restart containers from the service drawer
+- **Docker logs** — streams live container logs in the UI with timestamp parsing and ANSI stripping
+- **File explorer** — browses a container's filesystem and supports viewing and editing text files in place
+- **Terminal** — provides an interactive, theme-aware shell inside containers through xterm.js
+- **Image update monitoring** — checks Docker registries for newer images and flags containers with available updates
+- **Changelogs** — resolves source repositories from OCI labels and registry metadata, then displays relevant GitHub release notes
+- **Apprise notifications** — alerts on service failures and recovery, image updates, and configurable CPU or memory thresholds
+- **Interactive topology canvas** — drag, group, and resize service nodes; draw and label connections; snap to grid; zoom, pan, and fit the topology to the screen
+- **Themes and localization** — includes multiple built-in themes plus English and Brazilian Portuguese interfaces
+- **OIDC authentication** — optional SSO through standard OpenID Connect providers such as Keycloak, Authentik, Authelia, and Google
 
 ## Screenshots
 
@@ -128,92 +144,7 @@ Adjust the `POST` / `EXEC` toggles to match the features you actually use — le
 
 ## Configuration
 
-All configuration is done via environment variables. Changes require a container restart.
-
-| Variable | Default | Description |
-|---|---|---|
-| `LOG_LEVEL` | `info` | Logging verbosity: `error`, `warn`, `info`, or `debug`. Set to `debug` to trace registry provider selection and pagination |
-| `PORT` | `3001` | Port the server listens on |
-| `DOCKER_HOSTS` | `unix:///var/run/docker.sock` | Docker daemon socket or TCP address |
-| `NETWORK_CIDRS` | `192.168.0.1/24` | Comma-separated CIDR ranges to scan |
-| `DB_PATH` | `/app/data/dockdash.db` | Path to the SQLite database file |
-| `HEALTH_CHECK_INTERVAL` | `30000` | How often the server re-checks service health (ms) |
-| `RESOURCE_MONITOR_INTERVAL` | `5000` | How often the resource stats job fetches CPU / memory from Docker and refreshes the service table (ms) |
-| `UPDATE_CHECK_INTERVAL` | `3600000` | How often to check Docker images for updates (ms) |
-| `HEALTH_HISTORY_TTL_DAYS` | `30` | How many days of health check history to retain |
-| `LOCALE` | `en` | Language used for server-side notification messages |
-| `GITHUB_TOKEN` | — | GitHub personal access token with `read:packages` scope. Enables the GitHub Packages API for GHCR update checks, which returns versions newest-first and groups all tags per manifest — required for repos that push a git-hash tag on every commit, where the standard registry API buries release tags behind tens of thousands of hash tags. Also required for **private** GHCR images (anonymous registry API access is public-only) and increases the GitHub API rate limit when fetching changelogs (unauthenticated requests are limited to 60/hour per IP) |
-| `APPRISE_URL` | — | Full notify endpoint of the [Apprise REST API](https://github.com/caronc/apprise-api) server (e.g. `http://apprise:8000/notify/myconfig`) |
-| `APPRISE_TAGS` | — | Optional — comma-separated tags to filter which configured Apprise endpoints receive notifications (e.g. `admin`) |
-| `APPRISE_URLS` | — | Optional — comma-separated Apprise notification URLs sent inline (e.g. `slack://token/channel`) |
-| `CPU_SPIKE_THRESHOLD` | `90` | CPU usage percentage at which an Apprise alert is sent (and again when it drops back below). Set to `0` to disable CPU spike alerts |
-| `MEMORY_SPIKE_THRESHOLD` | `90` | Memory usage percentage at which an Apprise alert is sent (and again when it drops back below). Set to `0` to disable memory spike alerts |
-| `SPIKE_DURATION_THRESHOLD` | `300` | How long, **in seconds**, a CPU spike must be sustained before an alert fires. Prevents false alarms from brief bursts. Set to `0` for immediate alerts |
-| `DISABLE_CONTAINER_CONTROLS` | — | Set to `true` to hide the Stop / Start / Restart buttons in the service drawer |
-| `DISABLE_HEALTH_HISTORY` | — | Set to `true` to hide the health history graph in the service drawer and stop recording health check results |
-| `DISABLE_RESOURCE_MONITOR` | — | Set to `true` to hide the CPU / memory / network / disk monitor in the service drawer and stop persisting resource stats history |
-| `DISABLE_FILE_EXPLORER` | — | Set to `true` to hide the file explorer tab in the service drawer |
-| `DISABLE_TERMINAL` | — | Set to `true` to hide the terminal tab in the service drawer |
-| `TRUST_PROXY` | `loopback, uniquelocal` | Express trust proxy setting — controls which `X-Forwarded-*` headers are trusted. The default covers same-host and LAN proxies. Set to `true` to trust all proxies or a specific IP/CIDR for stricter control |
-| `OIDC_ISSUER` | — | OIDC provider discovery URL (e.g. `https://auth.example.com/realms/myrealm`); enables authentication when set together with the other `OIDC_*` vars |
-| `OIDC_CLIENT_ID` | — | Client ID registered with the OIDC provider |
-| `OIDC_CLIENT_SECRET` | — | Client secret registered with the OIDC provider |
-| `OIDC_REDIRECT_URI` | — | Callback URL override — auto-detected from the request as `<protocol>://<host>/auth/callback`; only needed if your reverse proxy setup causes incorrect detection |
-| `OIDC_SCOPES` | `openid profile email` | Space-separated scopes to request from the provider |
-| `SESSION_SECRET` | — | Secret used to sign session cookies — **required in production when OIDC is enabled** |
-| `SESSION_MAX_AGE` | `28800000` | Session cookie lifetime in milliseconds (default 8 hours) |
-
-### Docker socket
-
-Mount the host socket into the container so DockDash can inspect running containers:
-
-```
--v /var/run/docker.sock:/var/run/docker.sock
-```
-
-### Remote Docker host
-
-To connect to a remote Docker daemon instead of the local socket, set `DOCKER_HOSTS`:
-
-```
-DOCKER_HOSTS=tcp://192.168.1.100:2375
-```
-
-### Network scanning
-
-Set `NETWORK_CIDRS` to one or more comma-separated CIDR ranges. DockDash uses nmap to first discover live hosts via a ping sweep, then scans all 65535 TCP ports on each host:
-
-```
-NETWORK_CIDRS=192.168.0.1/24,10.0.0.0/16
-```
-
-### Notifications (Apprise)
-
-DockDash can send push notifications when services go down, recover, or have Docker image updates available. It integrates with the [Apprise REST API](https://github.com/caronc/apprise-api), a self-hosted sidecar that forwards notifications to 80+ services (Slack, Discord, Telegram, email, etc.).
-
-Set `APPRISE_URL` to the full notify endpoint of your Apprise server. The path encodes the config key for stateful mode (`/notify/{key}`).
-
-If you use tag-based routing on the Apprise side, set `APPRISE_TAGS` to match:
-
-```
-APPRISE_URL=http://192.168.7.5:8000/notify/apprise
-APPRISE_TAGS=admin
-```
-
-`APPRISE_URLS` is optional — use it to add extra inline notification targets (Slack, Discord, etc.) without pre-configuring them on the Apprise server:
-
-```
-APPRISE_URL=http://apprise:8000/notify
-APPRISE_URLS=slack://tokenA/tokenB/tokenC/#channel,discord://webhook_id/webhook_token
-```
-
-All three variables can be combined.
-
-Once configured, the **Settings** page shows a "Send Test" button to verify delivery. Notifications are sent for:
-
-- Service goes **down** (failure alert)
-- Service **recovers** after being down (success alert)
-- Docker image **update available** (warning alert)
+DockDash is configured through environment variables. See the [configuration guide](docs/CONFIGURATION.md) for the complete variable reference, Docker connectivity options, OIDC setup, notifications, feature controls, and deployment guidance.
 
 ## Development
 
@@ -228,3 +159,13 @@ yarn test:coverage   # run tests with V8 coverage report (output: coverage/)
 yarn typecheck       # type-check client and server
 yarn lint:fix        # auto-fix lint and formatting
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete development workflow, database migration guidance, required checks, and pull-request expectations.
+
+## Community and support
+
+- Use [GitHub issues](https://github.com/dougmaitelli/DockDash/issues) for reproducible bugs and feature proposals.
+- Use [GitHub private vulnerability reporting](https://github.com/dougmaitelli/DockDash/security/advisories/new) for security issues.
+- Review the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+
+Releases and container publishing are automated from semantic version tags. See the [release process](docs/RELEASING.md) for details.
