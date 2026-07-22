@@ -1,7 +1,7 @@
 import express, { Router } from "express";
 
-import type { ApiSuccess, FileContentResponse } from "@shared/api";
 import { fileContentRequestSchema } from "@shared/requestSchemas.js";
+import type { ApiSuccess, FileContentResponse } from "@shared/responseSchemas.js";
 
 import { config } from "../lib/config.js";
 import { isValidContainerPath } from "../lib/validate.js";

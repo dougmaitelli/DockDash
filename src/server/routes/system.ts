@@ -1,12 +1,12 @@
 import { Router } from "express";
 
-import type { AppUpdateInfo, DashboardConfig } from "@shared/api";
 import {
   CONFIG_SCHEMA,
   type ConfigKey,
   type SchemaConfig,
   type SchemaEntry,
 } from "@shared/configSchema.js";
+import type { AppUpdateInfo, DashboardConfig } from "@shared/responseSchemas.js";
 
 import { config } from "../lib/config.js";
 import { appUpdateService } from "../services/appUpdateService.js";

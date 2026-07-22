@@ -1,5 +1,13 @@
 import type { ServiceWithPosition } from "./ServiceWithPosition.js";
 
+export const SSE_EVENT = {
+  DONE: "done",
+  SCAN_ERROR: "scan-error",
+  LOG_ERROR: "log-error",
+  TERMINAL_SESSION: "terminal-session",
+  TERMINAL_ERROR: "terminal-error",
+} as const;
+
 export enum ContainerAction {
   STOP = "stop",
   START = "start",
@@ -85,18 +93,3 @@ export interface DashboardData {
   services: ServiceWithPosition[];
   links: ServiceLink[];
 }
-
-export type HealthBucket = ServiceStatus | "mixed" | null;
-
-export type ResourceBucket = { cpuPercent: number; memoryPercent: number } | null;
-
-export interface ChangelogRelease {
-  version: string;
-  publishedAt: string;
-  body: string;
-  htmlUrl: string;
-}
-
-export type ChangelogResponse =
-  | { available: true; release: ChangelogRelease }
-  | { available: false; reason: string };

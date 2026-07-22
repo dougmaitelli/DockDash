@@ -1,7 +1,11 @@
 import { Router } from "express";
 
-import type { DockerHostHealth, SseScanDonePayload, SseScanErrorPayload } from "@shared/api";
-import { SSE_EVENT } from "@shared/api";
+import type {
+  DockerHostHealth,
+  SseScanDonePayload,
+  SseScanErrorPayload,
+} from "@shared/responseSchemas.js";
+import { SSE_EVENT } from "@shared/types.js";
 
 import { validateNetworkCidr } from "../lib/validate.js";
 import { dockerService } from "../services/dockerService.js";

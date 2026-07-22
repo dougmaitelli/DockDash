@@ -1,8 +1,8 @@
 import { Router } from "express";
 
-import type { ApiSuccess, SseTerminalSessionPayload } from "@shared/api";
-import { SSE_EVENT } from "@shared/api";
 import { type TerminalInputRequest, terminalInputRequestSchema } from "@shared/requestSchemas.js";
+import type { ApiSuccess, SseTerminalSessionPayload } from "@shared/responseSchemas.js";
+import { SSE_EVENT } from "@shared/types.js";
 
 import { config } from "../lib/config.js";
 import { validateBody } from "../middleware/validateRequest.js";

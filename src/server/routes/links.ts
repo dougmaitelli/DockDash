@@ -1,13 +1,13 @@
 import { Router } from "express";
 
 import { ServiceLinkType } from "@shared";
-import type { ApiSuccess } from "@shared/api";
 import {
   type CreateLinkRequest,
   createLinkRequestSchema,
   type UpdateLinkRequest,
   updateLinkRequestSchema,
 } from "@shared/requestSchemas.js";
+import type { ApiSuccess } from "@shared/responseSchemas.js";
 
 import { serviceRepository } from "../db/serviceRepository.js";
 import { validateBody } from "../middleware/validateRequest.js";

@@ -1,8 +1,8 @@
 import { Router } from "express";
 
 import { ContainerAction } from "@shared";
-import type { ApiSuccess, ContainerStats } from "@shared/api";
-import { SSE_EVENT } from "@shared/api";
+import type { ApiSuccess, ContainerStats } from "@shared/responseSchemas.js";
+import { SSE_EVENT } from "@shared/types.js";
 
 import { config } from "../lib/config.js";
 import { dockerService } from "../services/dockerService.js";

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
-import axios from "axios";
+
+import { authApi } from "../services/api";
 
 interface AuthUser {
   sub: string;
@@ -29,8 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    axios
-      .get<{ enabled: boolean; user: AuthUser | null }>("/auth/me")
+    void authApi
+      .getState()
       .then((res) => {
         setEnabled(res.data.enabled);
         setUser(res.data.user);
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = async () => {
-    await axios.post("/auth/logout");
+    await authApi.logout();
     setUser(null);
     window.location.href = "/login";
   };

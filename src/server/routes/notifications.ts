@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import type { ApiSuccess } from "@shared/api";
+import type { ApiSuccess } from "@shared/responseSchemas.js";
 
 import { t } from "../i18n/index.js";
 import { config } from "../lib/config.js";

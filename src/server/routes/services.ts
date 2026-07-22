@@ -1,7 +1,6 @@
 import { Router } from "express";
 
 import { ServiceSource } from "@shared";
-import type { ApiSuccess, SavePositionsResponse } from "@shared/api";
 import {
   type CreateServiceRequest,
   createServiceRequestSchema,
@@ -10,6 +9,7 @@ import {
   type UpdateServiceRequest,
   updateServiceRequestSchema,
 } from "@shared/requestSchemas.js";
+import type { ApiSuccess, SavePositionsResponse } from "@shared/responseSchemas.js";
 
 import { historyRepository } from "../db/historyRepository.js";
 import { serviceRepository } from "../db/serviceRepository.js";

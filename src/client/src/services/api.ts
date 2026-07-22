@@ -1,23 +1,7 @@
-import axios from "axios";
+import axios, { type AxiosResponse } from "axios";
+import type { ZodType } from "zod";
 
-import type {
-  ApiSuccess,
-  ChangelogResponse,
-  CheckAllServicesResponse,
-  ContainerAction,
-  ContainerStats,
-  DashboardData,
-  DockerHostHealth,
-  FileContentResponse,
-  FilesResponse,
-  HealthBucket,
-  ResourceBucket,
-  SavePositionsResponse,
-  Service,
-  ServiceLink,
-  ServiceStatusItem,
-} from "@shared";
-import type { AppUpdateInfo } from "@shared/api";
+import type { ContainerAction } from "@shared";
 import type {
   CreateLinkRequest,
   CreateServiceRequest,
@@ -27,6 +11,26 @@ import type {
   UpdateLinkRequest,
   UpdateServiceRequest,
 } from "@shared/requestSchemas.js";
+import {
+  apiSuccessResponseSchema,
+  appUpdateResponseSchema,
+  authLogoutResponseSchema,
+  authStateResponseSchema,
+  changelogResponseSchema,
+  checkAllServicesResponseSchema,
+  containerStatsResponseSchema,
+  dashboardConfigResponseSchema,
+  dashboardDataResponseSchema,
+  dockerHostHealthResponseSchema,
+  fileContentResponseSchema,
+  filesResponseSchema,
+  healthHistoryResponseSchema,
+  resourceHistoryResponseSchema,
+  savePositionsResponseSchema,
+  serviceLinkResponseSchema,
+  serviceResponseSchema,
+  serviceStatusResponseSchema,
+} from "@shared/responseSchemas.js";
 
 const api = axios.create({
   baseURL: "/api",
@@ -43,60 +47,100 @@ api.interceptors.response.use(
   },
 );
 
+async function validated<T>(
+  request: Promise<AxiosResponse<unknown>>,
+  schema: ZodType<T>,
+): Promise<AxiosResponse<T>> {
+  const response = await request;
+
+  return { ...response, data: schema.parse(response.data) };
+}
+
 // Discovery APIs
 export const discoveryApi = {
-  dockerHealth: () => api.get<DockerHostHealth[]>("/docker/health"),
-  testNotification: () => api.post<ApiSuccess>("/notifications/test"),
-  checkAppUpdate: () => api.get<AppUpdateInfo>("/app-update"),
+  dockerHealth: () => validated(api.get("/docker/health"), dockerHostHealthResponseSchema),
+  testNotification: () => validated(api.post("/notifications/test"), apiSuccessResponseSchema),
+  checkAppUpdate: () => validated(api.get("/app-update"), appUpdateResponseSchema),
+};
+
+export const configApi = {
+  get: () => validated(api.get("/config"), dashboardConfigResponseSchema),
+};
+
+export const authApi = {
+  getState: () => validated(axios.get("/auth/me"), authStateResponseSchema),
+  logout: () => validated(axios.post("/auth/logout"), authLogoutResponseSchema),
 };
 
 // Service management APIs
 export const serviceApi = {
-  getAll: () => api.get<Service[]>("/services"),
-  getById: (id: string) => api.get<Service>(`/services/${id}`),
-  importService: (data: CreateServiceRequest) => api.post<Service>("/services", data),
-  update: (id: string, data: UpdateServiceRequest) => api.put<Service>(`/services/${id}`, data),
-  delete: (id: string) => api.delete<ApiSuccess>(`/services/${id}`),
+  getAll: () => validated(api.get("/services"), serviceResponseSchema.array()),
+  getById: (id: string) => validated(api.get(`/services/${id}`), serviceResponseSchema),
+  importService: (data: CreateServiceRequest) =>
+    validated(api.post("/services", data), serviceResponseSchema),
+  update: (id: string, data: UpdateServiceRequest) =>
+    validated(api.put(`/services/${id}`, data), serviceResponseSchema),
+  delete: (id: string) => validated(api.delete(`/services/${id}`), apiSuccessResponseSchema),
   getHealthHistory: (id: string, days: number, buckets = 80) =>
-    api.get<HealthBucket[]>(`/services/${id}/health-history`, { params: { days, buckets } }),
+    validated(
+      api.get(`/services/${id}/health-history`, { params: { days, buckets } }),
+      healthHistoryResponseSchema,
+    ),
   getResourceHistory: (id: string, days: number, buckets = 80) =>
-    api.get<ResourceBucket[]>(`/services/${id}/resource-history`, { params: { days, buckets } }),
-  getChangelog: (id: string) => api.get<ChangelogResponse>(`/services/${id}/changelog`),
-  addToDashboard: (id: string) => api.post<ApiSuccess>(`/services/${id}/dashboard`),
-  removeFromDashboard: (id: string) => api.delete<ApiSuccess>(`/services/${id}/dashboard`),
+    validated(
+      api.get(`/services/${id}/resource-history`, { params: { days, buckets } }),
+      resourceHistoryResponseSchema,
+    ),
+  getChangelog: (id: string) =>
+    validated(api.get(`/services/${id}/changelog`), changelogResponseSchema),
+  addToDashboard: (id: string) =>
+    validated(api.post(`/services/${id}/dashboard`), apiSuccessResponseSchema),
+  removeFromDashboard: (id: string) =>
+    validated(api.delete(`/services/${id}/dashboard`), apiSuccessResponseSchema),
   containerAction: (id: string, action: ContainerAction) =>
-    api.post<ApiSuccess>(`/services/${id}/container/${action}`),
+    validated(api.post(`/services/${id}/container/${action}`), apiSuccessResponseSchema),
   listFiles: (id: string, path: string) =>
-    api.get<FilesResponse>(`/services/${id}/files`, { params: { path } }),
+    validated(api.get(`/services/${id}/files`, { params: { path } }), filesResponseSchema),
   readFileContent: (id: string, path: string) =>
-    api.get<FileContentResponse>(`/services/${id}/files/content`, { params: { path } }),
+    validated(
+      api.get(`/services/${id}/files/content`, { params: { path } }),
+      fileContentResponseSchema,
+    ),
   writeFileContent: (id: string, path: string, content: string) =>
-    api.put<ApiSuccess>(`/services/${id}/files/content`, { path, content }),
+    validated(
+      api.put(`/services/${id}/files/content`, { path, content }),
+      apiSuccessResponseSchema,
+    ),
   writeTerminalInput: (id: string, data: TerminalInputRequest) =>
-    api.post<ApiSuccess>(`/services/${id}/terminal/input`, data),
-  getStats: (id: string) => api.get<ContainerStats>(`/services/${id}/stats`),
+    validated(api.post(`/services/${id}/terminal/input`, data), apiSuccessResponseSchema),
+  getStats: (id: string) =>
+    validated(api.get(`/services/${id}/stats`), containerStatsResponseSchema),
 };
 
 // Link management APIs
 export const linkApi = {
-  create: (data: CreateLinkRequest) => api.post<ServiceLink>("/links", data),
-  update: (id: string, data: UpdateLinkRequest) => api.put<ServiceLink>(`/links/${id}`, data),
-  delete: (id: string) => api.delete<ApiSuccess>(`/links/${id}`),
+  create: (data: CreateLinkRequest) =>
+    validated(api.post("/links", data), serviceLinkResponseSchema),
+  update: (id: string, data: UpdateLinkRequest) =>
+    validated(api.put(`/links/${id}`, data), serviceLinkResponseSchema),
+  delete: (id: string) => validated(api.delete(`/links/${id}`), apiSuccessResponseSchema),
 };
 
 // Position management APIs
 export const positionApi = {
   save: (positions: PositionUpdate[]) =>
-    api.post<SavePositionsResponse>("/positions", { positions } satisfies SavePositionsRequest),
+    validated(
+      api.post("/positions", { positions } satisfies SavePositionsRequest),
+      savePositionsResponseSchema,
+    ),
 };
 
 // Dashboard API
 export const dashboardApi = {
-  get: () => api.get<DashboardData>("/dashboard"),
-  checkAllServices: () => api.post<CheckAllServicesResponse>("/checkAllServices"),
-  serviceStatuses: () => api.get<ServiceStatusItem[]>("/serviceStatuses"),
+  get: () => validated(api.get("/dashboard"), dashboardDataResponseSchema),
+  checkAllServices: () => validated(api.post("/checkAllServices"), checkAllServicesResponseSchema),
+  serviceStatuses: () =>
+    validated(api.get("/serviceStatuses"), serviceStatusResponseSchema.array()),
 };
-
-export type { SavePositionsResponse };
 
 export default api;

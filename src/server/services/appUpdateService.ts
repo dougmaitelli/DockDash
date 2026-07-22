@@ -1,7 +1,7 @@
 import axios from "axios";
 
 import type { ChangelogRelease } from "@shared";
-import type { AppUpdateInfo } from "@shared/api";
+import type { AppUpdateInfo } from "@shared/responseSchemas.js";
 
 import { config } from "../lib/config.js";
 import { TagParser } from "../lib/tagParser.js";

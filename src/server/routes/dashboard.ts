@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import type { CheckAllServicesResponse } from "@shared/api";
+import type { CheckAllServicesResponse } from "@shared/responseSchemas.js";
 
 import { serviceRepository } from "../db/serviceRepository.js";
 import { logger } from "../lib/logService.js";

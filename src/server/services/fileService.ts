@@ -1,7 +1,7 @@
 import type Docker from "dockerode";
 import { Readable } from "stream";
 
-import type { FileContentResponse, FileEntry } from "@shared/api";
+import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 
 import { sanitizeDockerError } from "../lib/errors.js";
 import { DOCKER_STREAM_HEADER_SIZE } from "./dockerService.js";
