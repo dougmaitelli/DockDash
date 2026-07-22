@@ -1,7 +1,32 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  Background,
+  BackgroundVariant,
+  BaseEdge,
+  Connection,
+  ConnectionLineType,
+  Controls,
+  Edge,
+  EdgeLabelRenderer,
+  EdgeProps,
+  getSmoothStepPath,
+  Handle,
+  MarkerType,
+  MiniMap,
+  Node,
+  NodeProps,
+  NodeResizer,
+  Position,
+  ReactFlow,
+  ReactFlowProvider,
+  useEdgesState,
+  useNodesInitialized,
+  useNodesState,
+  useReactFlow,
+} from "@xyflow/react";
 
-import type { Service, ServiceLink, ServiceWithPosition } from "@shared";
+import type { Service, ServiceLink, ServicePosition, ServiceWithPosition } from "@shared";
 import { ServiceLinkType, ServiceSource, ServiceStatus } from "@shared";
 import type {
   CreateLinkRequest,
@@ -11,7 +36,10 @@ import type {
 } from "@shared/requestSchemas.js";
 
 import { Icons } from "@/components/Icons";
+import { PortTag } from "@/components/PortTag";
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
+import { LINK_TYPES } from "@/types";
 
 import { dashboardApi } from "../../services/api";
 import { AddServiceModal } from "../modals/AddServiceModal";
@@ -19,26 +47,9 @@ import { EditLinkModal } from "../modals/EditLinkModal";
 import { ServiceDrawer, Tab as DrawerTab } from "../modals/ServiceDrawer";
 import { EmptyOverlay } from "./EmptyOverlay";
 import { ErrorOverlay } from "./ErrorOverlay";
-import { LinkLayer } from "./LinkLayer";
-import {
-  CARD_BORDER_WIDTH,
-  CONTAINER_PADDING,
-  DEFAULT_CONTAINER_HEIGHT,
-  DEFAULT_CONTAINER_WIDTH,
-  getAbsoluteNodePosition,
-  getInfoSectionHeight,
-  getMinContainerDimensions,
-  getNodeSize,
-  getPortPosition,
-  NODE_HEIGHT,
-  NODE_WIDTH,
-  PortSide,
-} from "./nodeGeometry";
-import { NodeLayer } from "./NodeLayer";
-import type { ResizeDirection } from "./ServiceNode";
 import { UpdatesPopover } from "./UpdatesPopover";
-import { ZoomControls } from "./ZoomControls";
 
+import "@xyflow/react/dist/style.css";
 import "./DashboardCanvas.css";
 
 interface DashboardCanvasProps {
@@ -65,797 +76,604 @@ interface DashboardCanvasProps {
   removeLink: (id: string) => Promise<void>;
 }
 
-function findNestTarget(
-  services: ServiceWithPosition[],
-  draggedId: string,
-  draggedAbsX: number,
-  draggedAbsY: number,
-): string | null {
-  const draggedSize = getNodeSize(draggedId);
-  const cx = draggedAbsX + (draggedSize?.w ?? NODE_WIDTH) / 2;
-  const cy = draggedAbsY + (draggedSize?.h ?? NODE_HEIGHT) / 2;
+type ServiceFlowData = {
+  service: ServiceWithPosition;
+  isContainer: boolean;
+  minContainerWidth: number;
+  minContainerHeight: number;
+  targetPorts: number[];
+  onOpen: (service: ServiceWithPosition) => void;
+  onResizeEnd: (id: string, width: number, height: number) => void;
+};
 
-  for (const svc of services) {
-    if (svc.id === draggedId || !svc.id) continue;
+type ServiceFlowNode = Node<ServiceFlowData, "service">;
 
-    if (svc.position?.parentId) continue; // can't nest into a child
+type ServiceEdgeData = { link: ServiceLink };
+type ServiceFlowEdge = Edge<ServiceEdgeData, "serviceLink">;
 
-    const { x: svcX, y: svcY } = getAbsoluteNodePosition(svc, services, {});
+const PARENT_HEADER_HEIGHT = 112;
+const NODE_WIDTH = 220;
+const NODE_HEIGHT = 120;
+const DEFAULT_CONTAINER_WIDTH = 400;
+const DEFAULT_CONTAINER_HEIGHT = 280;
 
-    const hasChildren = services.some((s) => s.position?.parentId === svc.id && s.id !== draggedId);
-
-    if (hasChildren) {
-      const containerW = svc.position?.w ?? DEFAULT_CONTAINER_WIDTH;
-      const containerH = svc.position?.h ?? DEFAULT_CONTAINER_HEIGHT;
-
-      if (cx >= svcX && cx <= svcX + containerW && cy >= svcY && cy <= svcY + containerH) {
-        return svc.id;
-      }
-    } else {
-      const size = getNodeSize(svc.id);
-      const nodeW = size?.w ?? NODE_WIDTH;
-      const nodeH = size?.h ?? NODE_HEIGHT;
-
-      if (cx >= svcX && cx <= svcX + nodeW && cy >= svcY && cy <= svcY + nodeH) {
-        return svc.id;
-      }
-    }
-  }
-
-  return null;
+function getLinkColor(type: string): string {
+  return LINK_TYPES.find((candidate) => candidate.value === type)?.color || "var(--accent-gray)";
 }
 
-export function DashboardCanvas({
-  allServices,
-  services,
-  links,
-  loading,
-  error,
-  refresh,
-  updatePosition,
-  addService,
-  updateService,
-  addLink,
-  updateLink,
-  removeLink,
-  removeService,
-  removeFromDashboard,
-}: DashboardCanvasProps) {
-  const MIN_ZOOM = 0.25;
-  const MAX_ZOOM = 3;
-  const GRID_SIZE = 24;
-  const MOUSE_BUTTON_LEFT = 0;
-  const MOUSE_BUTTON_MIDDLE = 1;
+function ServiceLinkEdge({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  markerEnd,
+  style,
+  data,
+}: EdgeProps<ServiceFlowEdge>) {
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+  });
+  const portOffset = 22;
+  const portX =
+    targetX +
+    (targetPosition === Position.Left
+      ? -portOffset
+      : targetPosition === Position.Right
+        ? portOffset
+        : 0);
+  const portY =
+    targetY +
+    (targetPosition === Position.Top
+      ? -portOffset
+      : targetPosition === Position.Bottom
+        ? portOffset
+        : 0);
 
+  return (
+    <>
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <EdgeLabelRenderer>
+        {data?.link.label && (
+          <span
+            className="flow-edge-label nodrag nopan"
+            style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+          >
+            {data.link.label}
+          </span>
+        )}
+        {data?.link.targetPort != null && (
+          <span
+            className="flow-edge-port nodrag nopan"
+            style={{ transform: `translate(-50%, -50%) translate(${portX}px, ${portY}px)` }}
+          >
+            :{data.link.targetPort}
+          </span>
+        )}
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+function ServiceFlowNode({ id, data, selected }: NodeProps<ServiceFlowNode>) {
+  const {
+    service,
+    isContainer,
+    minContainerWidth,
+    minContainerHeight,
+    targetPorts,
+    onOpen,
+    onResizeEnd,
+  } = data;
+  const statusClass =
+    service.status === ServiceStatus.UP
+      ? "bg-success/15 text-success"
+      : service.status === ServiceStatus.DOWN
+        ? "bg-destructive/15 text-destructive"
+        : "bg-muted-foreground/15 text-muted-foreground";
+
+  return (
+    <div
+      className={cn(
+        "flow-service-node",
+        isContainer && "flow-service-node--container",
+        selected && "flow-service-node--selected",
+      )}
+      onDoubleClick={() => onOpen(service)}
+    >
+      {isContainer && (
+        <NodeResizer
+          minWidth={minContainerWidth}
+          minHeight={minContainerHeight}
+          isVisible={selected}
+          onResizeEnd={(_event, params) => onResizeEnd(id, params.width, params.height)}
+        />
+      )}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="target-left"
+        className="flow-passive-handle"
+      />
+      <Handle type="source" position={Position.Right} id="source-right" />
+      <Handle type="source" position={Position.Left} id="source-left" />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="target-right"
+        className="flow-passive-handle"
+      />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="target-top"
+        className="flow-passive-handle"
+      />
+      <Handle type="source" position={Position.Top} id="source-top" />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="target-bottom"
+        className="flow-passive-handle"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="source-bottom"
+        className="flow-external-bottom-handle"
+      />
+      {targetPorts.flatMap((port, index) =>
+        ([Position.Left, Position.Right, Position.Top, Position.Bottom] as const).map((side) => (
+          <Handle
+            key={`${port}-${side}`}
+            type="target"
+            position={side}
+            id={`target-port-${port}-${side}`}
+            className="flow-passive-handle"
+            style={
+              side === Position.Left || side === Position.Right
+                ? { top: `${((index + 1) / (targetPorts.length + 1)) * 100}%` }
+                : { left: `${((index + 1) / (targetPorts.length + 1)) * 100}%` }
+            }
+          />
+        )),
+      )}
+      {isContainer && (
+        <>
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            id="source-internal"
+            className="flow-internal-handle"
+          />
+          <Handle
+            type="target"
+            position={Position.Bottom}
+            id="target-internal"
+            className="flow-internal-handle"
+          />
+        </>
+      )}
+
+      <div className="flow-service-node__header">
+        <div className="text-[0.85rem] font-semibold text-foreground flex items-center gap-1.5 overflow-hidden">
+          {service.source === ServiceSource.DOCKER ? (
+            <Icons.Docker size={14} className="text-muted-foreground" />
+          ) : (
+            <Icons.Globe size={14} className="text-muted-foreground" />
+          )}
+          <span className="truncate" title={service.name}>
+            {service.name}
+          </span>
+        </div>
+
+        {service.source === ServiceSource.DOCKER && service.metadata?.imageTag && (
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <span className="px-[5px] py-px bg-accent-purple/10 text-accent-purple rounded text-[0.6rem] font-mono">
+              {service.metadata.imageTag}
+            </span>
+            {service.metadata.hasUpdate && (
+              <span className="px-[5px] py-px bg-warning/10 text-warning border border-warning/30 rounded text-[0.6rem] font-mono">
+                {service.metadata.latestVersion ?? "update available"}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="text-[0.7rem] text-muted-foreground mt-1 font-mono flex flex-wrap gap-1">
+          {service.host}
+          {service.ports?.map((port) => (
+            <PortTag key={port}>:{port}</PortTag>
+          ))}
+        </div>
+        <div
+          className={cn(
+            "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.65rem] font-semibold mt-2 uppercase",
+            statusClass,
+          )}
+        >
+          <span className="size-1.5 rounded-full bg-current" />
+          {service.status}
+        </div>
+        {isContainer && (
+          <div className="flow-service-node__container-label">Contained services</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const nodeTypes = { service: ServiceFlowNode };
+const edgeTypes = { serviceLink: ServiceLinkEdge };
+
+function toFlowEdges(links: ServiceLink[], services: ServiceWithPosition[]): ServiceFlowEdge[] {
+  const renderedPortLabels = new Set<string>();
+  const absolutePosition = (serviceId: string): { x: number; y: number } => {
+    const service = services.find((candidate) => candidate.id === serviceId);
+
+    if (!service?.position) return { x: 0, y: 0 };
+
+    if (!service.position.parentId) return service.position;
+
+    const parent = absolutePosition(service.position.parentId);
+
+    return {
+      x: parent.x + service.position.x,
+      y: parent.y + PARENT_HEADER_HEIGHT + service.position.y,
+    };
+  };
+
+  return links.map((link) => {
+    const portGroup = `${link.targetId}:${link.targetPort}`;
+    const showPortLabel = link.targetPort != null && !renderedPortLabels.has(portGroup);
+
+    if (showPortLabel) renderedPortLabels.add(portGroup);
+
+    const sourcePosition = absolutePosition(link.sourceId);
+    const targetPosition = absolutePosition(link.targetId);
+    const sourceIsParent =
+      services.find((service) => service.id === link.targetId)?.position?.parentId ===
+      link.sourceId;
+    const targetIsParent =
+      services.find((service) => service.id === link.sourceId)?.position?.parentId ===
+      link.targetId;
+    const verticalDirection = targetPosition.y - sourcePosition.y;
+    const horizontalDirection = targetPosition.x - sourcePosition.x;
+    const sourceService = services.find((service) => service.id === link.sourceId);
+    const targetService = services.find((service) => service.id === link.targetId);
+    const sourceHeight = sourceService?.position?.h ?? NODE_HEIGHT;
+    const targetHeight = targetService?.position?.h ?? NODE_HEIGHT;
+    const sourceWidth = sourceService?.position?.w ?? NODE_WIDTH;
+    const targetWidth = targetService?.position?.w ?? NODE_WIDTH;
+    const overlapsVertically =
+      sourcePosition.y <= targetPosition.y + targetHeight &&
+      targetPosition.y <= sourcePosition.y + sourceHeight;
+    const overlapsHorizontally =
+      sourcePosition.x <= targetPosition.x + targetWidth &&
+      targetPosition.x <= sourcePosition.x + sourceWidth;
+    const useVerticalHandles = !overlapsVertically && overlapsHorizontally;
+    const sourceSide = useVerticalHandles
+      ? verticalDirection > 0
+        ? Position.Bottom
+        : Position.Top
+      : horizontalDirection > 0
+        ? Position.Right
+        : Position.Left;
+    const targetSide = useVerticalHandles
+      ? verticalDirection > 0
+        ? Position.Top
+        : Position.Bottom
+      : horizontalDirection > 0
+        ? Position.Left
+        : Position.Right;
+    const sourceHandle = sourceIsParent
+      ? "source-internal"
+      : targetIsParent
+        ? "source-top"
+        : `source-${sourceSide}`;
+    const targetHandle = sourceIsParent
+      ? "target-top"
+      : targetIsParent
+        ? "target-internal"
+        : link.targetPort != null
+          ? `target-port-${link.targetPort}-${targetSide}`
+          : `target-${targetSide}`;
+
+    return {
+      id: link.id,
+      source: link.sourceId,
+      target: link.targetId,
+      sourceHandle,
+      targetHandle,
+      type: "serviceLink",
+      markerEnd: { type: MarkerType.ArrowClosed, color: getLinkColor(link.type) },
+      style: { stroke: getLinkColor(link.type), strokeWidth: 2 },
+      data: {
+        link: showPortLabel ? link : { ...link, targetPort: undefined },
+      },
+    };
+  });
+}
+
+function DashboardFlow(props: DashboardCanvasProps) {
+  const {
+    allServices,
+    services,
+    links,
+    loading,
+    error,
+    refresh,
+    updatePosition,
+    addService,
+    updateService,
+    addLink,
+    updateLink,
+    removeLink,
+    removeService,
+    removeFromDashboard,
+  } = props;
   const { t } = useTranslation();
-
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [canvasDimensions, setCanvasDimensions] = useState({ w: 0, h: 0 });
-
-  const servicesOnline = services.filter((s) => s.status === ServiceStatus.UP).length;
-  const servicesWithUpdates = allServices.filter((s) => s.metadata?.hasUpdate === true);
-
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [isPanning, setIsPanning] = useState(false);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-
-  const initialFitDone = useRef(false);
-
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selectedService = services.find((s) => s.id === selectedId);
-  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [addingService, setAddingService] = useState(false);
   const [editingLink, setEditingLink] = useState<ServiceLink | null>(null);
   const [editingNode, setEditingNode] = useState<Service | null>(null);
-  const [drawerInitialTab, setDrawerInitialTab] = useState<DrawerTab | undefined>(undefined);
+  const [drawerInitialTab, setDrawerInitialTab] = useState<DrawerTab | undefined>();
+  const [snapToGrid, setSnapToGrid] = useState(
+    () => localStorage.getItem("dockdash.snapToGrid") !== "false",
+  );
+  const nodesInitialized = useNodesInitialized();
+  const { fitView, getIntersectingNodes, getNodesBounds, isNodeIntersecting } = useReactFlow<
+    ServiceFlowNode,
+    ServiceFlowEdge
+  >();
+  const initialFitDone = useRef(false);
 
-  const handleRemoveFromDashboard = useCallback(
-    async (id: string) => {
-      await removeFromDashboard(id);
+  const handleResizeEnd = useCallback(
+    (id: string, width: number, height: number) => {
+      const service = services.find((item) => item.id === id);
 
-      if (selectedId === id) setSelectedId(null);
+      if (!service) return;
 
-      if (editingNode?.id === id) setEditingNode(null);
+      const position: ServicePosition = service.position ?? { serviceId: id, x: 0, y: 0 };
+
+      void updatePosition(id, position.x, position.y, position.parentId ?? null, width, height);
     },
-    [removeFromDashboard, selectedId, editingNode],
+    [services, updatePosition],
   );
 
-  const [dragOffsets, setDragOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
-  const [nestingTarget, setNestingTarget] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const openNode = useCallback((service: ServiceWithPosition) => {
+    setDrawerInitialTab(undefined);
+    setEditingNode(service);
+  }, []);
 
-  const [snapToGrid, setSnapToGrid] = useState(() => {
-    const stored = localStorage.getItem("dockdash.snapToGrid");
+  const flowNodes = useMemo<ServiceFlowNode[]>(() => {
+    const childCounts = new Map<string, number>();
 
-    return stored === null ? true : stored === "true";
-  });
-  const snapToGridRef = useRef(snapToGrid);
+    services.forEach((service) => {
+      if (service.position?.parentId)
+        childCounts.set(
+          service.position.parentId,
+          (childCounts.get(service.position.parentId) ?? 0) + 1,
+        );
+    });
+    const ordered = [...services].sort(
+      (a, b) => Number(!!a.position?.parentId) - Number(!!b.position?.parentId),
+    );
+    const portsByTarget = new Map<string, Set<number>>();
 
+    links.forEach((link) => {
+      if (link.targetPort == null) return;
+
+      const ports = portsByTarget.get(link.targetId) ?? new Set<number>();
+
+      ports.add(link.targetPort);
+      portsByTarget.set(link.targetId, ports);
+    });
+
+    return ordered.map((service, index) => {
+      const isContainer = childCounts.has(service.id!);
+      const cols = Math.max(3, Math.ceil(Math.sqrt(services.length)));
+      const position: ServicePosition = service.position ?? {
+        serviceId: service.id!,
+        x: 80 + (index % cols) * (NODE_WIDTH + 60),
+        y: 80 + Math.floor(index / cols) * (NODE_HEIGHT + 70),
+      };
+      const children = services.filter((child) => child.position?.parentId === service.id);
+      const minContainerWidth = Math.max(
+        DEFAULT_CONTAINER_WIDTH,
+        ...children.map((child) => (child.position?.x ?? 0) + NODE_WIDTH + 24),
+      );
+      const minContainerHeight = Math.max(
+        DEFAULT_CONTAINER_HEIGHT,
+        ...children.map(
+          (child) => PARENT_HEADER_HEIGHT + (child.position?.y ?? 0) + NODE_HEIGHT + 24,
+        ),
+      );
+
+      return {
+        id: service.id!,
+        type: "service",
+        position: {
+          x: position.x,
+          y: position.y + (position.parentId ? PARENT_HEADER_HEIGHT : 0),
+        },
+        parentId: position.parentId,
+        width: isContainer ? (position.w ?? DEFAULT_CONTAINER_WIDTH) : NODE_WIDTH,
+        height: isContainer ? (position.h ?? DEFAULT_CONTAINER_HEIGHT) : undefined,
+        data: {
+          service,
+          isContainer,
+          minContainerWidth,
+          minContainerHeight,
+          targetPorts: [...(portsByTarget.get(service.id!) ?? [])].sort((a, b) => a - b),
+          onOpen: openNode,
+          onResizeEnd: handleResizeEnd,
+        },
+      } satisfies ServiceFlowNode;
+    });
+  }, [services, links, openNode, handleResizeEnd]);
+  const routedEdges = useMemo(() => toFlowEdges(links, services), [links, services]);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState<ServiceFlowNode>(flowNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(routedEdges);
+
+  useEffect(() => setNodes(flowNodes), [flowNodes, setNodes]);
+  useEffect(() => setEdges(routedEdges), [routedEdges, setEdges]);
   useEffect(() => {
-    snapToGridRef.current = snapToGrid;
+    if (initialFitDone.current || services.length === 0 || !nodesInitialized) return;
+
+    const frame = requestAnimationFrame(() => {
+      void fitView({ padding: 0.18, maxZoom: 1, duration: 0 });
+      initialFitDone.current = true;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [fitView, nodesInitialized, services.length]);
+  useEffect(() => {
     localStorage.setItem("dockdash.snapToGrid", String(snapToGrid));
   }, [snapToGrid]);
 
-  const snapCoord = (v: number) =>
-    snapToGridRef.current ? Math.round(v / GRID_SIZE) * GRID_SIZE : v;
-
-  const resizeState = useRef<{
-    nodeId: string | null;
-    startMouseX: number;
-    startMouseY: number;
-    startW: number;
-    startH: number;
-  }>({ nodeId: null, startMouseX: 0, startMouseY: 0, startW: 0, startH: 0 });
-  const [resizeDimensions, setResizeDimensions] = useState<
-    Record<string, { w: number; h: number }>
-  >({});
-  const [isResizing, setIsResizing] = useState(false);
-
-  // Connection dragging state
-  const [connectingSource, setConnectingSource] = useState<{
-    serviceId: string;
-    side: PortSide;
-  } | null>(null);
-  const [connectingTarget, setConnectingTarget] = useState<string | null>(null);
-  const [mouseCanvasPos, setMouseCanvasPos] = useState<{ x: number; y: number } | null>(null);
-
-  const fitToContent = useCallback((): boolean => {
-    if (services.length === 0) return false;
-
-    if (canvasDimensions.w === 0 || canvasDimensions.h === 0) return false;
-
-    const PADDING = 60;
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-
-    services.forEach((service) => {
-      // Child services have parent-relative positions, not canvas coordinates.
-      // Their bounds are already covered by the parent container's DOM size.
-      if (service.position?.parentId) return;
-
-      // Skip services whose position hasn't loaded yet — the effect will
-      // retry once positions arrive from /api/dashboard.
-      if (!service.position) return;
-
-      const { x, y } = service.position;
-
-      const domSize = service.id ? getNodeSize(service.id) : null;
-      const isContainer = services.some((s) => s.position?.parentId === service.id);
-      const nodeW =
-        domSize?.w ?? (isContainer ? (service.position?.w ?? DEFAULT_CONTAINER_WIDTH) : NODE_WIDTH);
-      const nodeH =
-        domSize?.h ??
-        (isContainer ? (service.position?.h ?? DEFAULT_CONTAINER_HEIGHT) : NODE_HEIGHT);
-
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x + nodeW);
-      maxY = Math.max(maxY, y + nodeH);
-    });
-
-    if (minX === Infinity) return false;
-
-    const fitZoom = Math.min(
-      (canvasDimensions.w - PADDING * 2) / (maxX - minX),
-      (canvasDimensions.h - PADDING * 2) / (maxY - minY),
-      1,
-    );
-
-    const bboxCenterX = (minX + maxX) / 2;
-    const bboxCenterY = (minY + maxY) / 2;
-
-    setPanOffset({
-      x: canvasDimensions.w / 2 - bboxCenterX * fitZoom,
-      y: canvasDimensions.h / 2 - bboxCenterY * fitZoom,
-    });
-    setZoomLevel(fitZoom);
-
-    return true;
-  }, [services, canvasDimensions]);
-
-  // Initial fit to content
-  useEffect(() => {
-    if (initialFitDone.current) return;
-
-    if (fitToContent()) initialFitDone.current = true;
-  }, [fitToContent]);
-
-  // Keyboard handling
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Delete" && selectedId) {
-        e.preventDefault();
-        void handleRemoveFromDashboard(selectedId);
-      }
-    },
-    [selectedId, handleRemoveFromDashboard],
+  const selectedService = services.find(
+    (service) => nodes.find((node) => node.id === service.id)?.selected,
   );
+  const servicesOnline = services.filter((service) => service.status === ServiceStatus.UP).length;
+  const servicesWithUpdates = allServices.filter((service) => service.metadata?.hasUpdate);
 
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
-
-  // Node click — select/deselect
-  const handleNodeClick = useCallback(
-    (id: string) => {
-      setSelectedId(selectedId === id ? null : id);
-    },
-    [selectedId],
-  );
-
-  // Drag handling
-  const dragState = useRef<{
-    draggedId: string | null;
-    nodeX: number;
-    nodeY: number;
-    grabOffsetX: number;
-    grabOffsetY: number;
-    hasMoved: boolean;
-  }>({ draggedId: null, nodeX: 0, nodeY: 0, grabOffsetX: 0, grabOffsetY: 0, hasMoved: false });
-
-  // On mouse down on node, start dragging
-  const handleDragStart = useCallback(
-    (e: React.MouseEvent, serviceId: string) => {
-      if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a"))
+  const onConnect = useCallback(
+    async (connection: Connection) => {
+      if (!connection.source || !connection.target || connection.source === connection.target)
         return;
 
-      if (e.button !== MOUSE_BUTTON_LEFT) return;
-
-      e.stopPropagation();
-      const canvas = canvasRef.current;
-
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-
-      // Use absolute position so children (relative coords) are handled correctly
-      const service = services.find((s) => s.id === serviceId);
-      let nodeX: number;
-      let nodeY: number;
-
-      if (service) {
-        const abs = getAbsoluteNodePosition(service, services, {});
-
-        nodeX = abs.x;
-        nodeY = abs.y;
-      } else {
-        nodeX = 0;
-        nodeY = 0;
-      }
-
-      const grabOffsetX = mouseX - nodeX;
-      const grabOffsetY = mouseY - nodeY;
-
-      dragState.current = {
-        draggedId: serviceId,
-        nodeX,
-        nodeY,
-        grabOffsetX,
-        grabOffsetY,
-        hasMoved: false,
-      };
-      setIsDragging(true);
-      setDragOffsets((prev) => {
-        const copy = { ...prev };
-
-        delete copy[serviceId];
-
-        return copy;
-      });
-      e.preventDefault();
-    },
-    [panOffset, zoomLevel, services],
-  );
-
-  // Drag: live offset on mousemove, commit position on mouseup
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!canvasRef.current) return;
-
-      const rect = canvasRef.current.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-      const { draggedId, nodeX, nodeY, grabOffsetX, grabOffsetY } = dragState.current;
-
-      if (!draggedId) return;
-
-      dragState.current.hasMoved = true;
-
-      const dx = snapCoord(mouseX - grabOffsetX) - nodeX;
-      const dy = snapCoord(mouseY - grabOffsetY) - nodeY;
-
-      setDragOffsets((prev) => ({ ...prev, [draggedId]: { dx, dy } }));
-
-      // Nesting indicator: only for root nodes without children
-      const draggedHasChildren = services.some((s) => s.position?.parentId === draggedId);
-      const draggedService = services.find((s) => s.id === draggedId);
-      const isChild = draggedService?.position?.parentId != null;
-
-      if (!draggedHasChildren && !isChild) {
-        setNestingTarget(findNestTarget(services, draggedId, nodeX + dx, nodeY + dy));
-      } else {
-        setNestingTarget(null);
-      }
-    };
-
-    const handleMouseUp = async (e: MouseEvent) => {
-      const { draggedId, grabOffsetX, grabOffsetY, hasMoved } = dragState.current;
-
-      if (!draggedId || !canvasRef.current) return;
-
-      if (!hasMoved) {
-        dragState.current.draggedId = null;
-        setIsDragging(false);
-
+      if (
+        links.some(
+          (link) => link.sourceId === connection.source && link.targetId === connection.target,
+        )
+      )
         return;
-      }
 
-      const rect = canvasRef.current.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-      const finalAbsX = snapCoord(mouseX - grabOffsetX);
-      const finalAbsY = snapCoord(mouseY - grabOffsetY);
-
-      setNestingTarget(null);
-
-      const draggedService = services.find((s) => s.id === draggedId);
-      const draggedHasChildren = services.some((s) => s.position?.parentId === draggedId);
-      const currentParentId = draggedService?.position?.parentId ?? null;
-
-      let newX = finalAbsX;
-      let newY = finalAbsY;
-      let newParentId: string | null = null;
-
-      if (currentParentId) {
-        // Nested child: compute relative position within container body, or un-nest if dropped outside
-        const parent = services.find((s) => s.id === currentParentId);
-
-        if (parent) {
-          const { x: parentX, y: parentY } = getAbsoluteNodePosition(parent, services, {});
-          const containerW = parent.position?.w ?? DEFAULT_CONTAINER_WIDTH;
-          const containerH = parent.position?.h ?? DEFAULT_CONTAINER_HEIGHT;
-          const draggedSize = getNodeSize(draggedId);
-          const cx = finalAbsX + (draggedSize?.w ?? NODE_WIDTH) / 2;
-          const cy = finalAbsY + (draggedSize?.h ?? NODE_HEIGHT) / 2;
-          const insideContainer =
-            cx >= parentX &&
-            cx <= parentX + containerW &&
-            cy >= parentY &&
-            cy <= parentY + containerH;
-
-          if (insideContainer) {
-            const headerH = getInfoSectionHeight(currentParentId);
-
-            newX = Math.max(0, finalAbsX - parentX - CARD_BORDER_WIDTH);
-            newY = Math.max(0, finalAbsY - parentY - CARD_BORDER_WIDTH - headerH);
-            newParentId = currentParentId;
-          } else {
-            // Un-nest: place at absolute canvas position
-            newParentId = null;
-          }
-        }
-      } else if (!draggedHasChildren) {
-        // Root node without children: nest onto another node if applicable
-        const target = findNestTarget(services, draggedId, finalAbsX, finalAbsY);
-
-        if (target) {
-          const targetSvc = services.find((s) => s.id === target);
-
-          // Ensure the target has container dimensions saved (position may be null if never dragged)
-          const { x: targetX, y: targetY } = getAbsoluteNodePosition(targetSvc!, services, {});
-
-          if (!targetSvc?.position?.w) {
-            await updatePosition(
-              target,
-              targetSvc?.position?.x ?? targetX,
-              targetSvc?.position?.y ?? targetY,
-              null,
-              DEFAULT_CONTAINER_WIDTH,
-              DEFAULT_CONTAINER_HEIGHT,
-            );
-          }
-
-          const headerH = getInfoSectionHeight(target);
-
-          newX = Math.max(CONTAINER_PADDING, finalAbsX - targetX - CARD_BORDER_WIDTH);
-          newY = Math.max(CONTAINER_PADDING, finalAbsY - targetY - CARD_BORDER_WIDTH - headerH);
-          newParentId = target;
-        }
-      }
-
-      // Parent nodes (draggedHasChildren) move freely — preserve their w/h
-      const existingPos = draggedService?.position;
-      const wToSave = draggedHasChildren ? (existingPos?.w ?? null) : null;
-      const hToSave = draggedHasChildren ? (existingPos?.h ?? null) : null;
-
-      await updatePosition(draggedId, newX, newY, newParentId, wToSave, hToSave);
-
-      setDragOffsets((prev) => {
-        const copy = { ...prev };
-
-        delete copy[draggedId];
-
-        return copy;
+      await addLink({
+        sourceId: connection.source,
+        targetId: connection.target,
+        label: "",
+        type: ServiceLinkType.COMMUNICATION,
+        description: "",
       });
-      dragState.current.draggedId = null;
-      setIsDragging(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging, panOffset, zoomLevel, services, updatePosition]);
-
-  // Resize start — records mouse + current container dimensions
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent, serviceId: string, _direction: ResizeDirection) => {
-      e.stopPropagation();
-      e.preventDefault();
-
-      const canvas = canvasRef.current;
-
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const service = services.find((s) => s.id === serviceId);
-
-      resizeState.current = {
-        nodeId: serviceId,
-        startMouseX: (e.clientX - rect.left - panOffset.x) / zoomLevel,
-        startMouseY: (e.clientY - rect.top - panOffset.y) / zoomLevel,
-        startW: service?.position?.w ?? DEFAULT_CONTAINER_WIDTH,
-        startH: service?.position?.h ?? DEFAULT_CONTAINER_HEIGHT,
-      };
-      setIsResizing(true);
     },
-    [services, panOffset, zoomLevel],
+    [addLink, links],
   );
 
-  // Resize: live preview on mousemove, commit on mouseup
-  useEffect(() => {
-    if (!isResizing) return;
+  const onNodeDragStop = useCallback(
+    async (_event: MouseEvent | TouchEvent, node: ServiceFlowNode) => {
+      const original = services.find((service) => service.id === node.id);
+      const parent = node.parentId
+        ? nodes.find((candidate) => candidate.id === node.parentId)
+        : null;
+      const nodeBounds = getNodesBounds([node.id]);
+      const nodeCenter = {
+        x: nodeBounds.x + nodeBounds.width / 2,
+        y: nodeBounds.y + nodeBounds.height / 2,
+        width: 1,
+        height: 1,
+      };
+      const remainsInside = parent
+        ? isNodeIntersecting(nodeCenter, getNodesBounds([parent.id]), true)
+        : false;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!canvasRef.current) return;
-
-      const rect = canvasRef.current.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-      const {
-        nodeId: resizeNodeId,
-        startMouseX,
-        startMouseY,
-        startW,
-        startH,
-      } = resizeState.current;
-
-      if (!resizeNodeId) return;
-
-      const { minW, minH } = getMinContainerDimensions(resizeNodeId, services);
-      const newW = Math.max(minW, startW + (mouseX - startMouseX));
-      const newH = Math.max(minH, startH + (mouseY - startMouseY));
-
-      setResizeDimensions((prev) => ({ ...prev, [resizeNodeId]: { w: newW, h: newH } }));
-    };
-
-    const handleMouseUp = async (e: MouseEvent) => {
-      const { nodeId: resizeNodeId, startW, startH } = resizeState.current;
-
-      if (!resizeNodeId || !canvasRef.current) return;
-
-      const rect = canvasRef.current.getBoundingClientRect();
-      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-      const { minW, minH } = getMinContainerDimensions(resizeNodeId, services);
-      const newW = Math.max(minW, startW + (mouseX - resizeState.current.startMouseX));
-      const newH = Math.max(minH, startH + (mouseY - resizeState.current.startMouseY));
-      const service = services.find((s) => s.id === resizeNodeId);
-
-      if (service) {
-        const pos = service.position;
-        const absPos = getAbsoluteNodePosition(service, services, {});
-
+      if (parent && !remainsInside) {
         await updatePosition(
-          resizeNodeId,
-          pos?.x ?? absPos.x,
-          pos?.y ?? absPos.y,
-          pos?.parentId ?? null,
-          newW,
-          newH,
+          node.id,
+          nodeBounds.x,
+          nodeBounds.y,
+          null,
+          original?.position?.w ?? null,
+          original?.position?.h ?? null,
         );
-      }
-
-      resizeState.current.nodeId = null;
-      setResizeDimensions((prev) => {
-        const copy = { ...prev };
-
-        delete copy[resizeNodeId];
-
-        return copy;
-      });
-      setIsResizing(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing, panOffset, zoomLevel, services, updatePosition]);
-
-  // Port mouse down — start connecting
-  const handlePortMouseDown = useCallback(
-    (e: React.MouseEvent, serviceId: string, side: PortSide) => {
-      if (e.button !== MOUSE_BUTTON_LEFT) return;
-
-      e.stopPropagation();
-      e.preventDefault();
-
-      const canvas = canvasRef.current;
-
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const portPos = getPortPosition(serviceId, side, services, dragOffsets);
-
-      if (!portPos) return;
-
-      setConnectingSource({ serviceId, side });
-      setConnectingTarget(null);
-      setMouseCanvasPos({
-        x: (e.clientX - rect.left - panOffset.x) / zoomLevel,
-        y: (e.clientY - rect.top - panOffset.y) / zoomLevel,
-      });
-    },
-    [panOffset, zoomLevel, dragOffsets, services],
-  );
-
-  // Port mouse enter — this port is a potential target
-  const handlePortMouseEnter = useCallback(
-    (serviceId: string) => {
-      if (!connectingSource || connectingSource.serviceId === serviceId) return;
-
-      setConnectingTarget(serviceId);
-    },
-    [connectingSource],
-  );
-
-  // Node body mouse enter — also a valid target
-  const handleNodeMouseEnter = useCallback(
-    (serviceId: string) => {
-      if (!connectingSource || connectingSource.serviceId === serviceId) return;
-
-      setConnectingTarget(serviceId);
-    },
-    [connectingSource],
-  );
-
-  const handleNodeMouseLeave = useCallback(() => {
-    setConnectingTarget(null);
-  }, []);
-
-  const handlePortMouseLeave = useCallback(() => {
-    setConnectingTarget(null);
-  }, []);
-
-  // Global mouse move — update preview line end
-  useEffect(() => {
-    if (!connectingSource) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const canvas = canvasRef.current;
-
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-
-      setMouseCanvasPos({
-        x: (e.clientX - rect.left - panOffset.x) / zoomLevel,
-        y: (e.clientY - rect.top - panOffset.y) / zoomLevel,
-      });
-    };
-
-    const handleMouseUp = async (_e: MouseEvent) => {
-      if (connectingTarget && connectingSource && connectingTarget !== connectingSource.serviceId) {
-        const alreadyLinked = links.some(
-          (l) => l.sourceId === connectingSource.serviceId && l.targetId === connectingTarget,
-        );
-
-        if (!alreadyLinked) {
-          try {
-            await addLink({
-              sourceId: connectingSource.serviceId,
-              targetId: connectingTarget,
-              label: "",
-              type: ServiceLinkType.COMMUNICATION,
-              description: "",
-            });
-            await refresh();
-          } catch {
-            // ignore
-          }
-        }
-      }
-
-      setConnectingSource(null);
-      setConnectingTarget(null);
-      setMouseCanvasPos(null);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [connectingSource, connectingTarget, panOffset, zoomLevel, addLink, refresh, links]);
-
-  // Wheel zoom
-  const handleWheel = useCallback(
-    (e: WheelEvent) => {
-      e.preventDefault();
-      const rect = canvasRef.current?.getBoundingClientRect();
-
-      if (!rect) return;
-
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      const currentZoom = zoomLevel;
-      const delta = -e.deltaY * 0.001;
-      const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, currentZoom * (1 + delta)));
-      const zoomRatio = newZoom / currentZoom;
-
-      setPanOffset({
-        x: mouseX - (mouseX - panOffset.x) * zoomRatio,
-        y: mouseY - (mouseY - panOffset.y) * zoomRatio,
-      });
-      setZoomLevel(newZoom);
-    },
-    [panOffset, zoomLevel, MAX_ZOOM, MIN_ZOOM],
-  );
-
-  // Wheel zoom
-  useEffect(() => {
-    const canvas = canvasRef.current;
-
-    if (!canvas) return;
-
-    canvas.addEventListener("wheel", handleWheel, { passive: false });
-
-    const updateDimensions = () => {
-      setCanvasDimensions({ w: canvas.clientWidth || 1000, h: canvas.clientHeight || 600 });
-    };
-
-    updateDimensions();
-    const resizeObserver = new ResizeObserver(updateDimensions);
-
-    resizeObserver.observe(canvas);
-
-    return () => {
-      canvas.removeEventListener("wheel", handleWheel);
-      resizeObserver.disconnect();
-    };
-  }, [handleWheel]);
-
-  // Canvas panning
-  const handleCanvasMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.button === MOUSE_BUTTON_LEFT) {
-        if ((e.target as HTMLElement).closest(".draggable-node")) return;
-
-        setSelectedId(null);
 
         return;
       }
 
-      if (e.button !== MOUSE_BUTTON_MIDDLE) return;
+      if (!parent) {
+        const draggedHasChildren = nodes.some((candidate) => candidate.parentId === node.id);
+        const possibleParents = nodes.filter(
+          (candidate) => candidate.id !== node.id && !candidate.parentId,
+        );
+        const nestTarget = !draggedHasChildren
+          ? getIntersectingNodes(nodeCenter, true, possibleParents).at(-1)
+          : undefined;
 
-      e.preventDefault(); // suppress browser auto-scroll on middle click
-      setIsPanning(true);
-      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+        if (nestTarget) {
+          const targetService = services.find((service) => service.id === nestTarget.id);
+          const targetBounds = getNodesBounds([nestTarget.id]);
+          const targetPosition = targetService?.position ?? {
+            x: targetBounds.x,
+            y: targetBounds.y,
+          };
+          const targetWidth = targetService?.position?.w ?? DEFAULT_CONTAINER_WIDTH;
+          const targetHeight = targetService?.position?.h ?? DEFAULT_CONTAINER_HEIGHT;
+
+          await updatePosition(
+            nestTarget.id,
+            targetPosition.x,
+            targetPosition.y,
+            null,
+            targetWidth,
+            targetHeight,
+          );
+          await updatePosition(
+            node.id,
+            Math.max(0, nodeBounds.x - targetBounds.x),
+            Math.max(0, nodeBounds.y - targetBounds.y - PARENT_HEADER_HEIGHT),
+            nestTarget.id,
+            original?.position?.w ?? null,
+            original?.position?.h ?? null,
+          );
+
+          return;
+        }
+      }
+
+      const persistedY = parent
+        ? Math.max(0, node.position.y - PARENT_HEADER_HEIGHT)
+        : node.position.y;
+
+      await updatePosition(
+        node.id,
+        node.position.x,
+        persistedY,
+        node.parentId ?? null,
+        original?.position?.w ?? null,
+        original?.position?.h ?? null,
+      );
     },
-    [panOffset],
+    [getIntersectingNodes, getNodesBounds, isNodeIntersecting, nodes, services, updatePosition],
   );
 
-  // Global mouse move/up for panning
-  useEffect(() => {
-    if (!isPanning) return;
-
-    document.documentElement.classList.add("is-panning");
-
-    const handleMouseMove = (e: MouseEvent) => {
-      setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
-    };
-    const handleMouseUp = () => setIsPanning(false);
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      document.documentElement.classList.remove("is-panning");
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isPanning, panStart]);
-
-  // Edit link
-  const openEditLinkModal = (link: ServiceLink) => {
-    setEditingLink(link);
-  };
-
-  const handleEditLinkSave = async (data: UpdateLinkRequest) => {
-    if (!editingLink) return;
-
-    await updateLink(editingLink.id, data);
-    setEditingLink(null);
-    await refresh();
-  };
-
-  const handleEditLinkDelete = async () => {
-    if (!editingLink) return;
-
-    await removeLink(editingLink.id);
-    setEditingLink(null);
-    await refresh();
-  };
-
-  // Edit node
-  const openEditNodeModal = (service: Service) => {
-    setDrawerInitialTab(undefined);
-    setEditingNode(service);
-  };
-
-  const handleEditNodeConfirm = async (data: UpdateServiceRequest) => {
-    if (!editingNode) return;
-
-    await updateService(editingNode.id!, data);
+  const handleRemoveFromDashboard = async (id: string) => {
+    await removeFromDashboard(id);
     setEditingNode(null);
-    await refresh();
-  };
-
-  const handleEditNodeDelete = async () => {
-    if (!editingNode) return;
-
-    await removeService(editingNode.id!);
-    setEditingNode(null);
-    await refresh();
   };
 
   return (
     <div className="flex-1 relative bg-muted border border-border rounded-[10px] overflow-hidden min-h-[400px]">
-      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-card/90 border-b border-border">
+      <div className="flow-dashboard-toolbar">
         <div className="flex items-center gap-2.5">
           <span className="text-[0.85rem] text-foreground font-semibold">
             {servicesOnline} / {services.length}
           </span>
           <span className="text-[0.75rem] text-muted-foreground">{t("dashboard.online")}</span>
           {servicesWithUpdates.length > 0 && (
-            <>
-              <span className="text-border">·</span>
-              <UpdatesPopover
-                services={servicesWithUpdates}
-                onSelect={(s) => {
-                  setDrawerInitialTab(DrawerTab.CHANGELOG);
-                  setEditingNode(s);
-                }}
-              />
-            </>
+            <UpdatesPopover
+              services={servicesWithUpdates}
+              onSelect={(service) => {
+                setDrawerInitialTab(DrawerTab.CHANGELOG);
+                setEditingNode(service);
+              }}
+            />
           )}
         </div>
         <div className="flex items-center gap-2.5">
@@ -886,68 +704,68 @@ export function DashboardCanvas({
             variant={snapToGrid ? "default" : "outline"}
             size="icon"
             title={t("dashboard.snapToGrid")}
-            onClick={() => setSnapToGrid((v) => !v)}
+            onClick={() => setSnapToGrid((value) => !value)}
           >
             <Icons.Grid size={14} />
           </Button>
         </div>
       </div>
 
-      <div
-        ref={canvasRef}
-        className="w-full h-full relative overflow-hidden canvas-dot-grid"
-        style={{ cursor: isPanning ? "grabbing" : "default" }}
-        onMouseDown={handleCanvasMouseDown}
-      >
-        <div
-          style={{
-            transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
-            transformOrigin: "0 0",
-            width: "100%",
-            height: "100%",
-            position: "relative",
-            pointerEvents: "none",
-          }}
+      <div className="flow-dashboard-canvas">
+        <ReactFlow<ServiceFlowNode, ServiceFlowEdge>
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeDragStop={onNodeDragStop}
+          onConnect={(connection) => void onConnect(connection)}
+          connectionLineType={ConnectionLineType.SmoothStep}
+          connectionLineStyle={{ stroke: "var(--primary)", strokeWidth: 2 }}
+          onNodeDoubleClick={(_event, node) => openNode(node.data.service)}
+          onEdgeDoubleClick={(_event, edge) =>
+            setEditingLink(links.find((link) => link.id === edge.id) ?? null)
+          }
+          onNodesDelete={(deleted) => deleted.forEach((node) => void removeFromDashboard(node.id))}
+          snapToGrid={snapToGrid}
+          snapGrid={[24, 24]}
+          minZoom={0.25}
+          maxZoom={3}
+          panOnScroll
+          selectionOnDrag
+          deleteKeyCode={["Delete", "Backspace"]}
+          proOptions={{ hideAttribution: true }}
         >
-          <NodeLayer
-            services={services}
-            selectedId={selectedId}
-            dragOffsets={dragOffsets}
-            resizeDimensions={resizeDimensions}
-            hoveredNode={hoveredNode}
-            nestingTarget={nestingTarget}
-            connectingSource={connectingSource}
-            onSelect={handleNodeClick}
-            onHover={setHoveredNode}
-            onDoubleClick={openEditNodeModal}
-            onDragStart={handleDragStart}
-            onResizeStart={handleResizeStart}
-            onPortMouseDown={handlePortMouseDown}
-            onPortMouseEnter={handlePortMouseEnter}
-            onPortMouseLeave={handlePortMouseLeave}
-            onNodeMouseEnter={handleNodeMouseEnter}
-            onNodeMouseLeave={handleNodeMouseLeave}
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={24}
+            size={1.2}
+            color="var(--border-color)"
           />
-          <LinkLayer
-            links={links}
-            services={services}
-            dragOffsets={dragOffsets}
-            resizeDimensions={resizeDimensions}
-            connectingSource={connectingSource}
-            mouseCanvasPos={mouseCanvasPos}
-            onEditLink={openEditLinkModal}
-          />
-        </div>
-      </div>
+          <Controls position="bottom-left" showInteractive={false} />
+          <MiniMap
+            position="bottom-right"
+            pannable
+            zoomable
+            nodeColor={(node) => {
+              const data = (node as ServiceFlowNode).data;
+              const service = data.service;
 
-      <ZoomControls
-        zoom={zoomLevel}
-        minZoom={MIN_ZOOM}
-        maxZoom={MAX_ZOOM}
-        onZoomIn={() => setZoomLevel(Math.min(MAX_ZOOM, zoomLevel + 0.25))}
-        onZoomOut={() => setZoomLevel(Math.max(MIN_ZOOM, zoomLevel - 0.25))}
-        onFit={fitToContent}
-      />
+              return data.isContainer
+                ? "#8b5cf6"
+                : service.status === ServiceStatus.UP
+                  ? "#22c55e"
+                  : service.status === ServiceStatus.DOWN
+                    ? "#ef4444"
+                    : "#94a3b8";
+            }}
+            nodeStrokeColor="#0f172a"
+            nodeStrokeWidth={2}
+            maskColor="rgba(15, 23, 42, 0.62)"
+          />
+        </ReactFlow>
+      </div>
 
       {addingService && (
         <AddServiceModal
@@ -962,32 +780,49 @@ export function DashboardCanvas({
           onCancel={() => setAddingService(false)}
         />
       )}
-
       {editingLink && (
         <EditLinkModal
           link={editingLink}
-          onSave={handleEditLinkSave}
-          onDelete={handleEditLinkDelete}
+          onSave={async (data) => {
+            await updateLink(editingLink.id, data);
+            setEditingLink(null);
+          }}
+          onDelete={async () => {
+            await removeLink(editingLink.id);
+            setEditingLink(null);
+          }}
           onCancel={() => setEditingLink(null)}
         />
       )}
-
       {editingNode && (
         <ServiceDrawer
           service={editingNode}
           initialTab={drawerInitialTab}
-          onSave={handleEditNodeConfirm}
-          onDelete={handleEditNodeDelete}
+          onSave={async (data) => {
+            await updateService(editingNode.id!, data);
+            setEditingNode(null);
+            await refresh();
+          }}
+          onDelete={async () => {
+            await removeService(editingNode.id!);
+            setEditingNode(null);
+          }}
           onClose={() => {
             setEditingNode(null);
             setDrawerInitialTab(undefined);
           }}
         />
       )}
-
       {services.length === 0 && !editingLink && !error && <EmptyOverlay />}
-
       {error && !loading && <ErrorOverlay message={error} onRetry={refresh} />}
     </div>
+  );
+}
+
+export function DashboardCanvas(props: DashboardCanvasProps) {
+  return (
+    <ReactFlowProvider>
+      <DashboardFlow {...props} />
+    </ReactFlowProvider>
   );
 }

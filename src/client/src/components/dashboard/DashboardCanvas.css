@@ -1,5 +1,150 @@
-/* Canvas dot-grid background — radial-gradient can't use Tailwind opacity modifiers */
-.canvas-dot-grid {
-  background-image: radial-gradient(var(--border-color) 1px, transparent 1px);
-  background-size: 24px 24px;
+.flow-dashboard-toolbar {
+  align-items: center;
+  background: color-mix(in srgb, var(--bg-card) 90%, transparent);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 53px;
+  padding: 0.5rem 0.75rem;
+}
+
+.flow-dashboard-canvas {
+  height: calc(100% - 53px);
+  min-height: 347px;
+}
+
+.flow-service-node {
+  background: color-mix(in srgb, transparent 40%, color-mix(in srgb, white 3%, var(--bg-card)));
+  border: 2px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px var(--black-alpha-20);
+  height: 100%;
+  min-height: 96px;
+  overflow: visible;
+  width: 100%;
+}
+
+.flow-service-node:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 4px 16px var(--black-alpha-40);
+}
+
+.flow-service-node--selected {
+  border-color: var(--primary);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent),
+    0 4px 12px var(--black-alpha-30);
+}
+
+.flow-service-node__header {
+  background: var(--bg-card);
+  border-radius: 8px;
+  cursor: grab;
+  padding: 0.625rem 0.75rem;
+  position: relative;
+}
+
+.flow-service-node__header:active {
+  cursor: grabbing;
+}
+
+.flow-service-node--container .flow-service-node__header {
+  box-sizing: border-box;
+  height: 112px;
+}
+
+.flow-service-node__container-label {
+  border-top: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border-color));
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  left: 0;
+  padding: 0.35rem 0.75rem;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  text-transform: uppercase;
+  z-index: 2;
+}
+
+.react-flow__node-service {
+  width: 220px;
+}
+.react-flow__handle {
+  background: var(--primary);
+  border: 2px solid var(--bg-card);
+  height: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 150ms ease,
+    box-shadow 150ms ease;
+  width: 12px;
+  z-index: 20;
+}
+.react-flow__node:hover .react-flow__handle:not(.flow-passive-handle) {
+  opacity: 1;
+  pointer-events: all;
+}
+.react-flow__node,
+.react-flow__node-service {
+  overflow: visible;
+}
+.react-flow__handle.flow-internal-handle {
+  bottom: auto;
+  top: 112px;
+  transform: translate(-50%, -50%);
+}
+.react-flow__handle.flow-passive-handle {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+.react-flow__edgelabel-renderer {
+  z-index: 5;
+}
+.flow-edge-label,
+.flow-edge-port {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 3px 5px;
+  pointer-events: all;
+  position: absolute;
+  white-space: nowrap;
+  z-index: 10;
+}
+.flow-edge-port {
+  color: var(--primary);
+  font-family: monospace;
+  font-weight: 600;
+}
+.react-flow__edge-path {
+  transition: stroke-width 120ms ease;
+}
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 4;
+}
+.react-flow__controls,
+.react-flow__minimap {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px var(--black-alpha-20);
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  background: var(--bg-card);
+  border-bottom-color: var(--border-color);
+  color: var(--text);
+  fill: currentColor;
+}
+.react-flow__controls-button:hover {
+  background: var(--bg-muted);
+}
+.react-flow__minimap-mask {
+  fill: color-mix(in srgb, var(--bg-muted) 75%, transparent);
 }
