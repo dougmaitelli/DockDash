@@ -171,3 +171,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete development workflow, da
 - Review the [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
 
 Releases and container publishing are automated from semantic version tags. See the [release process](docs/RELEASING.md) for details.
+
+## License
+
+DockDash is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+
+Copyright 2026 Douglas Maitelli.
