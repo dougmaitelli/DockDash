@@ -78,4 +78,46 @@ describe("createSessionStore", () => {
     expect(typeof store.set).toBe("function");
     expect(typeof store.destroy).toBe("function");
   });
+
+  it("persists, reads, and destroys a session", async () => {
+    const store = connMod.createSessionStore();
+    const session = { cookie: { maxAge: 60_000 }, user: { id: "user-1" } };
+
+    await new Promise<void>((resolve, reject) =>
+      store.set("session-1", session as never, (error) => (error ? reject(error) : resolve())),
+    );
+    const stored = await new Promise<unknown>((resolve, reject) =>
+      store.get("session-1", (error, value) => (error ? reject(error) : resolve(value))),
+    );
+
+    expect(stored).toMatchObject({ user: { id: "user-1" } });
+
+    await new Promise<void>((resolve, reject) =>
+      store.destroy("session-1", (error) => (error ? reject(error) : resolve())),
+    );
+    const removed = await new Promise<unknown>((resolve, reject) =>
+      store.get("session-1", (error, value) => (error ? reject(error) : resolve(value))),
+    );
+
+    expect(removed).toBeNull();
+  });
+});
+
+describe("connection lifecycle", () => {
+  it("reports a healthy open database", () => {
+    expect(connMod.isConnectionHealthy()).toBe(true);
+  });
+
+  it("closes an open connection and reports it as unhealthy", () => {
+    connMod.closeConnection();
+
+    expect(connMod.sqlite.open).toBe(false);
+    expect(connMod.isConnectionHealthy()).toBe(false);
+  });
+
+  it("allows closeConnection to be called after the database is already closed", () => {
+    connMod.sqlite.close();
+
+    expect(() => connMod.closeConnection()).not.toThrow();
+  });
 });
