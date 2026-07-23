@@ -331,6 +331,60 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
       expect(mockRegistryClient.getRepositoryTags).not.toHaveBeenCalled();
       expect(mockDb.updateServiceMetadata).not.toHaveBeenCalled();
     });
+
+    it("skips Docker services without complete image metadata", async () => {
+      mockDb.getServices.mockReturnValue([
+        makeDockerService({ metadata: { image: "nginx" } }),
+        makeDockerService({ id: "svc-2", metadata: { imageTag: "latest" } }),
+      ]);
+
+      await updateCheckerService.checkAllServicesForUpdates();
+
+      expect(mockRegistryClient.parseImageRef).not.toHaveBeenCalled();
+      expect(mockDb.updateServiceMetadata).not.toHaveBeenCalled();
+    });
+
+    it("handles non-Error registry failures", async () => {
+      mockDb.getServices.mockReturnValue([makeDockerService()]);
+      mockRegistryClient.getRepositoryTags.mockRejectedValue("registry unavailable");
+
+      await expect(updateCheckerService.checkAllServicesForUpdates()).resolves.toBeUndefined();
+      expect(mockDb.updateServiceMetadata).not.toHaveBeenCalled();
+    });
+
+    it("does not reject when update notification delivery fails", async () => {
+      mockDb.getServices.mockReturnValue([makeDockerService()]);
+      mockRegistryClient.getRepositoryTags.mockResolvedValue(["1.25", "1.26"]);
+      mockNotificationService.notify.mockRejectedValue(new Error("notifications offline"));
+
+      await expect(updateCheckerService.checkAllServicesForUpdates()).resolves.toBeUndefined();
+    });
+  });
+
+  it("ignores tags with a different prefix or suffix", async () => {
+    mockDb.getServices.mockReturnValue([
+      makeDockerService({
+        metadata: { image: "nginx", imageTag: "v1.25-alpine", hasUpdate: false },
+      }),
+    ]);
+    mockRegistryClient.parseImageRef.mockReturnValue({
+      registry: "registry-1.docker.io",
+      repository: "library/nginx",
+      tag: "v1.25-alpine",
+    });
+    mockRegistryClient.getRepositoryTags.mockResolvedValue([
+      "cuda-1.30-alpine",
+      "v1.30-bookworm",
+      "invalid",
+      "v1.25-alpine",
+    ]);
+
+    await updateCheckerService.checkAllServicesForUpdates();
+
+    expect(mockDb.updateServiceMetadata).toHaveBeenCalledWith(
+      "svc-1",
+      expect.objectContaining({ hasUpdate: false }),
+    );
   });
 
   it("limits concurrent registry update checks", async () => {

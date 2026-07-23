@@ -4,11 +4,12 @@ const mockAxios = vi.hoisted(() => ({
   get: vi.fn(),
   head: vi.fn(),
 }));
+const mockFetchRegistryToken = vi.hoisted(() => vi.fn().mockResolvedValue(null));
 
 vi.mock("axios", () => ({ default: mockAxios }));
 
 vi.mock("@server/services/registry/auth.js", () => ({
-  fetchRegistryToken: vi.fn().mockResolvedValue(null),
+  fetchRegistryToken: mockFetchRegistryToken,
 }));
 
 const { registryClient } = await import("@server/services/registryClient.js");
@@ -61,7 +62,10 @@ describe("RegistryClient.parseImageRef", () => {
 });
 
 describe("RegistryClient.getManifestDigest", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFetchRegistryToken.mockResolvedValue(null);
+  });
   afterEach(() => vi.clearAllMocks());
 
   const ref = { registry: "registry-1.docker.io", repository: "library/nginx", tag: "latest" };
@@ -109,6 +113,30 @@ describe("RegistryClient.getManifestDigest", () => {
     const digest = await registryClient.getManifestDigest(ref);
 
     expect(digest).toBeNull();
+  });
+
+  it("returns null when successful responses omit the digest header", async () => {
+    mockAxios.head.mockResolvedValue({ status: 200, headers: {} });
+
+    await expect(registryClient.getManifestDigest(ref)).resolves.toBeNull();
+    expect(mockAxios.get).not.toHaveBeenCalled();
+  });
+
+  it("adds registry authentication to manifest requests", async () => {
+    mockFetchRegistryToken.mockResolvedValue("registry-token");
+    mockAxios.head.mockResolvedValue({
+      status: 200,
+      headers: { "docker-content-digest": "sha256:secured" },
+    });
+
+    await registryClient.getManifestDigest(ref);
+
+    expect(mockAxios.head).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer registry-token" }),
+      }),
+    );
   });
 
   it("returns null and does not throw when the request fails entirely", async () => {
