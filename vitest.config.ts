@@ -8,7 +8,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/server/**/*.ts"],
-      exclude: ["src/server/tests/**", "src/server/index.ts"],
+      exclude: [
+        "src/server/index.ts",
+        "src/server/tests/**",
+        "src/server/db/schema/**",
+        "src/server/types/**",
+        "src/server/mockEntry.ts",
+        "src/server/services/mock/**",
+      ],
       reporter: ["text", "html"],
     },
   },
