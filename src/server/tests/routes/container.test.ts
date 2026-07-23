@@ -78,6 +78,7 @@ describe("POST /api/services/:id/container/:action", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true });
     expect(mockContainer.stop).toHaveBeenCalledOnce();
+    expect(mockHealthCheckService.checkSingleService).toHaveBeenCalledWith("svc-1");
   });
 
   it("returns 200 when valid start action", async () => {
@@ -107,6 +108,16 @@ describe("POST /api/services/:id/container/:action", () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty("error");
+  });
+
+  it("serializes non-Error container failures", async () => {
+    mockContainer.restart.mockRejectedValue("daemon unavailable");
+
+    const res = await request(app).post("/api/services/svc-1/container/restart");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "daemon unavailable" });
+    expect(mockHealthCheckService.checkSingleService).not.toHaveBeenCalled();
   });
 });
 
@@ -165,5 +176,14 @@ describe("GET /api/services/:id/stats", () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty("error");
+  });
+
+  it("serializes non-Error statistics failures", async () => {
+    mockDockerService.getContainerStats.mockRejectedValue("stats unavailable");
+
+    const res = await request(app).get("/api/services/svc-1/stats");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "stats unavailable" });
   });
 });

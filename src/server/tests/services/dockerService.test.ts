@@ -406,6 +406,44 @@ describe("DockerService.getContainerStats", () => {
     expect(result.blockRead).toBe(0);
     expect(result.blockWrite).toBe(0);
   });
+
+  it("defaults optional memory, network, and block fields to zero", async () => {
+    mockContainerObj.stats.mockResolvedValue({
+      cpu_stats: { cpu_usage: { total_usage: 0 } },
+      precpu_stats: { cpu_usage: { total_usage: 0 } },
+      memory_stats: {},
+    });
+
+    const svc = new DockerService();
+    const result = await svc.getContainerStats(mockContainerObj as never);
+
+    expect(result).toMatchObject({
+      cpuPercent: 0,
+      memoryUsed: 0,
+      memoryLimit: 0,
+      memoryPercent: 0,
+      networkRx: 0,
+      networkTx: 0,
+      blockRead: 0,
+      blockWrite: 0,
+    });
+  });
+
+  it("rejects when Docker does not return statistics before the timeout", async () => {
+    vi.useFakeTimers();
+    mockContainerObj.stats.mockReturnValue(new Promise(() => {}));
+
+    try {
+      const svc = new DockerService();
+      const result = svc.getContainerStats(mockContainerObj as never);
+      const rejection = expect(result).rejects.toThrow("stats timeout");
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      await rejection;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("DockerService.openLogStream — multiplexed (non-TTY) demux", () => {
