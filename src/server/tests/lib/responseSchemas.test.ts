@@ -35,6 +35,21 @@ describe("response schemas", () => {
     expect(() => serviceResponseSchema.parse({ ...service, ports: ["80"] })).toThrow();
   });
 
+  it("accepts and ignores additive response fields", () => {
+    const parsed = serviceResponseSchema.parse({
+      ...service,
+      futureServiceField: "value",
+      metadata: {
+        dockerHost: "unix:///var/run/docker.sock",
+        dockerHostId: "host-id",
+        containerId: "abc123",
+      },
+    });
+
+    expect(parsed).not.toHaveProperty("futureServiceField");
+    expect(parsed.metadata).toEqual({ dockerHostId: "host-id", containerId: "abc123" });
+  });
+
   it("rejects malformed SSE completion payloads", () => {
     expect(() => sseScanDoneResponseSchema.parse({ count: -1 })).toThrow();
   });

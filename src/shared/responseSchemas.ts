@@ -19,7 +19,7 @@ export const serviceMetadataResponseSchema = z
     latestVersion: z.string().optional(),
     updateCheckedAt: z.string().optional(),
   })
-  .strict();
+  .strip();
 
 export const serviceResponseSchema = z
   .object({
@@ -37,7 +37,7 @@ export const serviceResponseSchema = z
     createdAt: z.string(),
     updatedAt: z.string(),
   })
-  .strict() satisfies z.ZodType<Service>;
+  .strip() satisfies z.ZodType<Service>;
 
 export const servicePositionResponseSchema = z
   .object({
@@ -48,7 +48,7 @@ export const servicePositionResponseSchema = z
     w: z.number().optional(),
     h: z.number().optional(),
   })
-  .strict() satisfies z.ZodType<ServicePosition>;
+  .strip() satisfies z.ZodType<ServicePosition>;
 
 export const serviceWithPositionResponseSchema = serviceResponseSchema.extend({
   position: servicePositionResponseSchema.nullable(),
@@ -68,14 +68,14 @@ export const serviceLinkResponseSchema = z
     protocol: z.enum(ServiceProtocol).nullable().optional(),
     createdAt: z.string().optional(),
   })
-  .strict() satisfies z.ZodType<ServiceLink>;
+  .strip() satisfies z.ZodType<ServiceLink>;
 
 export const dashboardDataResponseSchema = z
   .object({
     services: z.array(serviceWithPositionResponseSchema),
     links: z.array(serviceLinkResponseSchema),
   })
-  .strict() satisfies z.ZodType<DashboardData>;
+  .strip() satisfies z.ZodType<DashboardData>;
 
 export const serviceStatusResponseSchema = z
   .object({
@@ -85,14 +85,14 @@ export const serviceStatusResponseSchema = z
     cpuPercent: z.number().optional(),
     memoryPercent: z.number().optional(),
   })
-  .strict() satisfies z.ZodType<ServiceStatusItem>;
+  .strip() satisfies z.ZodType<ServiceStatusItem>;
 
 export const healthHistoryResponseSchema = z.array(
   z.union([z.enum(ServiceStatus), z.literal("mixed"), z.null()]),
 );
 
 export const resourceHistoryResponseSchema = z.array(
-  z.object({ cpuPercent: z.number(), memoryPercent: z.number() }).strict().nullable(),
+  z.object({ cpuPercent: z.number(), memoryPercent: z.number() }).strip().nullable(),
 );
 
 export const dockerHostHealthResponseSchema = z.array(
@@ -107,23 +107,23 @@ export const dockerHostHealthResponseSchema = z.array(
       serverVersion: z.string().optional(),
       error: z.string().optional(),
     })
-    .strict(),
+    .strip(),
 );
 
 export const sseScanDoneResponseSchema = z
   .object({ count: z.number().int().nonnegative() })
-  .strict();
-export const sseScanErrorResponseSchema = z.object({ message: z.string() }).strict();
+  .strip();
+export const sseScanErrorResponseSchema = z.object({ message: z.string() }).strip();
 
-export const apiSuccessResponseSchema = z.object({ success: z.boolean() }).strict();
+export const apiSuccessResponseSchema = z.object({ success: z.boolean() }).strip();
 
 export const savePositionsResponseSchema = z
   .object({ positions: z.array(servicePositionResponseSchema) })
-  .strict();
+  .strip();
 
 export const checkAllServicesResponseSchema = z
   .object({ status: z.string(), message: z.string() })
-  .strict();
+  .strip();
 
 export const containerStatsResponseSchema = z
   .object({
@@ -136,7 +136,7 @@ export const containerStatsResponseSchema = z
     blockRead: z.number(),
     blockWrite: z.number(),
   })
-  .strict();
+  .strip();
 
 export const changelogReleaseResponseSchema = z
   .object({
@@ -145,16 +145,16 @@ export const changelogReleaseResponseSchema = z
     body: z.string(),
     htmlUrl: z.string(),
   })
-  .strict();
+  .strip();
 
 export const changelogResponseSchema = z.discriminatedUnion("available", [
-  z.object({ available: z.literal(true), release: changelogReleaseResponseSchema }).strict(),
-  z.object({ available: z.literal(false), reason: z.string() }).strict(),
+  z.object({ available: z.literal(true), release: changelogReleaseResponseSchema }).strip(),
+  z.object({ available: z.literal(false), reason: z.string() }).strip(),
 ]);
 
 export const appUpdateResponseSchema = z
   .object({ hasUpdate: z.boolean(), release: changelogReleaseResponseSchema.optional() })
-  .strict();
+  .strip();
 
 export const filesResponseSchema = z
   .object({
@@ -168,14 +168,14 @@ export const filesResponseSchema = z
           permissions: z.string(),
           modified: z.string(),
         })
-        .strict(),
+        .strip(),
     ),
   })
-  .strict();
+  .strip();
 
 export const fileContentResponseSchema = z
   .object({ path: z.string(), content: z.string() })
-  .strict();
+  .strip();
 
 export const dashboardConfigResponseSchema = z
   .object({
@@ -196,7 +196,7 @@ export const dashboardConfigResponseSchema = z
     fileExplorerEnabled: z.boolean(),
     terminalEnabled: z.boolean(),
   })
-  .strict() satisfies z.ZodType<
+  .strip() satisfies z.ZodType<
   { version: string; appriseConfigured: boolean } & ClientSchemaConfig
 >;
 
@@ -210,14 +210,14 @@ export const authStateResponseSchema = z
         email: z.string().optional(),
         picture: z.string().optional(),
       })
-      .strict()
+      .strip()
       .nullable(),
   })
-  .strict();
+  .strip();
 
-export const authLogoutResponseSchema = z.object({ ok: z.literal(true) }).strict();
+export const authLogoutResponseSchema = z.object({ ok: z.literal(true) }).strip();
 
-export const sseTerminalSessionResponseSchema = z.object({ sessionId: z.string() }).strict();
+export const sseTerminalSessionResponseSchema = z.object({ sessionId: z.string() }).strip();
 
 export type ApiSuccess = z.infer<typeof apiSuccessResponseSchema>;
 export type AppUpdateInfo = z.infer<typeof appUpdateResponseSchema>;
