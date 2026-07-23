@@ -1,6 +1,8 @@
 import { EventEmitter, Readable } from "stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ServiceProtocol } from "@shared";
+
 // ── Mocks ──
 
 const mockSpawn = vi.hoisted(() => vi.fn());
@@ -102,6 +104,14 @@ function makeHangingPortScanProcess() {
 
     return true;
   });
+
+  return proc;
+}
+
+function makeFailingPortScanProcess(error: Error) {
+  const proc = makeHangingPortScanProcess();
+
+  setImmediate(() => proc.emit("error", error));
 
   return proc;
 }
@@ -298,5 +308,107 @@ describe("NetworkScanner.scanNetworkStream", () => {
     await scan;
 
     expect(portProcess.kill).toHaveBeenCalled();
+  });
+
+  it("uses the full port range for a deep scan", async () => {
+    const pingProcess = makePingSweepProcess(["Host: 192.168.1.5 (host) Status: Up"]);
+    const portProcess = makePortScanProcess("Host: 192.168.1.5 (host) Status: Up\n");
+
+    mockSpawn.mockReturnValueOnce(pingProcess).mockReturnValueOnce(portProcess);
+
+    for await (const _batch of networkScanner.scanNetworkStream("192.168.1.0/24", true)) {
+      // consume
+    }
+
+    expect(mockSpawn).toHaveBeenNthCalledWith(
+      2,
+      "nmap",
+      expect.arrayContaining(["-p-", "192.168.1.5"]),
+    );
+  });
+
+  it("continues the sweep when an individual port-scan process fails", async () => {
+    mockSpawn
+      .mockReturnValueOnce(makePingSweepProcess(["Host: 192.168.1.5 (host) Status: Up"]))
+      .mockReturnValueOnce(makeFailingPortScanProcess(new Error("spawn failed")));
+
+    const results = [];
+
+    for await (const batch of networkScanner.scanNetworkStream("192.168.1.0/24")) {
+      results.push(...batch);
+    }
+
+    expect(results).toEqual([]);
+  });
+
+  it("returns immediately when passed an already-aborted signal", async () => {
+    const controller = new AbortController();
+
+    controller.abort();
+
+    const results = [];
+
+    for await (const batch of networkScanner.scanNetworkStream(
+      "192.168.1.0/24",
+      false,
+      controller.signal,
+    )) {
+      results.push(...batch);
+    }
+
+    expect(results).toEqual([]);
+    expect(mockSpawn).not.toHaveBeenCalled();
+  });
+});
+
+describe("NetworkScanner service detection", () => {
+  type ScannerInternals = {
+    detectService(
+      ip: string,
+      port: number,
+      protocol: ServiceProtocol,
+      signal?: AbortSignal,
+    ): Promise<string | undefined>;
+  };
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it("uses an HTTP page title when one is available", async () => {
+    mockAxios.get.mockResolvedValue({ status: 200, data: "<title> Dashboard </title>" });
+    const scanner = new NetworkScanner() as unknown as ScannerInternals;
+
+    await expect(scanner.detectService("10.0.0.1", 80, ServiceProtocol.HTTP)).resolves.toBe(
+      "Dashboard",
+    );
+  });
+
+  it("falls back to health endpoints when the root page has no title", async () => {
+    mockAxios.get
+      .mockResolvedValueOnce({ status: 200, data: "<html></html>" })
+      .mockResolvedValueOnce({ status: 200, data: "<title>Healthy App</title>" });
+    const scanner = new NetworkScanner() as unknown as ScannerInternals;
+
+    await expect(scanner.detectService("10.0.0.1", 80, ServiceProtocol.HTTP)).resolves.toBe(
+      "Healthy App",
+    );
+  });
+
+  it("identifies SSH and known non-HTTP ports", async () => {
+    const scanner = new NetworkScanner() as unknown as ScannerInternals;
+
+    await expect(scanner.detectService("10.0.0.1", 22, ServiceProtocol.SSH)).resolves.toBe(
+      "SSH Server",
+    );
+    await expect(
+      scanner.detectService("10.0.0.1", 5432, ServiceProtocol.TCP),
+    ).resolves.toBeDefined();
+  });
+
+  it("returns undefined for an unknown non-HTTP port", async () => {
+    const scanner = new NetworkScanner() as unknown as ScannerInternals;
+
+    await expect(
+      scanner.detectService("10.0.0.1", 65000, ServiceProtocol.TCP),
+    ).resolves.toBeUndefined();
   });
 });
