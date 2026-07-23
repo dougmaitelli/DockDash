@@ -110,7 +110,7 @@ function MiniChart({
           <div
             className="w-full rounded-sm transition-all duration-500"
             style={{
-              height: b ? `${Math.max(getValue(b), 2)}%` : "2px",
+              height: b ? `max(2px, ${Math.min(Math.max(getValue(b), 0), 100)}%)` : "2px",
               background: b ? metricColor(getValue(b), normalColor) : "var(--border-color)",
               opacity: b ? 1 : 0.4,
             }}
