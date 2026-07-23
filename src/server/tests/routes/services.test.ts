@@ -19,6 +19,7 @@ const mockSvcRepo = vi.hoisted(() => ({
 
 const mockHistRepo = vi.hoisted(() => ({
   getHealthHistory: vi.fn(),
+  getResourceHistory: vi.fn(),
 }));
 
 const mockHealthCheckService = vi.hoisted(() => ({
@@ -185,6 +186,28 @@ describe("POST /api/services", () => {
     expect(res.body).toEqual(saved);
   });
 
+  it("uses repository defaults and logs a rejected background health check", async () => {
+    const saved = makeService();
+
+    mockSvcRepo.saveService.mockReturnValue(saved);
+    mockHealthCheckService.checkSingleService.mockRejectedValue("probe failed");
+
+    const res = await request(app).post("/api/services").send({ name: "Svc", host: "host" });
+
+    await vi.waitFor(() =>
+      expect(mockLogger.error).toHaveBeenCalledWith("Health check failed: probe failed"),
+    );
+    expect(res.status).toBe(201);
+    expect(mockSvcRepo.saveService).toHaveBeenCalledWith({
+      name: "Svc",
+      host: "host",
+      ports: [],
+      checkPort: undefined,
+      source: ServiceSource.NETWORK,
+      metadata: {},
+    });
+  });
+
   it("returns 400 when name missing", async () => {
     const res = await request(app).post("/api/services").send({ host: "10.0.0.1" });
 
@@ -242,6 +265,29 @@ describe("PUT /api/services/:id", () => {
 
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty("error");
+  });
+
+  it("logs a rejected background health check without failing the response", async () => {
+    mockSvcRepo.updateService.mockReturnValue(makeService({ name: "Updated" }));
+    mockHealthCheckService.checkSingleService.mockRejectedValue(new Error("probe failed"));
+
+    const res = await request(app).put("/api/services/svc-1").send({ name: "Updated" });
+
+    await vi.waitFor(() =>
+      expect(mockLogger.error).toHaveBeenCalledWith("Health check failed: probe failed"),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("serializes non-Error repository failures", async () => {
+    mockSvcRepo.updateService.mockImplementation(() => {
+      throw "missing";
+    });
+
+    const res = await request(app).put("/api/services/svc-1").send({ name: "Updated" });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "missing" });
   });
 
   it("returns 400 when name is empty string", async () => {
@@ -346,6 +392,40 @@ describe("GET /api/services/:id/health-history", () => {
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  it("clamps bucket count and applies a minimum day count", async () => {
+    mockHistRepo.getHealthHistory.mockReturnValue([]);
+
+    await request(app).get("/api/services/svc-1/health-history?days=-5&buckets=999");
+
+    expect(mockHistRepo.getHealthHistory).toHaveBeenCalledWith("svc-1", 1, 200);
+  });
+});
+
+describe("GET /api/services/:id/resource-history", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockConfig.resourceMonitorEnabled = true;
+  });
+
+  it("returns 403 when resource monitoring is disabled", async () => {
+    mockConfig.resourceMonitorEnabled = false;
+
+    const res = await request(app).get("/api/services/svc-1/resource-history");
+
+    expect(res.status).toBe(403);
+    expect(mockHistRepo.getResourceHistory).not.toHaveBeenCalled();
+  });
+
+  it("uses default query values and returns repository history", async () => {
+    mockHistRepo.getResourceHistory.mockReturnValue([{ timestamp: "now", cpuPercent: 5 }]);
+
+    const res = await request(app).get("/api/services/svc-1/resource-history");
+
+    expect(res.status).toBe(200);
+    expect(mockHistRepo.getResourceHistory).toHaveBeenCalledWith("svc-1", 7, 80);
+    expect(res.body).toHaveLength(1);
   });
 });
 
