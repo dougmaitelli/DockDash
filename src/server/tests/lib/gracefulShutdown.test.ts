@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
@@ -11,7 +11,15 @@ vi.mock("@server/lib/logService.js", () => ({ logger: mockLogger }));
 const { createGracefulShutdown } = await import("@server/lib/gracefulShutdown.js");
 
 describe("createGracefulShutdown", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.exitCode = undefined;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    process.exitCode = undefined;
+  });
 
   it("stops work, closes resources, then closes the database", async () => {
     const stop = vi.fn().mockResolvedValue(undefined);
@@ -38,6 +46,37 @@ describe("createGracefulShutdown", () => {
     expect(closeDatabase).toHaveBeenCalledOnce();
   });
 
+  it("logs active-resource and HTTP-close errors but still drains and closes the database", async () => {
+    const resourceError = new Error("resource close failed");
+    const serverError = new Error("server close failed");
+    const closeDatabase = vi.fn();
+    const shutdown = createGracefulShutdown({
+      server: {
+        close: vi.fn((callback: (error?: Error) => void) => callback(serverError)),
+        closeIdleConnections: vi.fn(),
+      } as never,
+      jobs: [],
+      startupTasks: [Promise.reject(new Error("startup failed"))],
+      closeActiveResources: () => {
+        throw resourceError;
+      },
+      closeDatabase,
+    });
+
+    await shutdown("SIGTERM");
+
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "[Shutdown] Failed to close active resources:",
+      resourceError,
+    );
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "[Shutdown] HTTP server close failed:",
+      serverError,
+    );
+    expect(closeDatabase).toHaveBeenCalledOnce();
+    expect(process.exitCode).toBeUndefined();
+  });
+
   it("forces open connections closed after the grace period", async () => {
     vi.useFakeTimers();
     const closeAllConnections = vi.fn();
@@ -59,6 +98,31 @@ describe("createGracefulShutdown", () => {
     await result;
     expect(closeAllConnections).toHaveBeenCalledOnce();
     expect(closeDatabase).toHaveBeenCalledOnce();
-    vi.useRealTimers();
+    expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining("100ms"));
+  });
+
+  it("marks shutdown failed when final database close throws", async () => {
+    const databaseError = new Error("database close failed");
+    const closeDatabase = vi.fn(() => {
+      throw databaseError;
+    });
+    const shutdown = createGracefulShutdown({
+      server: {
+        close: vi.fn((callback: (error?: Error) => void) => callback()),
+      } as never,
+      jobs: [],
+      closeActiveResources: vi.fn(),
+      closeDatabase,
+    });
+
+    await shutdown("SIGTERM");
+
+    expect(process.exitCode).toBe(1);
+    expect(closeDatabase).toHaveBeenCalledTimes(2);
+    expect(mockLogger.error).toHaveBeenCalledWith("[Shutdown] Failed:", databaseError);
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "[Shutdown] Database close failed:",
+      databaseError,
+    );
   });
 });
