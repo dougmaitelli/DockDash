@@ -1,6 +1,6 @@
 import express from "express";
-import request from "supertest";
 import { EventEmitter } from "stream";
+import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockDockerService = vi.hoisted(() => ({
