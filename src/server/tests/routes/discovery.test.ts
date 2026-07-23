@@ -37,6 +37,11 @@ const dockerScanHandler = (
     stack: { route?: { path: string; stack: { handle: RouteHandler }[] } }[];
   }
 ).stack.find((layer) => layer.route?.path === "/docker/scan/stream")!.route!.stack[0].handle;
+const networkScanHandler = (
+  routerModule.default as unknown as {
+    stack: { route?: { path: string; stack: { handle: RouteHandler }[] } }[];
+  }
+).stack.find((layer) => layer.route?.path === "/network/scan/stream")!.route!.stack[0].handle;
 
 const app = express();
 
@@ -256,5 +261,107 @@ describe("GET /api/network/scan/stream", () => {
       false,
       expect.any(AbortSignal),
     );
+  });
+
+  it("streams batches across multiple CIDRs with deep scan and reports the total", async () => {
+    mockNetworkScanner.scanNetworkStream.mockImplementation(async function* (cidr: string) {
+      yield [
+        { id: `${cidr}-1`, host: "10.0.0.1" },
+        { id: `${cidr}-2`, host: "10.0.0.2" },
+      ];
+    });
+
+    const req = Object.assign(new EventEmitter(), {
+      query: { cidrs: "10.0.0.0/24, 10.0.1.0/24", deepScan: "true" },
+    });
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+      setHeader: vi.fn(),
+      flushHeaders: vi.fn(),
+      write: vi.fn(),
+      end: vi.fn(),
+    };
+
+    await networkScanHandler(req, res);
+
+    expect(mockNetworkScanner.scanNetworkStream).toHaveBeenNthCalledWith(
+      1,
+      "10.0.0.0/24",
+      true,
+      expect.any(AbortSignal),
+    );
+    expect(mockNetworkScanner.scanNetworkStream).toHaveBeenNthCalledWith(
+      2,
+      "10.0.1.0/24",
+      true,
+      expect.any(AbortSignal),
+    );
+    expect(res.write).toHaveBeenCalledWith('data: {"id":"10.0.0.0/24-1","host":"10.0.0.1"}\n\n');
+    expect(res.write).toHaveBeenCalledWith('event: done\ndata: {"count":4}\n\n');
+    expect(res.end).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [new Error("network scan failed"), "network scan failed"],
+    ["unknown failure", "unknown failure"],
+  ])("sends an SSE error and completion when scanning fails", async (failure, message) => {
+    mockNetworkScanner.scanNetworkStream.mockImplementation(async function* () {
+      throw failure;
+    });
+
+    const req = Object.assign(new EventEmitter(), {
+      query: { cidrs: "10.0.0.0/24" },
+    });
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+      setHeader: vi.fn(),
+      flushHeaders: vi.fn(),
+      write: vi.fn(),
+      end: vi.fn(),
+    };
+
+    await networkScanHandler(req, res);
+
+    expect(res.write).toHaveBeenCalledWith(
+      `event: scan-error\ndata: ${JSON.stringify({ message })}\n\n`,
+    );
+    expect(res.write).toHaveBeenCalledWith('event: done\ndata: {"count":0}\n\n');
+    expect(res.end).toHaveBeenCalledOnce();
+  });
+
+  it("aborts the active scan and suppresses late events after disconnect", async () => {
+    let req: EventEmitter & { query: { cidrs: string } };
+    let receivedSignal: AbortSignal | undefined;
+
+    mockNetworkScanner.scanNetworkStream.mockImplementation(async function* (
+      _cidr: string,
+      _deepScan: boolean,
+      signal: AbortSignal,
+    ) {
+      receivedSignal = signal;
+      req.emit("close");
+      yield [{ id: "late-service" }];
+    });
+
+    req = Object.assign(new EventEmitter(), {
+      query: { cidrs: "10.0.0.0/24,10.0.1.0/24" },
+    });
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+      setHeader: vi.fn(),
+      flushHeaders: vi.fn(),
+      write: vi.fn(),
+      end: vi.fn(),
+    };
+
+    await networkScanHandler(req, res);
+
+    expect(receivedSignal?.aborted).toBe(true);
+    expect(mockNetworkScanner.scanNetworkStream).toHaveBeenCalledTimes(1);
+    expect(res.write).not.toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
   });
 });
