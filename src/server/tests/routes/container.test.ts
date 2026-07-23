@@ -1,5 +1,6 @@
 import express from "express";
 import request from "supertest";
+import { EventEmitter } from "stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockConfig = vi.hoisted(() => ({
@@ -40,6 +41,14 @@ vi.mock("@server/services/healthCheckService.js", () => ({
 vi.mock("@server/lib/logService.js", () => ({ logger: mockLogger }));
 
 const routerModule = await import("@server/routes/container.js");
+
+type RouteHandler = (req: unknown, res: unknown) => Promise<void>;
+
+const logStreamHandler = (
+  routerModule.default as unknown as {
+    stack: { route?: { path: string; stack: { handle: RouteHandler }[] } }[];
+  }
+).stack.find((layer) => layer.route?.path === "/services/:id/logs/stream")!.route!.stack[0].handle;
 
 const app = express();
 
@@ -185,5 +194,112 @@ describe("GET /api/services/:id/stats", () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ error: "stats unavailable" });
+  });
+});
+
+describe("GET /api/services/:id/logs/stream", () => {
+  function createRequestAndResponse() {
+    const req = Object.assign(new EventEmitter(), { params: { id: "svc-1" } });
+    const res = {
+      setHeader: vi.fn(),
+      flushHeaders: vi.fn(),
+      write: vi.fn(),
+      end: vi.fn(),
+    };
+
+    return { req, res };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDockerService.getContainerForServiceId.mockReturnValue(mockContainer);
+  });
+
+  it("sets SSE headers and forwards log data until the stream ends", async () => {
+    const logStream = Object.assign(new EventEmitter(), { destroy: vi.fn() });
+
+    mockDockerService.openLogStream.mockResolvedValue(logStream);
+
+    const { req, res } = createRequestAndResponse();
+
+    await logStreamHandler(req, res);
+    logStream.emit("data", Buffer.from("container output"));
+    logStream.emit("end");
+
+    expect(res.setHeader).toHaveBeenCalledWith("Content-Type", "text/event-stream");
+    expect(res.setHeader).toHaveBeenCalledWith("Cache-Control", "no-cache");
+    expect(res.setHeader).toHaveBeenCalledWith("Connection", "keep-alive");
+    expect(res.flushHeaders).toHaveBeenCalledOnce();
+    expect(res.write).toHaveBeenCalledWith("data: container output\n\n");
+    expect(res.end).toHaveBeenCalledOnce();
+  });
+
+  it("sends an SSE error event when the log stream fails", async () => {
+    const logStream = Object.assign(new EventEmitter(), { destroy: vi.fn() });
+
+    mockDockerService.openLogStream.mockResolvedValue(logStream);
+
+    const { req, res } = createRequestAndResponse();
+
+    await logStreamHandler(req, res);
+    logStream.emit("error", new Error("stream failed"));
+
+    expect(res.write).toHaveBeenCalledWith(
+      'event: log-error\ndata: {"message":"stream failed"}\n\n',
+    );
+    expect(res.end).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [new Error("Docker unavailable"), "Docker unavailable"],
+    ["unknown failure", "unknown failure"],
+  ])("sends an SSE error when stream setup rejects", async (failure, message) => {
+    mockDockerService.openLogStream.mockRejectedValue(failure);
+
+    const { req, res } = createRequestAndResponse();
+
+    await logStreamHandler(req, res);
+
+    expect(res.write).toHaveBeenCalledWith(
+      `event: log-error\ndata: ${JSON.stringify({ message })}\n\n`,
+    );
+    expect(res.end).toHaveBeenCalledOnce();
+  });
+
+  it("destroys the Docker log stream when the client disconnects", async () => {
+    const logStream = Object.assign(new EventEmitter(), { destroy: vi.fn() });
+
+    mockDockerService.openLogStream.mockResolvedValue(logStream);
+
+    const { req, res } = createRequestAndResponse();
+
+    await logStreamHandler(req, res);
+    req.emit("close");
+    logStream.emit("data", Buffer.from("late output"));
+    logStream.emit("end");
+    logStream.emit("error", new Error("late error"));
+
+    expect(logStream.destroy).toHaveBeenCalledOnce();
+    expect(res.write).not.toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
+  });
+
+  it("does not send a setup error after the client has disconnected", async () => {
+    let rejectStream!: (error: Error) => void;
+    const pendingStream = new Promise((_, reject) => {
+      rejectStream = reject;
+    });
+
+    mockDockerService.openLogStream.mockReturnValue(pendingStream);
+
+    const { req, res } = createRequestAndResponse();
+    const handling = logStreamHandler(req, res);
+
+    req.emit("close");
+    rejectStream(new Error("late setup failure"));
+    await handling;
+
+    expect(res.write).not.toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
   });
 });
