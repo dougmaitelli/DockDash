@@ -1,7 +1,7 @@
 import type { ServiceRepository } from "@server/db/serviceRepository.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ServiceLinkType, ServiceSource, ServiceStatus } from "@shared";
+import { ServiceLinkType, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 
 let svcRepo: ServiceRepository;
 let connSqlite: { close(): void };
@@ -139,6 +139,25 @@ describe("deleteService", () => {
 });
 
 describe("dashboard membership", () => {
+  it("saveServicePosition applies defaults and updates an existing position", () => {
+    const svc = svcRepo.saveService({
+      name: "s",
+      host: "h",
+      ports: [],
+      source: ServiceSource.NETWORK,
+    });
+
+    svcRepo.saveServicePosition({ serviceId: svc.id! });
+    expect(svcRepo.getServicePositions()).toEqual([
+      { serviceId: svc.id, x: 0, y: 0, parentId: undefined, w: undefined, h: undefined },
+    ]);
+
+    svcRepo.saveServicePosition({ serviceId: svc.id!, x: 25, y: 40, w: 320, h: 180 });
+    expect(svcRepo.getServicePositions()).toEqual([
+      { serviceId: svc.id, x: 25, y: 40, parentId: undefined, w: 320, h: 180 },
+    ]);
+  });
+
   it("addServiceToDashboard creates a position row at (0, 0)", () => {
     const svc = svcRepo.saveService({
       name: "s",
@@ -206,6 +225,25 @@ describe("dashboard membership", () => {
 });
 
 describe("links", () => {
+  it("uses the communication type by default", () => {
+    const s1 = svcRepo.saveService({
+      name: "a",
+      host: "h1",
+      ports: [],
+      source: ServiceSource.NETWORK,
+    });
+    const s2 = svcRepo.saveService({
+      name: "b",
+      host: "h2",
+      ports: [],
+      source: ServiceSource.NETWORK,
+    });
+
+    const link = svcRepo.saveLink({ sourceId: s1.id!, targetId: s2.id! });
+
+    expect(link.type).toBe(ServiceLinkType.COMMUNICATION);
+  });
+
   it("saves and retrieves a link between two services", () => {
     const s1 = svcRepo.saveService({
       name: "a",
@@ -268,6 +306,49 @@ describe("links", () => {
     expect(svcRepo.getLinks().some((l) => l.id === link.id)).toBe(false);
   });
 
+  it("updates link fields and normalizes cleared nullable values", () => {
+    const s1 = svcRepo.saveService({
+      name: "a",
+      host: "h1",
+      ports: [],
+      source: ServiceSource.NETWORK,
+    });
+    const s2 = svcRepo.saveService({
+      name: "b",
+      host: "h2",
+      ports: [],
+      source: ServiceSource.NETWORK,
+    });
+    const link = svcRepo.saveLink({
+      sourceId: s1.id!,
+      targetId: s2.id!,
+      label: "old",
+      description: "old description",
+      targetPort: 80,
+      protocol: ServiceProtocol.HTTP,
+    });
+
+    const updated = svcRepo.updateLink(link.id, {
+      label: null,
+      description: null,
+      targetPort: null,
+      protocol: null,
+      type: ServiceLinkType.DEPENDENCY,
+    });
+
+    expect(updated).toMatchObject({
+      type: ServiceLinkType.DEPENDENCY,
+      label: undefined,
+      description: undefined,
+      targetPort: undefined,
+      protocol: null,
+    });
+  });
+
+  it("throws when updating a missing link", () => {
+    expect(() => svcRepo.updateLink("missing", { label: "new" })).toThrow("Link not found");
+  });
+
   it("getLinksForService returns only the service's own links", () => {
     const s1 = svcRepo.saveService({
       name: "a",
@@ -320,6 +401,30 @@ describe("getServiceStatuses", () => {
     expect(status.metadata?.imageTag).toBe("v1.0");
     expect(status.metadata?.hasUpdate).toBe(true);
     expect(status.metadata?.latestVersion).toBe("v2.0");
+  });
+
+  it("projects only status-relevant metadata", () => {
+    svcRepo.saveService({
+      name: "s",
+      host: "h",
+      ports: [],
+      source: ServiceSource.DOCKER,
+      metadata: {
+        containerId: "container-id",
+        imageTag: "v1",
+        hasUpdate: false,
+        latestVersion: "v1",
+      },
+    });
+
+    const [status] = svcRepo.getServiceStatuses();
+
+    expect(status.metadata).toEqual({
+      imageTag: "v1",
+      hasUpdate: false,
+      latestVersion: "v1",
+    });
+    expect(status.metadata).not.toHaveProperty("containerId");
   });
 });
 

@@ -29,6 +29,10 @@ afterEach(() => {
 });
 
 describe("addHealthHistory / getHealthHistory", () => {
+  it("returns only empty buckets when no history exists", () => {
+    expect(histRepo.getHealthHistory("missing", 1, 4)).toEqual([null, null, null, null]);
+  });
+
   it("returns a non-null bucket after adding history", () => {
     const svc = svcRepo.saveService({
       name: "s",
@@ -60,9 +64,26 @@ describe("addHealthHistory / getHealthHistory", () => {
 
     expect(buckets[0]).toBe("mixed");
   });
+
+  it("preserves UNKNOWN-only buckets", () => {
+    const svc = svcRepo.saveService({
+      name: "s",
+      host: "h",
+      ports: [],
+      source: ServiceSource.NETWORK,
+    });
+
+    histRepo.addHealthHistory(svc.id!, ServiceStatus.UNKNOWN);
+
+    expect(histRepo.getHealthHistory(svc.id!, 1, 1)).toEqual([ServiceStatus.UNKNOWN]);
+  });
 });
 
 describe("addResourceStatsHistory / getResourceHistory", () => {
+  it("returns only empty buckets when no resource history exists", () => {
+    expect(histRepo.getResourceHistory("missing", 1, 3)).toEqual([null, null, null]);
+  });
+
   it("returns a non-null bucket after adding resource stats", () => {
     const svc = svcRepo.saveService({
       name: "s",
@@ -247,6 +268,55 @@ describe("rollupHistory", () => {
     const buckets = histRepo.getHealthHistory(svc.id!, 1, 1);
 
     expect(buckets[0]).toBe("mixed");
+  });
+
+  it("rolls up UNKNOWN health records", () => {
+    const svc = svcRepo.saveService({
+      name: "s",
+      host: "h",
+      ports: [],
+      source: ServiceSource.NETWORK,
+    });
+    const now = Date.now();
+
+    vi.useFakeTimers();
+
+    try {
+      vi.setSystemTime(now - 6 * 60_000);
+      histRepo.addHealthHistory(svc.id!, ServiceStatus.UNKNOWN);
+      vi.setSystemTime(now);
+
+      expect(histRepo.rollupHistory().health).toBe(1);
+      expect(histRepo.getHealthHistory(svc.id!, 1, 1)).toEqual([ServiceStatus.UNKNOWN]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("accumulates multiple resource samples in one rollup bucket", () => {
+    const svc = svcRepo.saveService({
+      name: "s",
+      host: "h",
+      ports: [],
+      source: ServiceSource.NETWORK,
+    });
+    const now = Date.now();
+
+    vi.useFakeTimers();
+
+    try {
+      vi.setSystemTime(now - 6 * 60_000);
+      histRepo.addResourceStatsHistory(svc.id!, 20, 40);
+      histRepo.addResourceStatsHistory(svc.id!, 60, 80);
+      vi.setSystemTime(now);
+
+      expect(histRepo.rollupHistory().resource).toBe(2);
+      expect(histRepo.getResourceHistory(svc.id!, 1, 1)).toEqual([
+        { cpuPercent: 40, memoryPercent: 60 },
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("getHealthHistory returns data from both rollup rows and the unrolled raw tail", () => {

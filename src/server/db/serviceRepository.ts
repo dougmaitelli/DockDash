@@ -113,25 +113,43 @@ export class ServiceRepository {
   }
 
   saveServicePosition(position: PositionUpdate): void {
-    orm
-      .insert(servicePositions)
-      .values({
-        serviceId: position.serviceId,
-        x: position.x ?? 0,
-        y: position.y ?? 0,
-        parentId: position.parentId ?? null,
-        w: position.w ?? null,
-        h: position.h ?? null,
-      })
+    const updates: {
+      x?: number;
+      y?: number;
+      parentId?: string | null;
+      w?: number | null;
+      h?: number | null;
+    } = {};
+
+    if (position.x !== undefined) updates.x = position.x;
+
+    if (position.y !== undefined) updates.y = position.y;
+
+    if (position.parentId !== undefined) updates.parentId = position.parentId;
+
+    if (position.w !== undefined) updates.w = position.w;
+
+    if (position.h !== undefined) updates.h = position.h;
+
+    const insert = orm.insert(servicePositions).values({
+      serviceId: position.serviceId,
+      x: position.x ?? 0,
+      y: position.y ?? 0,
+      parentId: position.parentId ?? null,
+      w: position.w ?? null,
+      h: position.h ?? null,
+    });
+
+    if (Object.keys(updates).length === 0) {
+      insert.onConflictDoNothing().run();
+
+      return;
+    }
+
+    insert
       .onConflictDoUpdate({
         target: servicePositions.serviceId,
-        set: {
-          x: position.x,
-          y: position.y,
-          parentId: position.parentId,
-          w: position.w,
-          h: position.h,
-        },
+        set: updates,
       })
       .run();
   }
