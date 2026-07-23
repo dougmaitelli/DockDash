@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { Icons } from "../components/Icons";
 import { useAuth } from "../context/AuthContext";
 
 function Login() {
@@ -21,7 +20,7 @@ function Login() {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-6 p-10 rounded-xl border border-border bg-card shadow-lg w-full max-w-sm">
         <div className="flex flex-col items-center gap-2">
-          <Icons.Logo size={40} stroke="var(--primary)" />
+          <img src="/logo.svg" alt="" className="size-10" aria-hidden="true" />
           <h1 className="text-2xl font-bold">DockDash</h1>
         </div>
 

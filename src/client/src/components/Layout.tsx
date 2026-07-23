@@ -122,7 +122,7 @@ function Layout({ children }: LayoutProps) {
           }}
           className="flex items-center gap-2 mr-10 text-xl font-bold no-underline"
         >
-          <Icons.Logo stroke="var(--primary)" />
+          <img src="/logo.svg" alt="" className="size-6" aria-hidden="true" />
           <span
             className="bg-gradient-to-br from-primary to-primary/70 bg-clip-text"
             style={{ WebkitTextFillColor: "transparent" }}
