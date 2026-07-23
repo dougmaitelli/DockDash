@@ -141,7 +141,8 @@ export function ServiceDrawer({
       )}
       <div
         data-drawer
-        className="fixed left-0 top-0 h-dvh flex flex-col border-r border-border z-[101] bg-muted"
+        onWheel={(event) => event.stopPropagation()}
+        className="fixed left-0 top-0 h-dvh flex flex-col overflow-hidden overscroll-contain border-r border-border z-[101] bg-muted"
         style={{
           width: `min(${tab !== Tab.DETAILS ? 900 : 600}px, 100dvw)`,
           animation: `${closing ? "slideOutDrawer" : "slideInDrawer"} ${ANIM_MS}ms ease both`,
