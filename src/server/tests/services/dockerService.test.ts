@@ -409,20 +409,20 @@ describe("DockerService.getContainerStats", () => {
 });
 
 describe("DockerService.openLogStream — multiplexed (non-TTY) demux", () => {
+  function makeFrame(type: number, payload: string): Buffer {
+    const payloadBuf = Buffer.from(payload);
+    const header = Buffer.alloc(DOCKER_STREAM_HEADER_SIZE);
+
+    header[0] = type;
+    header.writeUInt32BE(payloadBuf.length, 4);
+
+    return Buffer.concat([header, payloadBuf]);
+  }
+
   it("extracts stdout (type=1) and stderr (type=2) payload lines", async () => {
     const inspect = { Config: { Tty: false } };
 
     mockContainerObj.inspect.mockResolvedValue(inspect);
-
-    function makeFrame(type: number, payload: string): Buffer {
-      const payloadBuf = Buffer.from(payload);
-      const header = Buffer.alloc(DOCKER_STREAM_HEADER_SIZE);
-
-      header[0] = type;
-      header.writeUInt32BE(payloadBuf.length, 4);
-
-      return Buffer.concat([header, payloadBuf]);
-    }
 
     const stdoutFrame = makeFrame(1, "stdout line\n");
     const stderrFrame = makeFrame(2, "stderr line\n");
@@ -477,5 +477,86 @@ describe("DockerService.openLogStream — multiplexed (non-TTY) demux", () => {
     });
 
     expect(lines.some((l) => l.includes("raw tty output"))).toBe(true);
+  });
+
+  it("buffers frames split across multiple chunks and ignores unsupported stream types", async () => {
+    mockContainerObj.inspect.mockResolvedValue({ Config: { Tty: false } });
+    const stdoutFrame = makeFrame(1, "split line\n");
+    const unsupportedFrame = makeFrame(3, "ignored\n");
+
+    mockContainerObj.logs.mockImplementation(
+      (_opts: unknown, cb: (err: null, stream: PassThrough) => void) => {
+        const stream = new PassThrough();
+
+        cb(null, stream);
+        stream.write(stdoutFrame.subarray(0, 5));
+        stream.write(Buffer.concat([stdoutFrame.subarray(5), unsupportedFrame]));
+        stream.end();
+      },
+    );
+
+    const svc = new DockerService();
+    const output = await svc.openLogStream(mockContainerObj as never);
+    let result = "";
+
+    await new Promise<void>((resolve) => {
+      output.on("data", (chunk: Buffer) => (result += chunk.toString()));
+      output.on("end", resolve);
+    });
+
+    expect(result).toContain("split line");
+    expect(result).not.toContain("ignored");
+  });
+
+  it("destroys the output when Docker cannot create a log stream", async () => {
+    mockContainerObj.inspect.mockResolvedValue({ Config: { Tty: false } });
+    mockContainerObj.logs.mockImplementation(
+      (_opts: unknown, cb: (err: Error, stream?: PassThrough) => void) =>
+        cb(new Error("logs unavailable")),
+    );
+
+    const svc = new DockerService();
+    const output = await svc.openLogStream(mockContainerObj as never);
+    const error = await new Promise<Error>((resolve) => output.once("error", resolve));
+
+    expect(error.message).toBe("logs unavailable");
+  });
+
+  it("destroys the underlying Docker stream when the output closes", async () => {
+    mockContainerObj.inspect.mockResolvedValue({ Config: { Tty: true } });
+    const dockerStream = new PassThrough();
+    const destroy = vi.spyOn(dockerStream, "destroy");
+
+    mockContainerObj.logs.mockImplementation(
+      (_opts: unknown, cb: (err: null, stream: PassThrough) => void) => cb(null, dockerStream),
+    );
+
+    const svc = new DockerService();
+    const output = await svc.openLogStream(mockContainerObj as never);
+
+    const closed = new Promise<void>((resolve) => output.once("close", resolve));
+
+    output.destroy();
+    await closed;
+
+    expect(destroy).toHaveBeenCalledOnce();
+  });
+
+  it("closes every active output stream during shutdown", async () => {
+    mockContainerObj.inspect.mockResolvedValue({ Config: { Tty: true } });
+    mockContainerObj.logs.mockImplementation(
+      (_opts: unknown, cb: (err: null, stream: PassThrough) => void) => cb(null, new PassThrough()),
+    );
+
+    const svc = new DockerService();
+    const first = await svc.openLogStream(mockContainerObj as never);
+    const second = await svc.openLogStream(mockContainerObj as never);
+    const firstDestroy = vi.spyOn(first, "destroy");
+    const secondDestroy = vi.spyOn(second, "destroy");
+
+    svc.closeLogStreams();
+
+    expect(firstDestroy).toHaveBeenCalledOnce();
+    expect(secondDestroy).toHaveBeenCalledOnce();
   });
 });
