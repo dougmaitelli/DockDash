@@ -2057,10 +2057,10 @@ better-sqlite3-session-store@^0.1.0:
   dependencies:
     date-fns "2.16.1"
 
-better-sqlite3@^13.0.1:
-  version "13.0.1"
-  resolved "https://registry.yarnpkg.com/better-sqlite3/-/better-sqlite3-13.0.1.tgz#7e537f7ec14f0bb419b6cd666b666d6bc00bbc1e"
-  integrity sha512-LYpmOXdkpQYf4wmlxkdzW01XGlOXNIbjLg45yNkh0FQ4814VbK9PdOFmhZpYbej+EZtR/i3FDdhEG98HqZdgnA==
+better-sqlite3@^13.0.2:
+  version "13.0.2"
+  resolved "https://registry.yarnpkg.com/better-sqlite3/-/better-sqlite3-13.0.2.tgz#c57fca130a596c2f627089c597becc44d4e2f077"
+  integrity sha512-jW6oufeDhXZaiX9Lw5A+oerVClx4iFrI6uDj1zu7SqUAjak9vbJvA0NEcKLNxHiQHb6kYCoFzzXYV0YOauhV3g==
   dependencies:
     node-addon-api "^8.0.0"
 
