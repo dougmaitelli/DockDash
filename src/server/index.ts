@@ -18,6 +18,7 @@ import { logger } from "./lib/logService.js";
 import { serverHealth } from "./lib/serverHealth.js";
 import { requireAuth } from "./middleware/auth.js";
 import authRoutes from "./routes/auth.js";
+import certificateRoutes from "./routes/certificates.js";
 import containerRoutes from "./routes/container.js";
 import dashboardRoutes from "./routes/dashboard.js";
 import discoveryRoutes from "./routes/discovery.js";
@@ -129,6 +130,7 @@ app.use("/api", requireAuth);
 
 // API Routes
 app.use("/api", systemRoutes);
+app.use("/api", certificateRoutes);
 app.use("/api", discoveryRoutes);
 app.use("/api", serviceRoutes);
 app.use("/api", linkRoutes);

@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "services": "Services",
+    "certificates": "Certificates",
     "discovery": "Discovery",
     "settings": "Settings",
     "logout": "Logout",
@@ -38,6 +39,17 @@
     "emptyMessage": "Add a service manually or go to Discovery to find services on your network.",
     "noResults": "No services match the current filters.",
     "updateBadge": "Update"
+  },
+  "certificates": {
+    "title": "Certificates",
+    "count": "{{count}} certificate",
+    "count_other": "{{count}} certificates",
+    "notConfigured": "Configure CERTVAULT_URL and CERTVAULT_API_KEY (or CERTVAULT_API_KEY_FILE) to show certificate health.",
+    "openCertVault": "Open CertVault",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "empty": "CertVault has no certificates visible to this API key.",
+    "protectingService": "Certificate"
   },
   "dashboard": {
     "online": "Online",
