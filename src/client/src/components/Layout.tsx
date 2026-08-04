@@ -102,11 +102,11 @@ function Layout({ children }: LayoutProps) {
       <NavLink to="/services" active={location.pathname === "/services"}>
         {t("nav.services")}
       </NavLink>
-      <NavLink to="/certificates" active={location.pathname === "/certificates"}>
-        {t("nav.certificates")}
-      </NavLink>
       <NavLink to="/discover" active={location.pathname === "/discover"}>
         {t("nav.discovery")}
+      </NavLink>
+      <NavLink to="/certificates" active={location.pathname === "/certificates"}>
+        {t("nav.certificates")}
       </NavLink>
       <NavLink to="/settings" active={location.pathname === "/settings"}>
         {t("nav.settings")}
