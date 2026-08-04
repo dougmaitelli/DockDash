@@ -16,6 +16,8 @@ import {
   appUpdateResponseSchema,
   authLogoutResponseSchema,
   authStateResponseSchema,
+  certVaultCertificateResponseSchema,
+  certVaultCertificatesResponseSchema,
   changelogResponseSchema,
   checkAllServicesResponseSchema,
   containerStatsResponseSchema,
@@ -68,6 +70,19 @@ export const discoveryApi = {
 
 export const configApi = {
   get: () => validated(api.get("/config"), dashboardConfigResponseSchema),
+};
+
+export const certificateApi = {
+  getAll: (refresh = false) =>
+    validated(
+      api.get("/certificates", { params: refresh ? { refresh: true } : undefined }),
+      certVaultCertificatesResponseSchema,
+    ),
+  getForService: (serviceId: string) =>
+    validated(
+      api.get(`/services/${serviceId}/certificates`),
+      certVaultCertificateResponseSchema.array(),
+    ),
 };
 
 export const authApi = {

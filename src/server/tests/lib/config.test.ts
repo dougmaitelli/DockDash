@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CONFIG_SCHEMA } from "@shared/configSchema.js";
 
-const mockFs = vi.hoisted(() => ({ existsSync: vi.fn() }));
+const mockFs = vi.hoisted(() => ({ existsSync: vi.fn(), readFileSync: vi.fn() }));
 const mockRandomBytes = vi.hoisted(() => vi.fn());
-const mockLogger = vi.hoisted(() => ({ warn: vi.fn() }));
+const mockLogger = vi.hoisted(() => ({ warn: vi.fn(), error: vi.fn() }));
 
 vi.mock("fs", () => ({ default: mockFs }));
 vi.mock("crypto", () => ({ default: { randomBytes: mockRandomBytes } }));
@@ -29,6 +29,7 @@ describe("config", () => {
     configEnvironmentKeys.forEach((key) => delete process.env[key]);
     delete process.env.NODE_ENV;
     mockFs.existsSync.mockReturnValue(false);
+    mockFs.readFileSync.mockReturnValue("");
     mockRandomBytes.mockReturnValue(Buffer.alloc(32, 0xab));
   });
 
@@ -138,6 +139,25 @@ describe("config", () => {
     vi.stubEnv("APPRISE_URL", "http://apprise:8000");
     config = await freshConfig();
     expect(config.appriseConfigured).toBe(true);
+  });
+
+  it("configures CertVault from a direct API key or mounted key file", async () => {
+    vi.stubEnv("CERTVAULT_URL", "https://certvault.example.com");
+    vi.stubEnv("CERTVAULT_API_KEY", "direct-key");
+    let config = await freshConfig();
+
+    expect(config.certVaultConfigured).toBe(true);
+    expect(config.certVaultResolvedApiKey).toBe("direct-key");
+    expect(mockFs.readFileSync).not.toHaveBeenCalled();
+
+    delete process.env.CERTVAULT_API_KEY;
+    vi.stubEnv("CERTVAULT_API_KEY_FILE", "/run/secrets/certvault");
+    mockFs.readFileSync.mockReturnValue("file-key\n");
+    config = await freshConfig();
+
+    expect(config.certVaultConfigured).toBe(true);
+    expect(config.certVaultResolvedApiKey).toBe("file-key");
+    expect(mockFs.readFileSync).toHaveBeenCalledWith("/run/secrets/certvault", "utf8");
   });
 
   it("exposes NaN for invalid numeric input instead of silently using a default", async () => {

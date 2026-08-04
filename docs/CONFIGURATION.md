@@ -122,6 +122,21 @@ SESSION_SECRET=replace-with-a-long-random-value
 
 Without OIDC, protect DockDash with an authenticated reverse proxy and do not make the application directly reachable from an untrusted network.
 
+## CertVault integration
+
+DockDash can show certificate health from CertVault and associate certificates with services by
+matching service hostnames to certificate domains and wildcard domains.
+
+| Variable                 | Default | Description                                      |
+| ------------------------ | ------- | ------------------------------------------------ |
+| `CERTVAULT_URL`          | unset   | Public base URL of the CertVault instance        |
+| `CERTVAULT_API_KEY`      | unset   | CertVault API key with `certificates:read` scope |
+| `CERTVAULT_API_KEY_FILE` | unset   | File containing the CertVault API key            |
+
+Set either `CERTVAULT_API_KEY` or `CERTVAULT_API_KEY_FILE`. The file form is recommended for
+container deployments. The API key is used only by the DockDash server and is never sent to the
+browser.
+
 ## Notifications
 
 DockDash integrates with the [Apprise REST API](https://github.com/caronc/apprise-api), a self-hosted sidecar that forwards notifications to services such as Slack, Discord, Telegram, and email.

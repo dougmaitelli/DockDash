@@ -7,6 +7,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ConfigProvider } from "./context/ConfigContext";
 import { ThemeProvider } from "./context/ThemeContext";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Certificates = lazy(() => import("./pages/Certificates"));
 const Discovery = lazy(() => import("./pages/Discovery"));
 const Login = lazy(() => import("./pages/Login"));
 const Services = lazy(() => import("./pages/Services"));
@@ -44,6 +45,7 @@ function App() {
                         <Routes>
                           <Route path="/" element={<Dashboard />} />
                           <Route path="/services" element={<Services />} />
+                          <Route path="/certificates" element={<Certificates />} />
                           <Route path="/discover" element={<Discovery />} />
                           <Route path="/settings" element={<Settings />} />
                           <Route path="*" element={<Navigate to="/" replace />} />

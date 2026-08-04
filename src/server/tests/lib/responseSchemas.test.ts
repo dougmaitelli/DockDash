@@ -58,6 +58,7 @@ describe("response schemas", () => {
     const expectedKeys = [
       "version",
       "appriseConfigured",
+      "certVaultConfigured",
       ...Object.entries(CONFIG_SCHEMA)
         .filter(([, entry]) => "showOnUi" in entry && entry.showOnUi)
         .map(([key]) => key),

@@ -1,7 +1,7 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { Service } from "@shared";
+import type { CertVaultCertificate, Service } from "@shared";
 import { isContainerService } from "@shared";
 import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useConfig } from "@/context/ConfigContext";
 import { useFormValidation } from "@/hooks/useFormValidation";
+import { certificateApi } from "@/services/api";
 
+import { CertificateSummary } from "./CertificateSummary";
 import { ContainerResourceMonitor } from "./ContainerResourceMonitor";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
 import { FormGroup, Label } from "./modals/BaseModal";
@@ -32,6 +34,8 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
   const [editPorts, setEditPorts] = useState<number[]>(service.ports ?? []);
   const [editCheckPort, setEditCheckPort] = useState(service.checkPort?.toString() ?? "");
   const [metadataExpanded, setMetadataExpanded] = useState(false);
+  const [certificates, setCertificates] = useState<CertVaultCertificate[]>([]);
+  const [certificateError, setCertificateError] = useState<string | null>(null);
   const { errors, validate, clearError } = useFormValidation({
     name: { required: t("modals.nameRequired") },
     host: { required: t("modals.hostRequired") },
@@ -50,6 +54,26 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
         value: Array.isArray(value) ? value.join(", ") : String(value),
       }))
     : [];
+
+  useEffect(() => {
+    setCertificates([]);
+    setCertificateError(null);
+
+    if (!config?.certVaultConfigured) return;
+
+    let cancelled = false;
+
+    certificateApi
+      .getForService(service.id!)
+      .then(({ data }) => !cancelled && setCertificates(data))
+      .catch((err: unknown) => {
+        if (!cancelled) setCertificateError(err instanceof Error ? err.message : String(err));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [config?.certVaultConfigured, service.id]);
 
   const handlePortsChange = (vals: string[]) => {
     setEditPorts(vals.map(Number).sort((a, b) => a - b));
@@ -82,6 +106,21 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
     <>
       <div className="flex-1 overflow-y-auto flex flex-col p-5">
         {(config?.healthHistoryEnabled ?? true) && <HealthHistoryGraph serviceId={service.id!} />}
+
+        {config?.certVaultConfigured && (certificates.length > 0 || certificateError) && (
+          <div className="mb-5 space-y-2">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              {t("certificates.protectingService")}
+            </p>
+            {certificateError ? (
+              <p className="text-xs text-destructive">{certificateError}</p>
+            ) : (
+              certificates.map((certificate) => (
+                <CertificateSummary key={certificate.name} certificate={certificate} />
+              ))
+            )}
+          </div>
+        )}
 
         <FormGroup error={errors.name}>
           <Label>{t("modals.name")}</Label>

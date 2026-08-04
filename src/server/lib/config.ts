@@ -75,6 +75,26 @@ class Config {
     return !!this.appriseUrl;
   }
 
+  get certVaultResolvedApiKey(): string | null {
+    if (this.certVaultApiKey) return this.certVaultApiKey;
+
+    if (!this.certVaultApiKeyFile) return null;
+
+    try {
+      return fs.readFileSync(this.certVaultApiKeyFile, "utf8").trim() || null;
+    } catch (err) {
+      logger.error(
+        `Unable to read CERTVAULT_API_KEY_FILE: ${err instanceof Error ? err.message : String(err)}`,
+      );
+
+      return null;
+    }
+  }
+
+  get certVaultConfigured(): boolean {
+    return !!(this.certVaultUrl && this.certVaultResolvedApiKey);
+  }
+
   static {
     for (const key of Object.keys(CONFIG_SCHEMA) as ConfigKey[]) {
       if (!Object.getOwnPropertyDescriptor(this.prototype, key)) {
