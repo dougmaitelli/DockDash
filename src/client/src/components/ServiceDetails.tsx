@@ -34,6 +34,7 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
   const [editPorts, setEditPorts] = useState<number[]>(service.ports ?? []);
   const [editCheckPort, setEditCheckPort] = useState(service.checkPort?.toString() ?? "");
   const [metadataExpanded, setMetadataExpanded] = useState(false);
+  const [certificatesExpanded, setCertificatesExpanded] = useState(false);
   const [certificates, setCertificates] = useState<CertVaultCertificate[]>([]);
   const [certificateError, setCertificateError] = useState<string | null>(null);
   const { errors, validate, clearError } = useFormValidation({
@@ -58,6 +59,7 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
   useEffect(() => {
     setCertificates([]);
     setCertificateError(null);
+    setCertificatesExpanded(false);
 
     if (!config?.certVaultConfigured) return;
 
@@ -107,21 +109,6 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
       <div className="flex-1 overflow-y-auto flex flex-col p-5">
         {(config?.healthHistoryEnabled ?? true) && <HealthHistoryGraph serviceId={service.id!} />}
 
-        {config?.certVaultConfigured && (certificates.length > 0 || certificateError) && (
-          <div className="mb-5 space-y-2">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("certificates.protectingService")}
-            </p>
-            {certificateError ? (
-              <p className="text-xs text-destructive">{certificateError}</p>
-            ) : (
-              certificates.map((certificate) => (
-                <CertificateSummary key={certificate.name} certificate={certificate} />
-              ))
-            )}
-          </div>
-        )}
-
         <FormGroup error={errors.name}>
           <Label>{t("modals.name")}</Label>
           <Input
@@ -144,6 +131,31 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
             placeholder={t("modals.hostPlaceholder")}
           />
         </FormGroup>
+
+        {config?.certVaultConfigured && (certificates.length > 0 || certificateError) && (
+          <div className="mb-5">
+            <button
+              type="button"
+              onClick={() => setCertificatesExpanded((value) => !value)}
+              className="flex items-center gap-1.5 w-full bg-transparent border-none py-2 text-muted-foreground text-xs uppercase tracking-wide hover:text-secondary-foreground"
+            >
+              <span>{certificatesExpanded ? "▾" : "▸"}</span>
+              {t("certificates.protectingService")}
+            </button>
+            {certificatesExpanded && (
+              <div className="space-y-2">
+                {certificateError ? (
+                  <p className="text-xs text-destructive">{certificateError}</p>
+                ) : (
+                  certificates.map((certificate) => (
+                    <CertificateSummary key={certificate.name} certificate={certificate} />
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <FormGroup>
           <Label>{t("modals.ports")}</Label>
           <NumberTagArrayInput
