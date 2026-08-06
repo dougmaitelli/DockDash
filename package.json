@@ -65,7 +65,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/cors": "^2.8.19",
     "@types/dockerode": "^4.0.1",
     "@types/express": "^5.0.6",

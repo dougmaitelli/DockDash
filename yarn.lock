@@ -1337,10 +1337,10 @@
   dependencies:
     tslib "^2.4.0"
 
-"@types/better-sqlite3@^7.6.13":
-  version "7.6.13"
-  resolved "https://registry.yarnpkg.com/@types/better-sqlite3/-/better-sqlite3-7.6.13.tgz#a72387f00d2f53cab699e63f2e2c05453cf953f0"
-  integrity sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==
+"@types/better-sqlite3@^9.6.0":
+  version "9.6.0"
+  resolved "https://registry.yarnpkg.com/@types/better-sqlite3/-/better-sqlite3-9.6.0.tgz#d14d1135e3eca08d4ee90477790b4e879ad26761"
+  integrity sha512-ZEEwBSgMu7GYJOynoagg5X9JbxfL6dTJDsgViJIqh67jV44kyOr9RXfmFjLK5rzC4MWssP06t9hu/JwGDnUbCg==
   dependencies:
     "@types/node" "*"
 
@@ -1498,19 +1498,12 @@
     "@types/node" "*"
     form-data "^4.0.4"
 
-"@types/node@*":
-  version "25.7.0"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-25.7.0.tgz#7498f82e90dbdce7c34b75aaaa256c498a0ebe6c"
-  integrity sha512-z+pdZyxE+RTQE9AcboAZCb4otwcrvgHD+GlBpPgn0emDVt0ohrTMhAwlr2Wd9nZ+nihhYFxO2pThz3C5qSu2Eg==
+"@types/node@*", "@types/node@>=13.7.0", "@types/node@^26.0.0":
+  version "26.1.0"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-26.1.0.tgz#aa85f0727fc5611347091c478341c63650903439"
+  integrity sha512-O0A1G3xPGy4w7AgQdAQYUlQ+BKk2Oovw8eRpofyp5KdBZULnbe+WqaOVNrm705SHphCiG4XHsACrSmPu1f+Kgw==
   dependencies:
-    undici-types "~7.21.0"
-
-"@types/node@>=13.7.0":
-  version "25.9.1"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-25.9.1.tgz#3bda556db500ae4319c08e7fc9ab94f19013ba0b"
-  integrity sha512-xfrlY7UD5rMJk3ZVJP8BNzS28J36YJg+xp+LPXV1TdWxr8uMH5A860QNxYDGQe/ylDSgjxE52Q9VnO7p75tJxg==
-  dependencies:
-    undici-types ">=7.24.0 <7.24.7"
+    undici-types "~8.3.0"
 
 "@types/node@^18.11.18":
   version "18.19.130"
@@ -1525,13 +1518,6 @@
   integrity sha512-Dh8vAsV36ig5wa9OX4pXvMc9D3Veibfw2wix0CUwYODLD8nkj9UsLjASr49nPg+2eKzxhBV+v7L8pXvT4e639Q==
   dependencies:
     undici-types "~7.18.0"
-
-"@types/node@^26.0.0":
-  version "26.1.0"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-26.1.0.tgz#aa85f0727fc5611347091c478341c63650903439"
-  integrity sha512-O0A1G3xPGy4w7AgQdAQYUlQ+BKk2Oovw8eRpofyp5KdBZULnbe+WqaOVNrm705SHphCiG4XHsACrSmPu1f+Kgw==
-  dependencies:
-    undici-types "~8.3.0"
 
 "@types/qs@*":
   version "6.15.1"
@@ -5954,11 +5940,6 @@ unbox-primitive@^1.1.0:
     has-symbols "^1.1.0"
     which-boxed-primitive "^1.1.1"
 
-"undici-types@>=7.24.0 <7.24.7":
-  version "7.24.6"
-  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-7.24.6.tgz#61275b485d7fd4e9d269c7cf04ec2873c9cc0f91"
-  integrity sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg==
-
 undici-types@~5.26.4:
   version "5.26.5"
   resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-5.26.5.tgz#bcd539893d00b56e964fd2657a4866b221a65617"
@@ -5968,11 +5949,6 @@ undici-types@~7.18.0:
   version "7.18.2"
   resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-7.18.2.tgz#29357a89e7b7ca4aef3bf0fd3fd0cd73884229e9"
   integrity sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==
-
-undici-types@~7.21.0:
-  version "7.21.0"
-  resolved "https://registry.yarnpkg.com/undici-types/-/undici-types-7.21.0.tgz#433f7dd1b5daa9ab4dacb721a5e11a8de51eadda"
-  integrity sha512-w9IMgQrz4O0YN1LtB7K5P63vhlIOvC7opSmouCJ+ZywlPAlO9gIkJ+otk6LvGpAs2wg4econaCz3TvQ9xPoyuQ==
 
 undici-types@~8.3.0:
   version "8.3.0"
