@@ -5,6 +5,7 @@ import type { Service } from "@shared";
 import { isContainerService, ServiceSource, ServiceStatus } from "@shared";
 import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
+import { CertificateHealthDot } from "@/components/CertificateHealthDot";
 import { Icons } from "@/components/Icons";
 import { PortTag } from "@/components/PortTag";
 import type { SortState } from "@/components/Table";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { MiniHealthBar } from "../components/HealthHistoryGraph";
 import { AddServiceModal } from "../components/modals/AddServiceModal";
 import { ServiceDrawer } from "../components/modals/ServiceDrawer";
+import { useCertificateHealth } from "../context/CertificateHealthContext";
 import { useConfig } from "../context/ConfigContext";
 import { useServices } from "../hooks/useData";
 
@@ -95,6 +97,17 @@ function compareServices(a: Service, b: Service, column: SortColumn): number {
     case "host":
       return a.host.localeCompare(b.host);
   }
+}
+
+function ServiceHost({ service }: { service: Service }) {
+  const certificateHealth = useCertificateHealth(service.id);
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span>{service.host}</span>
+      <CertificateHealthDot health={certificateHealth} />
+    </div>
+  );
 }
 
 export default function Services() {
@@ -310,7 +323,7 @@ export default function Services() {
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">{service.name}</td>
                     <td className="px-4 py-3 font-mono text-xs text-secondary-foreground">
-                      {service.host}
+                      <ServiceHost service={service} />
                     </td>
                     <td className="px-4 py-3">
                       {service.ports.length > 0 ? (

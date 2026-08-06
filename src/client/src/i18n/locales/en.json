@@ -49,7 +49,12 @@
     "refresh": "Refresh",
     "loading": "Loading…",
     "empty": "CertVault has no certificates visible to this API key.",
-    "protectingService": "Certificate"
+    "protectingService": "Certificate",
+    "health": {
+      "healthy": "Certificate is healthy",
+      "warning": "Certificate is near expiration",
+      "error": "Certificate has an issue"
+    }
   },
   "dashboard": {
     "online": "Online",

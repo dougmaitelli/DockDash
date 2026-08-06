@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import Layout from "./components/Layout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import { CertificateHealthProvider } from "./context/CertificateHealthContext";
 import { ConfigProvider } from "./context/ConfigContext";
 import { ThemeProvider } from "./context/ThemeContext";
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -40,18 +41,20 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ConfigProvider>
-                    <Layout>
-                      <Suspense fallback={<PageFallback />}>
-                        <Routes>
-                          <Route path="/" element={<Dashboard />} />
-                          <Route path="/services" element={<Services />} />
-                          <Route path="/certificates" element={<Certificates />} />
-                          <Route path="/discover" element={<Discovery />} />
-                          <Route path="/settings" element={<Settings />} />
-                          <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                      </Suspense>
-                    </Layout>
+                    <CertificateHealthProvider>
+                      <Layout>
+                        <Suspense fallback={<PageFallback />}>
+                          <Routes>
+                            <Route path="/" element={<Dashboard />} />
+                            <Route path="/services" element={<Services />} />
+                            <Route path="/certificates" element={<Certificates />} />
+                            <Route path="/discover" element={<Discovery />} />
+                            <Route path="/settings" element={<Settings />} />
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                          </Routes>
+                        </Suspense>
+                      </Layout>
+                    </CertificateHealthProvider>
                   </ConfigProvider>
                 </ProtectedRoute>
               }

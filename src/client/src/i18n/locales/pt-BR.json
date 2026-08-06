@@ -49,7 +49,12 @@
     "refresh": "Atualizar",
     "loading": "Carregando…",
     "empty": "O CertVault não possui certificados visíveis para esta chave de API.",
-    "protectingService": "Certificado"
+    "protectingService": "Certificado",
+    "health": {
+      "healthy": "O certificado está saudável",
+      "warning": "O certificado está próximo da expiração",
+      "error": "O certificado tem um problema"
+    }
   },
   "dashboard": {
     "online": "Online",
