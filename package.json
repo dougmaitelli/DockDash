@@ -72,7 +72,7 @@
     "@types/express-session": "^1.19.0",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.3",
+    "@types/react-dom": "^19.2.4",
     "@types/sanitize-html": "^2.16.1",
     "@types/supertest": "^7.2.0",
     "@types/uuid": "^11.0.0",
