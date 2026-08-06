@@ -74,7 +74,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.3",
     "@types/sanitize-html": "^2.16.1",
-    "@types/supertest": "^7.2.0",
+    "@types/supertest": "^7.2.1",
     "@types/uuid": "^11.0.0",
     "@typescript-eslint/eslint-plugin": "^8.65.0",
     "@typescript-eslint/parser": "^8.65.0",
