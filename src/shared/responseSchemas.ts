@@ -257,6 +257,23 @@ export const certVaultCertificatesResponseSchema = z.object({
   certificates: z.array(certVaultCertificateResponseSchema),
 });
 
+export const tlsCertificateResponseSchema = z.object({
+  serviceId: z.string(),
+  hostname: z.string(),
+  port: z.number().int(),
+  health: z.enum(["healthy", "warning", "error"]),
+  trusted: z.boolean(),
+  hostnameValid: z.boolean(),
+  validFrom: z.string().nullable(),
+  validTo: z.string().nullable(),
+  daysRemaining: z.number().int().nullable(),
+  issuer: z.string().nullable(),
+  serial: z.string().nullable(),
+  fingerprintSha256: z.string().nullable(),
+  domains: z.array(z.string()),
+  error: z.string().optional(),
+});
+
 export const authStateResponseSchema = z
   .object({
     enabled: z.boolean(),
@@ -285,6 +302,7 @@ export type CheckAllServicesResponse = z.infer<typeof checkAllServicesResponseSc
 export type ContainerStats = z.infer<typeof containerStatsResponseSchema>;
 export type CertVaultCertificate = z.infer<typeof certVaultCertificateResponseSchema>;
 export type CertVaultCertificatesResponse = z.infer<typeof certVaultCertificatesResponseSchema>;
+export type TlsCertificate = z.infer<typeof tlsCertificateResponseSchema>;
 export type DashboardConfig = z.infer<typeof dashboardConfigResponseSchema>;
 export type DockerHostHealth = z.infer<typeof dockerHostHealthResponseSchema>[number];
 export type KubernetesClusterHealth = z.infer<typeof kubernetesClusterHealthResponseSchema>[number];

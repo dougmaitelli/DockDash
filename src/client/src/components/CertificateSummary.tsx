@@ -27,10 +27,12 @@ export function CertificateSummary({ certificate, showServices = false }: Certif
           <h3 className="font-medium text-foreground">{certificate.name}</h3>
           <p className="text-xs text-muted-foreground mt-1">{certificate.domains.join(", ")}</p>
         </div>
-        <Badge variant={badgeVariant[certificate.health]}>{certificate.health}</Badge>
+        <Badge variant={badgeVariant[certificate.health]}>{certificate.status}</Badge>
       </div>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+        <span className="text-muted-foreground">Renewal status</span>
+        <span className="text-right text-secondary-foreground">{certificate.status}</span>
         <span className="text-muted-foreground">Expires</span>
         <span className="text-right text-secondary-foreground">
           {expires ? `${expires} (${certificate.daysRemaining} days)` : "Not issued"}

@@ -1,73 +1,39 @@
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-import type { CertVaultCertificate } from "@shared";
+import type { TlsCertificate } from "@shared";
 
-import { certificateApi } from "../services/api";
-import { useConfig } from "./ConfigContext";
+import { tlsCertificateApi } from "../services/api";
 
-export type CertificateHealth = "healthy" | "warning" | "error";
+export type CertificateHealth = TlsCertificate["health"];
 
 const CertificateHealthContext = createContext<ReadonlyMap<string, CertificateHealth>>(new Map());
 
-function displayHealth(health: CertVaultCertificate["health"]): CertificateHealth {
-  if (health === "healthy") return "healthy";
-
-  if (health === "warning") return "warning";
-
-  return "error";
-}
-
-const healthPriority: Record<CertificateHealth, number> = {
-  healthy: 0,
-  warning: 1,
-  error: 2,
-};
-
 export function CertificateHealthProvider({ children }: { children: ReactNode }) {
-  const config = useConfig();
-  const [certificates, setCertificates] = useState<CertVaultCertificate[]>([]);
+  const [certificates, setCertificates] = useState<TlsCertificate[]>([]);
 
   useEffect(() => {
-    if (!config?.certVaultConfigured) {
-      setCertificates([]);
-
-      return;
-    }
-
     let cancelled = false;
+    const load = (refresh = false) => {
+      void tlsCertificateApi
+        .getAll(refresh)
+        .then(({ data }) => !cancelled && setCertificates(data))
+        .catch(() => !cancelled && setCertificates([]));
+    };
 
-    void certificateApi
-      .getAll()
-      .then(({ data }) => {
-        if (!cancelled) setCertificates(data.certificates);
-      })
-      .catch(() => {
-        if (!cancelled) setCertificates([]);
-      });
+    load();
+    const interval = window.setInterval(() => load(true), 60_000);
 
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [config?.certVaultConfigured]);
+  }, []);
 
-  const healthByService = useMemo(() => {
-    const result = new Map<string, CertificateHealth>();
-
-    for (const certificate of certificates) {
-      const health = displayHealth(certificate.health);
-
-      for (const service of certificate.matchedServices) {
-        const current = result.get(service.id);
-
-        if (!current || healthPriority[health] > healthPriority[current]) {
-          result.set(service.id, health);
-        }
-      }
-    }
-
-    return result;
-  }, [certificates]);
+  const healthByService = useMemo(
+    () => new Map(certificates.map(({ serviceId, health }) => [serviceId, health])),
+    [certificates],
+  );
 
   return (
     <CertificateHealthContext.Provider value={healthByService}>

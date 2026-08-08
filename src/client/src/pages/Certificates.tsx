@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Navigate } from "react-router-dom";
 
 import type { CertVaultCertificatesResponse } from "@shared";
 
 import { CertificateSummary } from "@/components/CertificateSummary";
 import { Button } from "@/components/ui/Button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card, CardContent } from "@/components/ui/Card";
 import { useConfig } from "@/context/ConfigContext";
 import { certificateApi } from "@/services/api";
 
@@ -34,16 +35,7 @@ export default function Certificates() {
   }, [config?.certVaultConfigured, load]);
 
   if (config && !config.certVaultConfigured) {
-    return (
-      <div className="p-6 max-w-5xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("certificates.title")}</CardTitle>
-            <CardDescription>{t("certificates.notConfigured")}</CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
+    return <Navigate to="/" replace />;
   }
 
   return (
