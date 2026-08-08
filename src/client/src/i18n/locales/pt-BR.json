@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "Painel",
     "services": "Serviços",
+    "certificates": "Certificados",
     "discovery": "Descoberta",
     "settings": "Configurações",
     "logout": "Sair",
@@ -38,6 +39,22 @@
     "emptyMessage": "Adicione um serviço manualmente ou vá em Descoberta para encontrar serviços na sua rede.",
     "noResults": "Nenhum serviço corresponde aos filtros atuais.",
     "updateBadge": "Atualização"
+  },
+  "certificates": {
+    "title": "Certificados",
+    "count": "{{count}} certificado",
+    "count_other": "{{count}} certificados",
+    "notConfigured": "Configure CERTVAULT_URL e CERTVAULT_API_KEY (ou CERTVAULT_API_KEY_FILE) para mostrar a integridade dos certificados.",
+    "openCertVault": "Abrir CertVault",
+    "refresh": "Atualizar",
+    "loading": "Carregando…",
+    "empty": "O CertVault não possui certificados visíveis para esta chave de API.",
+    "protectingService": "Certificado",
+    "health": {
+      "healthy": "O certificado está saudável",
+      "warning": "O certificado está próximo da expiração",
+      "error": "O certificado tem um problema"
+    }
   },
   "dashboard": {
     "online": "Online",

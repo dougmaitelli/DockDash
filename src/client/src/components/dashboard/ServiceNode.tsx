@@ -2,8 +2,10 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 
 import { isContainerService, Service, ServiceStatus } from "@shared";
 
+import { CertificateHealthDot } from "@/components/CertificateHealthDot";
 import { Icons } from "@/components/Icons";
 import { PortTag } from "@/components/PortTag";
+import { useCertificateHealth } from "@/context/CertificateHealthContext";
 import { cn } from "@/lib/utils";
 
 import { CONTAINER_PADDING, PortSide } from "./nodeGeometry";
@@ -134,6 +136,7 @@ export function ServiceNode({
   onNodeMouseLeave,
   connectingSource,
 }: ServiceNodeProps) {
+  const certificateHealth = useCertificateHealth(service.id);
   const isParent = !!childrenSection;
   const showPorts = onPortMouseDown && isHovered;
   const showResizeHandle = isParent && onResizeStart && (isHovered || isSelected);
@@ -302,6 +305,7 @@ export function ServiceNode({
 
           <div className="text-[0.7rem] text-muted-foreground mt-0.5 font-mono flex items-center flex-wrap gap-1">
             {service.host}
+            <CertificateHealthDot health={certificateHealth} />
             {service.ports?.map((p) => (
               <PortTag key={p}>:{p}</PortTag>
             ))}

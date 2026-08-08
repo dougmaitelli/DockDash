@@ -8,6 +8,7 @@ import type { ChangelogRelease } from "@shared";
 import { cn } from "@/lib/utils";
 
 import { useAuth } from "../context/AuthContext";
+import { useConfig } from "../context/ConfigContext";
 import { discoveryApi } from "../services/api";
 import { Icons } from "./Icons";
 
@@ -71,6 +72,7 @@ function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { t } = useTranslation();
   const { enabled, user, logout } = useAuth();
+  const config = useConfig();
   const [updateInfo, setUpdateInfo] = useState<ChangelogRelease | null>(null);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -105,6 +107,11 @@ function Layout({ children }: LayoutProps) {
       <NavLink to="/discover" active={location.pathname === "/discover"}>
         {t("nav.discovery")}
       </NavLink>
+      {config?.certVaultConfigured && (
+        <NavLink to="/certificates" active={location.pathname === "/certificates"}>
+          {t("nav.certificates")}
+        </NavLink>
+      )}
       <NavLink to="/settings" active={location.pathname === "/settings"}>
         {t("nav.settings")}
       </NavLink>

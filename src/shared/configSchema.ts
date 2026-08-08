@@ -48,6 +48,9 @@ export const CONFIG_SCHEMA = {
   appriseUrl:               { env: "APPRISE_URL",               type: "string",         default: null                  },
   appriseUrls:              { env: "APPRISE_URLS",              type: "string-array",   default: []                    },
   appriseTags:              { env: "APPRISE_TAGS",              type: "string-array",   default: []                    },
+  certVaultUrl:             { env: "CERTVAULT_URL",             type: "string",         default: null, showOnUi: true  },
+  certVaultApiKey:          { env: "CERTVAULT_API_KEY",         type: "string",         default: null                  },
+  certVaultApiKeyFile:      { env: "CERTVAULT_API_KEY_FILE",    type: "string",         default: null                  },
   githubToken:              { env: "GITHUB_TOKEN",              type: "string",         default: null                  },
 } as const satisfies Record<string, SchemaEntry>;
 

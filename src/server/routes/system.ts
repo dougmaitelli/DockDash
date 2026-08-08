@@ -23,6 +23,7 @@ router.get("/config", (_req, res) => {
   const cfg: DashboardConfig = {
     version: config.appVersion,
     appriseConfigured: config.appriseConfigured,
+    certVaultConfigured: config.certVaultConfigured,
     ...schemaValues,
   } as DashboardConfig;
 
