@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { CertVaultCertificate, Service } from "@shared";
+import type { CertVaultCertificate, Service, TlsCertificate } from "@shared";
 import { isContainerService } from "@shared";
 import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useConfig } from "@/context/ConfigContext";
 import { useFormValidation } from "@/hooks/useFormValidation";
-import { certificateApi } from "@/services/api";
+import { certificateApi, tlsCertificateApi } from "@/services/api";
 
-import { CertificateSummary } from "./CertificateSummary";
 import { ContainerResourceMonitor } from "./ContainerResourceMonitor";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
+import { LiveCertificateSummary } from "./LiveCertificateSummary";
 import { FormGroup, Label } from "./modals/BaseModal";
 
 interface ServiceDetailsProps {
@@ -36,6 +36,7 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
   const [metadataExpanded, setMetadataExpanded] = useState(false);
   const [certificatesExpanded, setCertificatesExpanded] = useState(false);
   const [certificates, setCertificates] = useState<CertVaultCertificate[]>([]);
+  const [liveCertificate, setLiveCertificate] = useState<TlsCertificate | null>(null);
   const [certificateError, setCertificateError] = useState<string | null>(null);
   const { errors, validate, clearError } = useFormValidation({
     name: { required: t("modals.nameRequired") },
@@ -58,24 +59,37 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
 
   useEffect(() => {
     setCertificates([]);
+    setLiveCertificate(null);
     setCertificateError(null);
     setCertificatesExpanded(false);
 
-    if (!config?.certVaultConfigured) return;
+    const hasScheme = service.host.includes("://");
+    const hasHttpsEndpoint = hasScheme
+      ? service.host.trim().toLowerCase().startsWith("https://")
+      : service.ports.includes(443);
+
+    if (!hasHttpsEndpoint) return;
 
     let cancelled = false;
 
-    certificateApi
+    tlsCertificateApi
       .getForService(service.id!)
-      .then(({ data }) => !cancelled && setCertificates(data))
+      .then(({ data }) => !cancelled && setLiveCertificate(data))
       .catch((err: unknown) => {
         if (!cancelled) setCertificateError(err instanceof Error ? err.message : String(err));
       });
 
+    if (config?.certVaultConfigured) {
+      certificateApi
+        .getForService(service.id!)
+        .then(({ data }) => !cancelled && setCertificates(data))
+        .catch(() => undefined);
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [config?.certVaultConfigured, service.id]);
+  }, [config?.certVaultConfigured, service.host, service.id, service.ports]);
 
   const handlePortsChange = (vals: string[]) => {
     setEditPorts(vals.map(Number).sort((a, b) => a - b));
@@ -132,7 +146,7 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
           />
         </FormGroup>
 
-        {config?.certVaultConfigured && (certificates.length > 0 || certificateError) && (
+        {(liveCertificate || certificateError) && (
           <div className="mb-5">
             <button
               type="button"
@@ -144,13 +158,23 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
             </button>
             {certificatesExpanded && (
               <div className="space-y-2">
-                {certificateError ? (
+                {liveCertificate ? (
+                  <LiveCertificateSummary
+                    certificate={liveCertificate}
+                    latestDeployed={
+                      certificates.length > 0
+                        ? certificates.some(
+                            (certificate) =>
+                              certificate.currentVersion?.fingerprintSha256
+                                .replaceAll(":", "")
+                                .toLowerCase() === liveCertificate.fingerprintSha256,
+                          )
+                        : undefined
+                    }
+                  />
+                ) : certificateError ? (
                   <p className="text-xs text-destructive">{certificateError}</p>
-                ) : (
-                  certificates.map((certificate) => (
-                    <CertificateSummary key={certificate.name} certificate={certificate} />
-                  ))
-                )}
+                ) : null}
               </div>
             )}
           </div>

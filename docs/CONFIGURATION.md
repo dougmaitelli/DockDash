@@ -122,10 +122,14 @@ SESSION_SECRET=replace-with-a-long-random-value
 
 Without OIDC, protect DockDash with an authenticated reverse proxy and do not make the application directly reachable from an untrusted network.
 
-## CertVault integration
+## TLS certificates and CertVault integration
 
-DockDash can show certificate health from CertVault and associate certificates with services by
-matching service hostnames to certificate domains and wildcard domains.
+DockDash probes HTTPS services directly on port 443 by default and shows the certificate actually
+served by each hostname. This live certificate health is enabled without additional configuration.
+
+The optional CertVault integration adds its certificate inventory and renewal state. DockDash also
+matches CertVault domains and wildcard domains to services and warns when CertVault's latest
+certificate fingerprint differs from the certificate currently deployed on the service.
 
 | Variable                 | Default | Description                                      |
 | ------------------------ | ------- | ------------------------------------------------ |
