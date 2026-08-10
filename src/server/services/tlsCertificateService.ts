@@ -89,18 +89,15 @@ export function probeTlsCertificate(service: Service): Promise<TlsCertificate> {
       host: target.hostname,
       port: target.port,
       servername: target.hostname,
-      rejectUnauthorized: false,
+      rejectUnauthorized: true,
       timeout: TIMEOUT_MS,
     });
 
-    socket.once("secureConnect", () => {
+    const certificateResult = (connectionError?: Error): TlsCertificate | null => {
       const cert = socket.getPeerCertificate();
 
       if (!cert?.raw) {
-        socket.destroy();
-        finish(failed(service.id!, target.hostname, target.port, "No certificate was served"));
-
-        return;
+        return null;
       }
 
       const validFromMs = Date.parse(cert.valid_from);
@@ -119,11 +116,14 @@ export function probeTlsCertificate(service: Service): Promise<TlsCertificate> {
         : !hostnameValid
           ? hostnameError.message
           : !trusted
-            ? String(socket.authorizationError ?? "Certificate chain is not trusted")
+            ? String(
+                socket.authorizationError ??
+                  connectionError?.message ??
+                  "Certificate chain is not trusted",
+              )
             : undefined;
 
-      socket.end();
-      finish({
+      return {
         serviceId: service.id!,
         hostname: target.hostname,
         port: target.port,
@@ -142,12 +142,23 @@ export function probeTlsCertificate(service: Service): Promise<TlsCertificate> {
         fingerprintSha256: cert.fingerprint256?.replaceAll(":", "").toLowerCase() ?? null,
         domains: domainsFrom(cert),
         ...(error ? { error } : {}),
-      });
+      };
+    };
+
+    socket.once("secureConnect", () => {
+      const result = certificateResult();
+
+      socket.end();
+      finish(
+        result ?? failed(service.id!, target.hostname, target.port, "No certificate was served"),
+      );
     });
     socket.once("timeout", () => socket.destroy(new Error("TLS connection timed out")));
-    socket.once("error", (err) =>
-      finish(failed(service.id!, target.hostname, target.port, err.message)),
-    );
+    socket.once("error", (err) => {
+      const result = certificateResult(err);
+
+      finish(result ?? failed(service.id!, target.hostname, target.port, err.message));
+    });
   });
 }
 
