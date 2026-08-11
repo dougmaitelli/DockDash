@@ -50,6 +50,11 @@
     "loading": "Loading…",
     "empty": "CertVault has no certificates visible to this API key.",
     "protectingService": "Certificate",
+    "deployment": {
+      "in-use": "In use",
+      "different": "Different certificate",
+      "unverified": "Unverified"
+    },
     "health": {
       "healthy": "Certificate is healthy",
       "warning": "Certificate is near expiration",

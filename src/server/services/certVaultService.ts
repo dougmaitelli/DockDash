@@ -1,10 +1,17 @@
 import axios from "axios";
 import { z } from "zod";
 
-import type { CertVaultCertificate, CertVaultCertificatesResponse, Service } from "@shared";
+import {
+  type CertVaultCertificate,
+  type CertVaultCertificatesResponse,
+  type Service,
+  ServiceProtocol,
+  type TlsCertificate,
+} from "@shared";
 
 import { serviceRepository } from "../db/serviceRepository.js";
 import { config } from "../lib/config.js";
+import { tlsCertificateService } from "./tlsCertificateService.js";
 
 const CACHE_TTL_MS = 60_000;
 
@@ -63,12 +70,46 @@ export function domainMatchesHostname(domain: string, hostname: string): boolean
 }
 
 function matchesService(certificate: RawCertificate, service: Service): boolean {
+  if (service.protocol !== ServiceProtocol.HTTPS) return false;
+
   const hostname = normalizeHostname(service.host);
 
   return (
     hostname !== null &&
     certificate.domains.some((domain) => domainMatchesHostname(domain, hostname))
   );
+}
+
+function normalizeFingerprint(fingerprint: string | null | undefined): string | null {
+  const normalized = fingerprint?.replaceAll(":", "").trim().toLowerCase();
+
+  return normalized || null;
+}
+
+function deploymentForService(
+  certificate: RawCertificate,
+  liveCertificate: TlsCertificate | undefined,
+): Pick<CertVaultCertificate["matchedServices"][number], "deploymentStatus" | "deploymentError"> {
+  const expectedFingerprint = normalizeFingerprint(certificate.current_version?.fingerprint_sha256);
+  const liveFingerprint = normalizeFingerprint(liveCertificate?.fingerprintSha256);
+
+  if (!expectedFingerprint) {
+    return {
+      deploymentStatus: "unverified",
+      deploymentError: "CertVault has no current certificate version",
+    };
+  }
+
+  if (!liveFingerprint) {
+    return {
+      deploymentStatus: "unverified",
+      deploymentError: liveCertificate?.error ?? "The live TLS certificate could not be checked",
+    };
+  }
+
+  return {
+    deploymentStatus: liveFingerprint === expectedFingerprint ? "in-use" : "different",
+  };
 }
 
 function certificateHealth(certificate: RawCertificate): CertVaultCertificate["health"] {
@@ -114,7 +155,11 @@ class CertVaultService {
     return certificates;
   }
 
-  private enrich(certificate: RawCertificate, services: Service[]): CertVaultCertificate {
+  private enrich(
+    certificate: RawCertificate,
+    services: Service[],
+    liveCertificates: Map<string, TlsCertificate>,
+  ): CertVaultCertificate {
     const version = certificate.current_version;
     const notAfter = version ? Date.parse(version.not_after) : NaN;
 
@@ -140,7 +185,12 @@ class CertVaultService {
       health: certificateHealth(certificate),
       matchedServices: services
         .filter((service) => matchesService(certificate, service))
-        .map(({ id, name, host }) => ({ id: id!, name, host })),
+        .map(({ id, name, host }) => ({
+          id: id!,
+          name,
+          host,
+          ...deploymentForService(certificate, liveCertificates.get(id!)),
+        })),
     };
   }
 
@@ -150,12 +200,20 @@ class CertVaultService {
     }
 
     const services = serviceRepository.getServices();
-    const certificates = await this.fetchCertificates(forceRefresh);
+    const [certificates, tlsCertificates] = await Promise.all([
+      this.fetchCertificates(forceRefresh),
+      tlsCertificateService.getAll(forceRefresh).catch(() => []),
+    ]);
+    const liveCertificates = new Map(
+      tlsCertificates.map((certificate) => [certificate.serviceId, certificate]),
+    );
 
     return {
       configured: true,
       consoleUrl: this.consoleUrl,
-      certificates: certificates.map((certificate) => this.enrich(certificate, services)),
+      certificates: certificates.map((certificate) =>
+        this.enrich(certificate, services, liveCertificates),
+      ),
     };
   }
 
@@ -164,11 +222,19 @@ class CertVaultService {
 
     if (!service) return null;
 
-    const result = await this.getCertificates();
+    if (!config.certVaultConfigured) return [];
 
-    return result.certificates.filter((certificate) =>
-      certificate.matchedServices.some(({ id }) => id === serviceId),
-    );
+    const [certificates, tlsCertificate] = await Promise.all([
+      this.fetchCertificates(),
+      tlsCertificateService.getForService(serviceId).catch(() => null),
+    ]);
+    const liveCertificates = new Map<string, TlsCertificate>();
+
+    if (tlsCertificate) liveCertificates.set(serviceId, tlsCertificate);
+
+    return certificates
+      .map((certificate) => this.enrich(certificate, [service], liveCertificates))
+      .filter((certificate) => certificate.matchedServices.length > 0);
   }
 }
 

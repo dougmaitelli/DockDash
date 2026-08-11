@@ -186,11 +186,12 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
                     certificate={liveCertificate}
                     latestDeployed={
                       certificates.length > 0
-                        ? certificates.some(
-                            (certificate) =>
-                              certificate.currentVersion?.fingerprintSha256
-                                .replaceAll(":", "")
-                                .toLowerCase() === liveCertificate.fingerprintSha256,
+                        ? certificates.some((certificate) =>
+                            certificate.matchedServices.some(
+                              (matchedService) =>
+                                matchedService.id === service.id &&
+                                matchedService.deploymentStatus === "in-use",
+                            ),
                           )
                         : undefined
                     }

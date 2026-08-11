@@ -50,6 +50,11 @@
     "loading": "Carregando…",
     "empty": "O CertVault não possui certificados visíveis para esta chave de API.",
     "protectingService": "Certificado",
+    "deployment": {
+      "in-use": "Em uso",
+      "different": "Certificado diferente",
+      "unverified": "Não verificado"
+    },
     "health": {
       "healthy": "O certificado está saudável",
       "warning": "O certificado está próximo da expiração",

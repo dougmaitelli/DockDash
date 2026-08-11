@@ -229,6 +229,8 @@ export const certVaultMatchedServiceResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
   host: z.string(),
+  deploymentStatus: z.enum(["in-use", "different", "unverified"]),
+  deploymentError: z.string().optional(),
 });
 
 export const certVaultCertificateResponseSchema = z.object({

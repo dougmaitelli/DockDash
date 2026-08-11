@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 import type { CertVaultCertificate } from "@shared";
 
 import { Badge } from "@/components/ui/Badge";
@@ -10,12 +12,19 @@ const badgeVariant = {
   pending: "secondary",
 } as const;
 
+const deploymentBadgeVariant = {
+  "in-use": "success",
+  different: "warning",
+  unverified: "secondary",
+} as const;
+
 interface CertificateSummaryProps {
   certificate: CertVaultCertificate;
   showServices?: boolean;
 }
 
 export function CertificateSummary({ certificate, showServices = false }: CertificateSummaryProps) {
+  const { t } = useTranslation();
   const expires = certificate.currentVersion
     ? new Date(certificate.currentVersion.notAfter).toLocaleDateString()
     : null;
@@ -55,16 +64,23 @@ export function CertificateSummary({ certificate, showServices = false }: Certif
             Matched services
           </p>
           {certificate.matchedServices.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-2">
               {certificate.matchedServices.map((service) => (
-                <a
-                  key={service.id}
-                  href="/services"
-                  title={service.host}
-                  className="text-xs rounded-full bg-primary/10 text-primary px-2.5 py-1 no-underline"
-                >
-                  {service.name}
-                </a>
+                <div key={service.id} className="flex items-center justify-between gap-3">
+                  <a
+                    href="/services"
+                    title={service.host}
+                    className="text-sm text-primary no-underline truncate"
+                  >
+                    {service.name}
+                  </a>
+                  <Badge
+                    variant={deploymentBadgeVariant[service.deploymentStatus]}
+                    title={service.deploymentError}
+                  >
+                    {t(`certificates.deployment.${service.deploymentStatus}`)}
+                  </Badge>
+                </div>
               ))}
             </div>
           ) : (

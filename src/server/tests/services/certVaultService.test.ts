@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ServiceSource, ServiceStatus } from "@shared";
+import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 
 const mockConfig = vi.hoisted(() => ({
   certVaultConfigured: true,
@@ -12,11 +12,18 @@ const mockServiceRepository = vi.hoisted(() => ({
   getServices: vi.fn(),
   getService: vi.fn(),
 }));
+const mockTlsCertificateService = vi.hoisted(() => ({
+  getAll: vi.fn(),
+  getForService: vi.fn(),
+}));
 
 vi.mock("axios", () => ({ default: { get: mockAxiosGet } }));
 vi.mock("@server/lib/config.js", () => ({ config: mockConfig }));
 vi.mock("@server/db/serviceRepository.js", () => ({
   serviceRepository: mockServiceRepository,
+}));
+vi.mock("@server/services/tlsCertificateService.js", () => ({
+  tlsCertificateService: mockTlsCertificateService,
 }));
 
 const rawCertificate = {
@@ -34,11 +41,16 @@ const rawCertificate = {
   },
 };
 
-function service(id: string, host: string) {
+function service(
+  id: string,
+  host: string,
+  protocol: ServiceProtocol | null = ServiceProtocol.HTTPS,
+) {
   return {
     id,
     name: id,
     host,
+    protocol,
     ports: [443],
     source: ServiceSource.NETWORK,
     status: ServiceStatus.UP,
@@ -55,13 +67,34 @@ describe("CertVaultService", () => {
     mockServiceRepository.getServices.mockReturnValue([
       service("exact", "https://example.com:443/path"),
       service("wildcard", "app.example.com"),
+      service("unverified", "unverified.example.com"),
       service("too-deep", "nested.app.example.com"),
       service("ip", "192.168.1.5"),
+      service("http", "http://example.com", ServiceProtocol.HTTP),
     ]);
     mockAxiosGet.mockResolvedValue({ data: [rawCertificate] });
+    mockTlsCertificateService.getAll.mockResolvedValue([
+      {
+        serviceId: "exact",
+        fingerprintSha256: "AB:C",
+      },
+      {
+        serviceId: "wildcard",
+        fingerprintSha256: "def",
+      },
+      {
+        serviceId: "unverified",
+        fingerprintSha256: null,
+        error: "TLS connection timed out",
+      },
+    ]);
+    mockTlsCertificateService.getForService.mockResolvedValue({
+      serviceId: "exact",
+      fingerprintSha256: "abc",
+    });
   });
 
-  it("fetches certificates with a server-side API key and matches service hostnames", async () => {
+  it("fetches certificates and reports whether hostname matches use the current version", async () => {
     const { certVaultService } = await import("@server/services/certVaultService.js");
     const result = await certVaultService.getCertificates();
 
@@ -69,9 +102,14 @@ describe("CertVaultService", () => {
       "https://certvault.example.com/api/v1/certificates",
       expect.objectContaining({ headers: { Authorization: "Bearer test-key" } }),
     );
-    expect(result.certificates[0].matchedServices.map(({ id }) => id)).toEqual([
-      "exact",
-      "wildcard",
+    expect(result.certificates[0].matchedServices).toEqual([
+      expect.objectContaining({ id: "exact", deploymentStatus: "in-use" }),
+      expect.objectContaining({ id: "wildcard", deploymentStatus: "different" }),
+      expect.objectContaining({
+        id: "unverified",
+        deploymentStatus: "unverified",
+        deploymentError: "TLS connection timed out",
+      }),
     ]);
     expect(result.certificates[0]).toMatchObject({
       name: "homelab",
@@ -90,6 +128,24 @@ describe("CertVaultService", () => {
       certificates: [],
     });
     expect(mockAxiosGet).not.toHaveBeenCalled();
+    expect(mockTlsCertificateService.getAll).not.toHaveBeenCalled();
+  });
+
+  it("only probes the requested service for the service-specific response", async () => {
+    mockServiceRepository.getService.mockReturnValue(
+      service("exact", "https://example.com:443/path"),
+    );
+    const { certVaultService } = await import("@server/services/certVaultService.js");
+
+    const result = await certVaultService.getCertificatesForService("exact");
+
+    expect(mockTlsCertificateService.getForService).toHaveBeenCalledWith("exact");
+    expect(mockTlsCertificateService.getAll).not.toHaveBeenCalled();
+    expect(result).toEqual([
+      expect.objectContaining({
+        matchedServices: [expect.objectContaining({ id: "exact", deploymentStatus: "in-use" })],
+      }),
+    ]);
   });
 
   it("uses one-label wildcard matching", async () => {
