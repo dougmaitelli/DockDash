@@ -1,7 +1,6 @@
-import { isIP } from "node:net";
 import tls from "node:tls";
 
-import type { Service, TlsCertificate } from "@shared";
+import { isIpHostname, resolveTlsEndpoint, type Service, type TlsCertificate } from "@shared";
 
 import { serviceRepository } from "../db/serviceRepository.js";
 
@@ -9,30 +8,10 @@ const CACHE_TTL_MS = 60_000;
 const WARNING_DAYS = 30;
 const TIMEOUT_MS = 5_000;
 
-export function resolveTlsEndpoint(service: Service): { hostname: string; port: number } | null {
-  const host = service.host;
-  const value = host.trim();
-
-  if (!value) return null;
-
-  try {
-    const hasScheme = value.includes("://");
-    const url = new URL(hasScheme ? value : `https://${value}`);
-
-    if (hasScheme && url.protocol !== "https:") return null;
-
-    const hostname = url.hostname.replace(/^\[(.*)\]$/, "$1");
-
-    if (!hasScheme && isIP(hostname) !== 0 && !service.ports.includes(443)) return null;
-
-    return { hostname, port: url.port ? Number(url.port) : 443 };
-  } catch {
-    return null;
-  }
-}
+export { resolveTlsEndpoint };
 
 export function resolveTlsServername(hostname: string): string | undefined {
-  return isIP(hostname) === 0 ? hostname : undefined;
+  return isIpHostname(hostname) ? undefined : hostname;
 }
 
 function issuerName(issuer: tls.PeerCertificate["issuer"]): string | null {

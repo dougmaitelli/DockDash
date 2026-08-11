@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { CertVaultCertificate, Service, TlsCertificate } from "@shared";
-import { isContainerService } from "@shared";
+import { isContainerService, resolveTlsEndpoint } from "@shared";
 import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
 import { NumberInput } from "@/components/NumberInput";
@@ -63,12 +63,7 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
     setCertificateError(null);
     setCertificatesExpanded(false);
 
-    const hasScheme = service.host.includes("://");
-    const hasHttpsEndpoint = hasScheme
-      ? service.host.trim().toLowerCase().startsWith("https://")
-      : service.ports.includes(443);
-
-    if (!hasHttpsEndpoint) return;
+    if (!resolveTlsEndpoint({ host: service.host, ports: service.ports })) return;
 
     let cancelled = false;
 
