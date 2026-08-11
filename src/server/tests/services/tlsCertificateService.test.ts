@@ -29,11 +29,21 @@ describe("resolveTlsEndpoint", () => {
     });
   });
 
-  it("uses port 443 for a bare hostname that exposes HTTPS", async () => {
+  it("assumes port 443 for a bare hostname without port metadata", async () => {
     const { resolveTlsEndpoint } = await import("@server/services/tlsCertificateService.js");
 
-    expect(resolveTlsEndpoint(service("app.example.com", [80, 443]))).toEqual({
+    expect(resolveTlsEndpoint(service("app.example.com", []))).toEqual({
       hostname: "app.example.com",
+      port: 443,
+    });
+  });
+
+  it("requires observed port 443 for a bare IP address", async () => {
+    const { resolveTlsEndpoint } = await import("@server/services/tlsCertificateService.js");
+
+    expect(resolveTlsEndpoint(service("192.168.0.3", []))).toBeNull();
+    expect(resolveTlsEndpoint(service("192.168.0.3", [443]))).toEqual({
+      hostname: "192.168.0.3",
       port: 443,
     });
   });
@@ -47,11 +57,10 @@ describe("resolveTlsEndpoint", () => {
     });
   });
 
-  it("does not probe HTTP-only services", async () => {
+  it("does not probe an explicit HTTP endpoint", async () => {
     const { resolveTlsEndpoint } = await import("@server/services/tlsCertificateService.js");
 
     expect(resolveTlsEndpoint(service("http://app.example.com", [443]))).toBeNull();
-    expect(resolveTlsEndpoint(service("app.example.com", [80]))).toBeNull();
   });
 });
 

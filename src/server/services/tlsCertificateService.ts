@@ -21,9 +21,9 @@ export function resolveTlsEndpoint(service: Service): { hostname: string; port: 
 
     if (hasScheme && url.protocol !== "https:") return null;
 
-    if (!hasScheme && !service.ports.includes(443)) return null;
-
     const hostname = url.hostname.replace(/^\[(.*)\]$/, "$1");
+
+    if (!hasScheme && isIP(hostname) !== 0 && !service.ports.includes(443)) return null;
 
     return { hostname, port: url.port ? Number(url.port) : 443 };
   } catch {
