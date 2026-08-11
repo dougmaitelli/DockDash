@@ -50,6 +50,38 @@
     "loading": "Carregando…",
     "empty": "O CertVault não possui certificados visíveis para esta chave de API.",
     "protectingService": "Certificado",
+    "matchedServices": "Serviços correspondentes",
+    "noMatchingServices": "Nenhum serviço correspondente no DockDash",
+    "noDnsNames": "Nenhum nome DNS informado",
+    "notIssued": "Não emitido",
+    "unknown": "Desconhecido",
+    "yes": "Sim",
+    "no": "Não",
+    "daysRemaining": "{{count}} dia",
+    "daysRemaining_other": "{{count}} dias",
+    "expirationWithDays": "{{date}} ({{remaining}})",
+    "latestNotDeployed": "O certificado mais recente do CertVault não está implantado neste endpoint.",
+    "fields": {
+      "renewalStatus": "Status da renovação",
+      "expires": "Expira em",
+      "issuer": "Emissor",
+      "keyType": "Tipo de chave",
+      "trusted": "Confiável",
+      "serial": "Número de série",
+      "sha256Fingerprint": "Impressão digital SHA-256"
+    },
+    "vaultHealth": {
+      "healthy": "Saudável",
+      "warning": "Expira em breve",
+      "expired": "Expirado",
+      "error": "Erro",
+      "pending": "Pendente"
+    },
+    "liveHealth": {
+      "healthy": "Saudável",
+      "warning": "Expira em breve",
+      "error": "Erro"
+    },
     "deployment": {
       "in-use": "Em uso",
       "different": "Certificado diferente",

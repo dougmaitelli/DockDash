@@ -28,6 +28,14 @@ export function CertificateSummary({ certificate, showServices = false }: Certif
   const expires = certificate.currentVersion
     ? new Date(certificate.currentVersion.notAfter).toLocaleDateString()
     : null;
+  const expiration = expires
+    ? certificate.daysRemaining === null
+      ? expires
+      : t("certificates.expirationWithDays", {
+          date: expires,
+          remaining: t("certificates.daysRemaining", { count: certificate.daysRemaining }),
+        })
+    : t("certificates.notIssued");
 
   return (
     <div className="rounded-lg border border-border bg-background p-4 space-y-3">
@@ -36,21 +44,21 @@ export function CertificateSummary({ certificate, showServices = false }: Certif
           <h3 className="font-medium text-foreground">{certificate.name}</h3>
           <p className="text-xs text-muted-foreground mt-1">{certificate.domains.join(", ")}</p>
         </div>
-        <Badge variant={badgeVariant[certificate.health]}>{certificate.status}</Badge>
+        <Badge variant={badgeVariant[certificate.health]}>
+          {t(`certificates.vaultHealth.${certificate.health}`)}
+        </Badge>
       </div>
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-        <span className="text-muted-foreground">Renewal status</span>
+        <span className="text-muted-foreground">{t("certificates.fields.renewalStatus")}</span>
         <span className="text-right text-secondary-foreground">{certificate.status}</span>
-        <span className="text-muted-foreground">Expires</span>
-        <span className="text-right text-secondary-foreground">
-          {expires ? `${expires} (${certificate.daysRemaining} days)` : "Not issued"}
-        </span>
-        <span className="text-muted-foreground">Issuer</span>
+        <span className="text-muted-foreground">{t("certificates.fields.expires")}</span>
+        <span className="text-right text-secondary-foreground">{expiration}</span>
+        <span className="text-muted-foreground">{t("certificates.fields.issuer")}</span>
         <span className="text-right text-secondary-foreground truncate">
           {certificate.currentVersion?.issuer ?? "—"}
         </span>
-        <span className="text-muted-foreground">Key type</span>
+        <span className="text-muted-foreground">{t("certificates.fields.keyType")}</span>
         <span className="text-right text-secondary-foreground">{certificate.keyType}</span>
       </div>
 
@@ -61,7 +69,7 @@ export function CertificateSummary({ certificate, showServices = false }: Certif
       {showServices && (
         <div className="pt-2 border-t border-border">
           <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
-            Matched services
+            {t("certificates.matchedServices")}
           </p>
           {certificate.matchedServices.length > 0 ? (
             <div className="space-y-2">
@@ -84,7 +92,7 @@ export function CertificateSummary({ certificate, showServices = false }: Certif
               ))}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">No matching DockDash services</p>
+            <p className="text-xs text-muted-foreground">{t("certificates.noMatchingServices")}</p>
           )}
         </div>
       )}
