@@ -38,10 +38,34 @@ describe("resolveTlsEndpoint", () => {
     });
   });
 
+  it("normalizes an IPv6 URL hostname for TLS connections", async () => {
+    const { resolveTlsEndpoint } = await import("@server/services/tlsCertificateService.js");
+
+    expect(resolveTlsEndpoint(service("https://[2001:db8::1]:8443", []))).toEqual({
+      hostname: "2001:db8::1",
+      port: 8443,
+    });
+  });
+
   it("does not probe HTTP-only services", async () => {
     const { resolveTlsEndpoint } = await import("@server/services/tlsCertificateService.js");
 
     expect(resolveTlsEndpoint(service("http://app.example.com", [443]))).toBeNull();
     expect(resolveTlsEndpoint(service("app.example.com", [80]))).toBeNull();
+  });
+});
+
+describe("resolveTlsServername", () => {
+  it("uses DNS hostnames for SNI", async () => {
+    const { resolveTlsServername } = await import("@server/services/tlsCertificateService.js");
+
+    expect(resolveTlsServername("app.example.com")).toBe("app.example.com");
+  });
+
+  it("omits SNI for IP address targets", async () => {
+    const { resolveTlsServername } = await import("@server/services/tlsCertificateService.js");
+
+    expect(resolveTlsServername("192.168.0.3")).toBeUndefined();
+    expect(resolveTlsServername("2001:db8::1")).toBeUndefined();
   });
 });

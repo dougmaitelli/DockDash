@@ -1,3 +1,4 @@
+import { isIP } from "node:net";
 import tls from "node:tls";
 
 import type { Service, TlsCertificate } from "@shared";
@@ -22,10 +23,16 @@ export function resolveTlsEndpoint(service: Service): { hostname: string; port: 
 
     if (!hasScheme && !service.ports.includes(443)) return null;
 
-    return { hostname: url.hostname, port: url.port ? Number(url.port) : 443 };
+    const hostname = url.hostname.replace(/^\[(.*)\]$/, "$1");
+
+    return { hostname, port: url.port ? Number(url.port) : 443 };
   } catch {
     return null;
   }
+}
+
+export function resolveTlsServername(hostname: string): string | undefined {
+  return isIP(hostname) === 0 ? hostname : undefined;
 }
 
 function issuerName(issuer: tls.PeerCertificate["issuer"]): string | null {
@@ -85,10 +92,11 @@ export function probeTlsCertificate(service: Service): Promise<TlsCertificate> {
       settled = true;
       resolve(result);
     };
+    const servername = resolveTlsServername(target.hostname);
     const socket = tls.connect({
       host: target.hostname,
       port: target.port,
-      servername: target.hostname,
+      ...(servername ? { servername } : {}),
       rejectUnauthorized: true,
       timeout: TIMEOUT_MS,
     });
