@@ -45,7 +45,7 @@ export function CertificateSummary({ certificate, showServices = false }: Certif
           <p className="text-xs text-muted-foreground mt-1">{certificate.domains.join(", ")}</p>
         </div>
         <Badge variant={badgeVariant[certificate.health]}>
-          {t(`certificates.vaultHealth.${certificate.health}`)}
+          {t(`certificates.status.${certificate.health}`)}
         </Badge>
       </div>
 

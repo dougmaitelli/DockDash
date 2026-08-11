@@ -40,7 +40,7 @@ export function LiveCertificateSummary({
           </p>
         </div>
         <Badge variant={badgeVariant[certificate.health]}>
-          {t(`certificates.liveHealth.${certificate.health}`)}
+          {t(`certificates.status.${certificate.health}`)}
         </Badge>
       </div>
 

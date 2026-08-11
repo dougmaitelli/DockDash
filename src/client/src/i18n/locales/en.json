@@ -70,17 +70,12 @@
       "serial": "Serial",
       "sha256Fingerprint": "SHA-256 fingerprint"
     },
-    "vaultHealth": {
+    "status": {
       "healthy": "Healthy",
       "warning": "Expiring soon",
       "expired": "Expired",
       "error": "Error",
       "pending": "Pending"
-    },
-    "liveHealth": {
-      "healthy": "Healthy",
-      "warning": "Expiring soon",
-      "error": "Error"
     },
     "deployment": {
       "in-use": "In use",

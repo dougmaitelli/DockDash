@@ -70,17 +70,12 @@
       "serial": "Número de série",
       "sha256Fingerprint": "Impressão digital SHA-256"
     },
-    "vaultHealth": {
+    "status": {
       "healthy": "Saudável",
       "warning": "Expira em breve",
       "expired": "Expirado",
       "error": "Erro",
       "pending": "Pendente"
-    },
-    "liveHealth": {
-      "healthy": "Saudável",
-      "warning": "Expira em breve",
-      "error": "Erro"
     },
     "deployment": {
       "in-use": "Em uso",
