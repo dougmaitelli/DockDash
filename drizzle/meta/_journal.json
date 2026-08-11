@@ -64,6 +64,13 @@
       "when": 1784005684196,
       "tag": "0008_fast_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1786421840558,
+      "tag": "0009_chubby_silver_surfer",
+      "breakpoints": true
     }
   ]
 }

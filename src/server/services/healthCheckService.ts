@@ -237,7 +237,7 @@ export class HealthCheckService extends ConcurrentService {
 
     if (!port) return ServiceStatus.UNKNOWN;
 
-    const protocol = detectProtocolByPort(port);
+    const protocol = service.protocol ?? detectProtocolByPort(port);
 
     if (HTTP_PROTOCOLS.includes(protocol)) {
       const httpOk = await this.checkHttp(service.host, port, protocol);

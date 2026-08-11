@@ -38,6 +38,7 @@ describe("saveService / getService", () => {
     expect(service.id).toBeDefined();
     expect(service.name).toBe("web-app");
     expect(service.host).toBe("192.168.1.10");
+    expect(service.protocol).toBeNull();
     expect(service.ports).toEqual([80, 443]);
     expect(service.status).toBe(ServiceStatus.UNKNOWN);
 
@@ -84,6 +85,21 @@ describe("updateService", () => {
     const retrieved = svcRepo.getService(svc.id!);
 
     expect(retrieved).toMatchObject({ name: "new", host: "2.2.2.2", ports: [8080] });
+  });
+
+  it("persists and clears the optional protocol", () => {
+    const svc = svcRepo.saveService({
+      name: "secure",
+      host: "secure.example.com",
+      protocol: ServiceProtocol.HTTPS,
+      source: ServiceSource.NETWORK,
+    });
+
+    expect(svcRepo.getService(svc.id!)?.protocol).toBe(ServiceProtocol.HTTPS);
+
+    svcRepo.updateService(svc.id!, { protocol: null });
+
+    expect(svcRepo.getService(svc.id!)?.protocol).toBeNull();
   });
 
   it("throws when service does not exist", () => {

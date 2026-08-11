@@ -7,7 +7,7 @@ import { ContainerAction, ContainerStats, Service, ServiceSource, ServiceStatus 
 import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 
 import { config } from "../../lib/config.js";
-import { DOCKER_LATEST_TAG } from "../../lib/constants.js";
+import { detectProtocolByPort, DOCKER_LATEST_TAG } from "../../lib/constants.js";
 import { fileService } from "../fileService.js";
 import { terminalService } from "../terminalService.js";
 import type { ContainerRuntime, RuntimeTerminalSession } from "./types.js";
@@ -124,6 +124,7 @@ export class DockerRuntime implements ContainerRuntime {
         id: `docker-${uuidv4()}`,
         name,
         host,
+        protocol: detectProtocolByPort(hostPorts[0] ?? 0),
         ports: hostPorts,
         checkPort: hostPorts[0],
         source: ServiceSource.DOCKER,

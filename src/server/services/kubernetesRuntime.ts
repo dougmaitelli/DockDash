@@ -15,6 +15,7 @@ import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js"
 
 import { serviceRepository } from "../db/serviceRepository.js";
 import { config } from "../lib/config.js";
+import { detectProtocolByPort } from "../lib/constants.js";
 import type { ContainerRuntime, RuntimeTerminalSession } from "./containerRuntime/types.js";
 import { terminalService } from "./terminalService.js";
 
@@ -139,6 +140,7 @@ export class KubernetesRuntime implements ContainerRuntime {
               id: `kubernetes-${uuidv4()}`,
               name: `${namespace}/${workloadName}:${container.name}`,
               host: pod.status?.podIP ?? `${pod.metadata.name}.${namespace}.pod`,
+              protocol: detectProtocolByPort(ports[0] ?? 0),
               ports,
               checkPort: ports[0],
               source: ServiceSource.KUBERNETES,

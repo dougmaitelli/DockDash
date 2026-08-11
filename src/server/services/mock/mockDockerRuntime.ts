@@ -6,6 +6,7 @@ import type { ContainerStats } from "@shared";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 import { serviceRepository } from "../../db/serviceRepository.js";
+import { detectProtocolByPort } from "../../lib/constants.js";
 import {
   type ContainerStateMap,
   DOCKER_CONTAINER_STATE,
@@ -188,6 +189,7 @@ export class MockDockerRuntime extends DockerRuntime {
         id: `docker-${uuidv4()}`,
         name: c.name,
         host: "localhost",
+        protocol: detectProtocolByPort(c.ports[0] ?? 0),
         ports: c.ports,
         checkPort: c.ports[0],
         source: ServiceSource.DOCKER,

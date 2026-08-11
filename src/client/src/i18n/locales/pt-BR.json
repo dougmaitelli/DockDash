@@ -194,6 +194,8 @@
     "name": "Nome",
     "namePlaceholder": "Nome do serviço",
     "host": "Host",
+    "protocol": "Protocolo",
+    "protocolNone": "Nenhum",
     "hostPlaceholder": "Endereço IP ou hostname",
     "ports": "Portas",
     "portsPlaceholder": "ex.: 8080",

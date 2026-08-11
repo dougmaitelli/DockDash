@@ -20,12 +20,21 @@ interface SelectProps {
   placeholder?: string;
   id?: string;
   className?: string;
+  ariaLabel?: string;
 }
 
-export function Select({ value, onValueChange, options, placeholder, id, className }: SelectProps) {
+export function Select({
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  id,
+  className,
+  ariaLabel,
+}: SelectProps) {
   return (
     <SelectRoot value={value} onValueChange={onValueChange}>
-      <SelectTrigger id={id} className={className}>
+      <SelectTrigger id={id} className={className} aria-label={ariaLabel}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

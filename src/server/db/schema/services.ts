@@ -1,13 +1,14 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import type { ServiceMetadata } from "@shared";
+import type { ServiceMetadata, ServiceProtocol } from "@shared";
 import { ServiceSource, ServiceStatus } from "@shared";
 
 export const services = sqliteTable("services", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   host: text("host").notNull(),
+  protocol: text("protocol").$type<ServiceProtocol>(),
   ports: text("ports", { mode: "json" })
     .$type<number[]>()
     .notNull()

@@ -7,12 +7,13 @@ import {
   serviceResponseSchema,
   sseScanDoneResponseSchema,
 } from "@shared/responseSchemas.js";
-import { ServiceSource, ServiceStatus } from "@shared/types.js";
+import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared/types.js";
 
 const service = {
   id: "service-1",
   name: "Web",
   host: "web.local",
+  protocol: ServiceProtocol.HTTPS,
   ports: [80, 443],
   source: ServiceSource.DOCKER,
   status: ServiceStatus.UP,
@@ -33,6 +34,7 @@ describe("response schemas", () => {
 
   it("rejects malformed service responses", () => {
     expect(() => serviceResponseSchema.parse({ ...service, ports: ["80"] })).toThrow();
+    expect(() => serviceResponseSchema.parse({ ...service, protocol: "tls" })).toThrow();
   });
 
   it("accepts and ignores additive response fields", () => {

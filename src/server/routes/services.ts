@@ -54,11 +54,13 @@ router.get("/services/:id", (req, res) => {
 });
 
 router.post("/services", validateBody(createServiceRequestSchema), (req, res) => {
-  const { name, host, ports, checkPort, source, metadata } = req.body as CreateServiceRequest;
+  const { name, host, protocol, ports, checkPort, source, metadata } =
+    req.body as CreateServiceRequest;
 
   const service = serviceRepository.saveService({
     name,
     host,
+    protocol,
     ports: Array.isArray(ports) ? ports : [],
     checkPort,
     source: source || ServiceSource.NETWORK,
@@ -75,13 +77,14 @@ router.post("/services", validateBody(createServiceRequestSchema), (req, res) =>
 });
 
 router.put("/services/:id", validateBody(updateServiceRequestSchema), (req, res) => {
-  const { name, host, ports, checkPort } = req.body as UpdateServiceRequest;
+  const { name, host, protocol, ports, checkPort } = req.body as UpdateServiceRequest;
 
   try {
     const serviceId = String(req.params.id);
     const service = serviceRepository.updateService(serviceId, {
       name,
       host,
+      protocol,
       ports: Array.isArray(ports) ? ports : undefined,
       checkPort,
     });

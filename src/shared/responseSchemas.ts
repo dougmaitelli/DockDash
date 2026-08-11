@@ -33,6 +33,7 @@ export const serviceResponseSchema = z
     id: z.string(),
     name: z.string(),
     host: z.string(),
+    protocol: z.enum(ServiceProtocol).nullable().optional(),
     ports: z.array(z.number().int()),
     checkPort: z.number().int().nullable().optional(),
     source: z.enum(ServiceSource),

@@ -26,6 +26,16 @@ afterEach(() => {
 });
 
 describe("overrideConnection", () => {
+  it("migrates an optional service protocol column", () => {
+    const columns = connMod.sqlite.prepare("PRAGMA table_info(services)").all() as Array<{
+      name: string;
+      notnull: number;
+    }>;
+    const protocol = columns.find((column) => column.name === "protocol");
+
+    expect(protocol).toMatchObject({ name: "protocol", notnull: 0 });
+  });
+
   it("replaces the sqlite live binding", () => {
     const original = connMod.sqlite;
     const replacement = new Database(":memory:");

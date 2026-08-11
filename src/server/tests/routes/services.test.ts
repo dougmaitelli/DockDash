@@ -2,7 +2,7 @@ import express from "express";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ServiceSource, ServiceStatus } from "@shared";
+import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 
 const mockSvcRepo = vi.hoisted(() => ({
   getServices: vi.fn(),
@@ -201,6 +201,7 @@ describe("POST /api/services", () => {
     expect(mockSvcRepo.saveService).toHaveBeenCalledWith({
       name: "Svc",
       host: "host",
+      protocol: undefined,
       ports: [],
       checkPort: undefined,
       source: ServiceSource.NETWORK,
@@ -238,6 +239,24 @@ describe("POST /api/services", () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty("error");
+  });
+
+  it("accepts an optional service protocol", async () => {
+    const saved = makeService({ protocol: ServiceProtocol.HTTPS });
+
+    mockSvcRepo.saveService.mockReturnValue(saved);
+    mockHealthCheckService.checkSingleService.mockResolvedValue(undefined);
+
+    const res = await request(app).post("/api/services").send({
+      name: "Secure Service",
+      host: "secure.example.com",
+      protocol: ServiceProtocol.HTTPS,
+    });
+
+    expect(res.status).toBe(201);
+    expect(mockSvcRepo.saveService).toHaveBeenCalledWith(
+      expect.objectContaining({ protocol: ServiceProtocol.HTTPS }),
+    );
   });
 });
 
@@ -295,6 +314,19 @@ describe("PUT /api/services/:id", () => {
 
     expect(res.status).toBe(400);
     expect(res.body).toHaveProperty("error");
+  });
+
+  it("clears an optional service protocol", async () => {
+    mockSvcRepo.updateService.mockReturnValue(makeService({ protocol: null }));
+    mockHealthCheckService.checkSingleService.mockResolvedValue(undefined);
+
+    const res = await request(app).put("/api/services/svc-1").send({ protocol: null });
+
+    expect(res.status).toBe(200);
+    expect(mockSvcRepo.updateService).toHaveBeenCalledWith(
+      "svc-1",
+      expect.objectContaining({ protocol: null }),
+    );
   });
 });
 

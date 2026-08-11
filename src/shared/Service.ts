@@ -1,11 +1,13 @@
 import { v4 as uuidv4 } from "uuid";
 
-import { ServiceMetadata, ServiceSource, ServiceStatus } from "./types.js";
+import type { ServiceMetadata, ServiceProtocol } from "./types.js";
+import { ServiceSource, ServiceStatus } from "./types.js";
 
 export class Service {
   id!: string;
   name!: string;
   host!: string;
+  protocol?: ServiceProtocol | null;
   ports: number[] = [];
   checkPort?: number | null;
   source!: ServiceSource;

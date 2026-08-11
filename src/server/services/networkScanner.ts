@@ -236,6 +236,7 @@ export class NetworkScanner {
       id: `net-${uuidv4()}`,
       name: hostname || primary?.serviceName || ip,
       host: ip,
+      protocol: primary?.protocol ?? ServiceProtocol.TCP,
       ports: detectedPorts.map((p) => p.port).sort((a, b) => a - b),
       checkPort: primary?.port,
       source: ServiceSource.NETWORK,

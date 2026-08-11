@@ -31,6 +31,7 @@ export const createServiceRequestSchema = z
   .object({
     name: nonEmptyString,
     host: nonEmptyString,
+    protocol: z.enum(ServiceProtocol).nullable().optional(),
     ports: z.array(port).optional(),
     checkPort: port.optional(),
     source: z.enum(ServiceSource).optional(),
@@ -42,6 +43,7 @@ export const updateServiceRequestSchema = z
   .object({
     name: nonEmptyString.optional(),
     host: nonEmptyString.optional(),
+    protocol: z.enum(ServiceProtocol).nullable().optional(),
     ports: z.array(port).nullable().optional(),
     checkPort: port.nullable().optional(),
   })

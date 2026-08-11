@@ -1,4 +1,5 @@
 import type { Service } from "./Service.js";
+import { ServiceProtocol } from "./types.js";
 
 export interface TlsEndpoint {
   hostname: string;
@@ -18,7 +19,11 @@ export function isIpHostname(hostname: string): boolean {
   );
 }
 
-export function resolveTlsEndpoint(service: Pick<Service, "host" | "ports">): TlsEndpoint | null {
+export function resolveTlsEndpoint(
+  service: Pick<Service, "host" | "protocol" | "checkPort">,
+): TlsEndpoint | null {
+  if (service.protocol !== ServiceProtocol.HTTPS) return null;
+
   const value = service.host.trim();
 
   if (!value) return null;
@@ -31,9 +36,7 @@ export function resolveTlsEndpoint(service: Pick<Service, "host" | "ports">): Tl
 
     const hostname = url.hostname.replace(/^\[(.*)\]$/, "$1");
 
-    if (!hasScheme && isIpHostname(hostname) && !service.ports.includes(443)) return null;
-
-    return { hostname, port: url.port ? Number(url.port) : 443 };
+    return { hostname, port: url.port ? Number(url.port) : (service.checkPort ?? 443) };
   } catch {
     return null;
   }

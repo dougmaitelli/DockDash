@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ServiceSource, ServiceStatus } from "@shared";
+import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 
 // ── Mock objects created before vi.mock() factories so factories can reference them ──
 
@@ -147,6 +147,21 @@ describe("HealthCheckService — network service checks", () => {
     const result = await healthCheckService.checkSingleService("svc-net");
 
     expect(result).toBe(ServiceStatus.UP);
+  });
+
+  it("uses an explicitly configured HTTPS protocol", async () => {
+    const svc = makeNetworkService({ protocol: ServiceProtocol.HTTPS, checkPort: 8443 });
+
+    mockDb.getService.mockReturnValue(svc);
+    mockAxios.get.mockResolvedValue({ status: 200 });
+
+    const result = await healthCheckService.checkSingleService("svc-net");
+
+    expect(result).toBe(ServiceStatus.UP);
+    expect(mockAxios.get).toHaveBeenCalledWith(
+      "https://192.168.1.10:8443",
+      expect.objectContaining({ timeout: 1000 }),
+    );
   });
 
   it("falls back to TCP and returns UP when HTTP probe fails but TCP connects", async () => {

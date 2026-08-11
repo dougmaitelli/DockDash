@@ -2,8 +2,10 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Service } from "@shared";
+import { ServiceProtocol } from "@shared";
 
 import { NumberInput } from "@/components/NumberInput";
+import { Select } from "@/components/Select";
 import { NumberTagArrayInput } from "@/components/TagArrayInput";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -12,7 +14,7 @@ import { useFormValidation } from "@/hooks/useFormValidation";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
 
 interface AddServiceModalProps {
-  onSave: (data: Pick<Service, "name" | "host" | "ports" | "checkPort">) => void;
+  onSave: (data: Pick<Service, "name" | "host" | "protocol" | "ports" | "checkPort">) => void;
   onCancel: () => void;
 }
 
@@ -20,6 +22,7 @@ export function AddServiceModal({ onSave, onCancel }: AddServiceModalProps) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [host, setHost] = useState("");
+  const [protocol, setProtocol] = useState<ServiceProtocol | "">("");
   const [ports, setPorts] = useState<number[]>([]);
   const [checkPort, setCheckPort] = useState("");
   const { errors, validate, clearError } = useFormValidation({
@@ -56,6 +59,7 @@ export function AddServiceModal({ onSave, onCancel }: AddServiceModalProps) {
     onSave({
       name,
       host,
+      protocol: protocol || null,
       ports,
       checkPort: isNaN(cp) ? null : cp,
     });
@@ -92,14 +96,32 @@ export function AddServiceModal({ onSave, onCancel }: AddServiceModalProps) {
       </FormGroup>
       <FormGroup error={errors.host}>
         <Label>{t("modals.host")}</Label>
-        <Input
-          value={host}
-          onChange={(e) => {
-            setHost(e.target.value);
-            clearError("host");
-          }}
-          placeholder={t("modals.hostPlaceholder")}
-        />
+        <div className="flex">
+          <Select
+            value={protocol || "__none__"}
+            onValueChange={(value) =>
+              setProtocol(value === "__none__" ? "" : (value as ServiceProtocol))
+            }
+            options={[
+              { value: "__none__", label: t("modals.protocolNone") },
+              ...Object.values(ServiceProtocol).map((value) => ({
+                value,
+                label: value.toUpperCase(),
+              })),
+            ]}
+            className="w-32 shrink-0 rounded-r-none"
+            ariaLabel={t("modals.protocol")}
+          />
+          <Input
+            value={host}
+            onChange={(e) => {
+              setHost(e.target.value);
+              clearError("host");
+            }}
+            placeholder={t("modals.hostPlaceholder")}
+            className="-ml-px rounded-l-none"
+          />
+        </div>
       </FormGroup>
       <FormGroup>
         <Label>{t("modals.ports")}</Label>

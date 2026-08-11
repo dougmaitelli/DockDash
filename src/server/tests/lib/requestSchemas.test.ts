@@ -8,20 +8,28 @@ import {
   terminalInputRequestSchema,
   updateServiceRequestSchema,
 } from "@shared/requestSchemas.js";
+import { ServiceProtocol } from "@shared/types.js";
 
 describe("request schemas", () => {
   it("accepts and normalizes a valid service request", () => {
     const result = createServiceRequestSchema.parse({
       name: "  Frigate  ",
       host: "  192.168.1.10  ",
+      protocol: ServiceProtocol.HTTPS,
       ports: [5000],
     });
 
-    expect(result).toMatchObject({ name: "Frigate", host: "192.168.1.10", ports: [5000] });
+    expect(result).toMatchObject({
+      name: "Frigate",
+      host: "192.168.1.10",
+      protocol: ServiceProtocol.HTTPS,
+      ports: [5000],
+    });
   });
 
   it.each([
     [{ name: "Frigate", host: "host", ports: [0] }, createServiceRequestSchema],
+    [{ name: "Frigate", host: "host", protocol: "tls" }, createServiceRequestSchema],
     [{ name: "Frigate", host: "host", unexpected: true }, createServiceRequestSchema],
     [
       { name: "Frigate", host: "host", metadata: { networkNames: [1] } },

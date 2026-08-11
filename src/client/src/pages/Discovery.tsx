@@ -179,7 +179,9 @@ export default function Discovery() {
         importService({
           name: svc.name,
           host: svc.host,
+          protocol: svc.protocol,
           ports: svc.ports,
+          checkPort: svc.checkPort ?? undefined,
           source: ServiceSource.DOCKER,
           metadata: svc.metadata,
         }),
@@ -194,7 +196,9 @@ export default function Discovery() {
         importService({
           name: svc.name,
           host: svc.host,
+          protocol: svc.protocol,
           ports: svc.ports,
+          checkPort: svc.checkPort ?? undefined,
           source: ServiceSource.NETWORK,
           metadata: svc.metadata,
         }),
@@ -296,7 +300,9 @@ export default function Discovery() {
                           importService({
                             name: svc.name,
                             host: svc.host,
+                            protocol: svc.protocol,
                             ports: svc.ports,
+                            checkPort: svc.checkPort ?? undefined,
                             source: ServiceSource.DOCKER,
                             metadata: svc.metadata,
                           });
@@ -364,7 +370,9 @@ export default function Discovery() {
                             importService({
                               name: svc.name,
                               host: svc.host,
+                              protocol: svc.protocol,
                               ports: svc.ports,
+                              checkPort: svc.checkPort ?? undefined,
                               source: ServiceSource.KUBERNETES,
                               metadata: svc.metadata,
                             })
@@ -459,7 +467,9 @@ export default function Discovery() {
                           importService({
                             name: svc.name,
                             host: svc.host,
+                            protocol: svc.protocol,
                             ports: svc.ports,
+                            checkPort: svc.checkPort ?? undefined,
                             source: ServiceSource.NETWORK,
                             metadata: svc.metadata,
                           });

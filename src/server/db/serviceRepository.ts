@@ -30,6 +30,7 @@ export class ServiceRepository {
       id: uuidv4(),
       name: data.name,
       host: data.host,
+      protocol: data.protocol ?? null,
       ports: data.ports ?? [],
       checkPort: data.checkPort,
       source: data.source ?? ServiceSource.NETWORK,
@@ -52,6 +53,7 @@ export class ServiceRepository {
       .set({
         name: data.name,
         host: data.host,
+        protocol: data.protocol,
         ports: data.ports === null ? [] : data.ports,
         checkPort: data.checkPort,
         updatedAt: new Date().toISOString(),
