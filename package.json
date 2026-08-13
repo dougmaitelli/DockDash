@@ -75,7 +75,7 @@
     "@vitest/coverage-v8": "^4.1.10",
     "concurrently": "^10.0.4",
     "drizzle-kit": "^0.31.10",
-    "esbuild": "^0.28.1",
+    "esbuild": "^0.28.2",
     "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
