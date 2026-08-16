@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import {
   type CertVaultCertificate,
-  type CertVaultCertificatesResponse,
   type Service,
   ServiceProtocol,
   type TlsCertificate,
@@ -191,29 +190,6 @@ class CertVaultService {
           host,
           ...deploymentForService(certificate, liveCertificates.get(id!)),
         })),
-    };
-  }
-
-  async getCertificates(forceRefresh = false): Promise<CertVaultCertificatesResponse> {
-    if (!config.certVaultConfigured) {
-      return { configured: false, consoleUrl: this.consoleUrl, certificates: [] };
-    }
-
-    const services = serviceRepository.getServices();
-    const [certificates, tlsCertificates] = await Promise.all([
-      this.fetchCertificates(forceRefresh),
-      tlsCertificateService.getAll(forceRefresh).catch(() => []),
-    ]);
-    const liveCertificates = new Map(
-      tlsCertificates.map((certificate) => [certificate.serviceId, certificate]),
-    );
-
-    return {
-      configured: true,
-      consoleUrl: this.consoleUrl,
-      certificates: certificates.map((certificate) =>
-        this.enrich(certificate, services, liveCertificates),
-      ),
     };
   }
 

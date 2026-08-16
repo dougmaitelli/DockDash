@@ -16,14 +16,6 @@ function integrationError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-router.get("/certificates", async (req, res) => {
-  try {
-    res.json(await certVaultService.getCertificates(req.query.refresh === "true"));
-  } catch (err) {
-    res.status(502).json({ error: integrationError(err) });
-  }
-});
-
 router.get("/services/:id/certificates", async (req, res) => {
   try {
     const certificates = await certVaultService.getCertificatesForService(req.params.id);

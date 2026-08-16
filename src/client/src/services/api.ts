@@ -17,7 +17,6 @@ import {
   authLogoutResponseSchema,
   authStateResponseSchema,
   certVaultCertificateResponseSchema,
-  certVaultCertificatesResponseSchema,
   changelogResponseSchema,
   checkAllServicesResponseSchema,
   containerStatsResponseSchema,
@@ -74,11 +73,6 @@ export const configApi = {
 };
 
 export const certificateApi = {
-  getAll: (refresh = false) =>
-    validated(
-      api.get("/certificates", { params: refresh ? { refresh: true } : undefined }),
-      certVaultCertificatesResponseSchema,
-    ),
   getForService: (serviceId: string) =>
     validated(
       api.get(`/services/${serviceId}/certificates`),

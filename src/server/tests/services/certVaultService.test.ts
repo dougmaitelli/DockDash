@@ -9,11 +9,9 @@ const mockConfig = vi.hoisted(() => ({
 }));
 const mockAxiosGet = vi.hoisted(() => vi.fn());
 const mockServiceRepository = vi.hoisted(() => ({
-  getServices: vi.fn(),
   getService: vi.fn(),
 }));
 const mockTlsCertificateService = vi.hoisted(() => ({
-  getAll: vi.fn(),
   getForService: vi.fn(),
 }));
 
@@ -64,71 +62,40 @@ describe("CertVaultService", () => {
     vi.clearAllMocks();
     vi.resetModules();
     mockConfig.certVaultConfigured = true;
-    mockServiceRepository.getServices.mockReturnValue([
-      service("exact", "https://example.com:443/path"),
-      service("wildcard", "app.example.com"),
-      service("unverified", "unverified.example.com"),
-      service("too-deep", "nested.app.example.com"),
-      service("ip", "192.168.1.5"),
-      service("http", "http://example.com", ServiceProtocol.HTTP),
-    ]);
     mockAxiosGet.mockResolvedValue({ data: [rawCertificate] });
-    mockTlsCertificateService.getAll.mockResolvedValue([
-      {
-        serviceId: "exact",
-        fingerprintSha256: "AB:C",
-      },
-      {
-        serviceId: "wildcard",
-        fingerprintSha256: "def",
-      },
-      {
-        serviceId: "unverified",
-        fingerprintSha256: null,
-        error: "TLS connection timed out",
-      },
-    ]);
     mockTlsCertificateService.getForService.mockResolvedValue({
       serviceId: "exact",
       fingerprintSha256: "abc",
     });
   });
 
-  it("fetches certificates and reports whether hostname matches use the current version", async () => {
+  it("fetches certificates and reports whether the service uses the current version", async () => {
+    mockServiceRepository.getService.mockReturnValue(
+      service("exact", "https://example.com:443/path"),
+    );
     const { certVaultService } = await import("@server/services/certVaultService.js");
-    const result = await certVaultService.getCertificates();
+    const result = await certVaultService.getCertificatesForService("exact");
 
     expect(mockAxiosGet).toHaveBeenCalledWith(
       "https://certvault.example.com/api/v1/certificates",
       expect.objectContaining({ headers: { Authorization: "Bearer test-key" } }),
     );
-    expect(result.certificates[0].matchedServices).toEqual([
-      expect.objectContaining({ id: "exact", deploymentStatus: "in-use" }),
-      expect.objectContaining({ id: "wildcard", deploymentStatus: "different" }),
-      expect.objectContaining({
-        id: "unverified",
-        deploymentStatus: "unverified",
-        deploymentError: "TLS connection timed out",
-      }),
-    ]);
-    expect(result.certificates[0]).toMatchObject({
+    expect(result?.[0]).toMatchObject({
       name: "homelab",
       health: "healthy",
       currentVersion: { fingerprintSha256: "abc" },
+      matchedServices: [expect.objectContaining({ id: "exact", deploymentStatus: "in-use" })],
     });
   });
 
-  it("returns an empty disabled response without contacting CertVault", async () => {
+  it("returns no certificates when CertVault is disabled", async () => {
     mockConfig.certVaultConfigured = false;
+    mockServiceRepository.getService.mockReturnValue(service("exact", "example.com"));
     const { certVaultService } = await import("@server/services/certVaultService.js");
 
-    await expect(certVaultService.getCertificates()).resolves.toEqual({
-      configured: false,
-      consoleUrl: "https://certvault.example.com",
-      certificates: [],
-    });
+    await expect(certVaultService.getCertificatesForService("exact")).resolves.toEqual([]);
     expect(mockAxiosGet).not.toHaveBeenCalled();
-    expect(mockTlsCertificateService.getAll).not.toHaveBeenCalled();
+    expect(mockTlsCertificateService.getForService).not.toHaveBeenCalled();
   });
 
   it("only probes the requested service for the service-specific response", async () => {
@@ -140,7 +107,6 @@ describe("CertVaultService", () => {
     const result = await certVaultService.getCertificatesForService("exact");
 
     expect(mockTlsCertificateService.getForService).toHaveBeenCalledWith("exact");
-    expect(mockTlsCertificateService.getAll).not.toHaveBeenCalled();
     expect(result).toEqual([
       expect.objectContaining({
         matchedServices: [expect.objectContaining({ id: "exact", deploymentStatus: "in-use" })],

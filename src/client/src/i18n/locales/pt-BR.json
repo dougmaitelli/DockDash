@@ -2,7 +2,6 @@
   "nav": {
     "dashboard": "Painel",
     "services": "Serviços",
-    "certificates": "Certificados",
     "discovery": "Descoberta",
     "settings": "Configurações",
     "logout": "Sair",
@@ -41,19 +40,8 @@
     "updateBadge": "Atualização"
   },
   "certificates": {
-    "title": "Certificados",
-    "count": "{{count}} certificado",
-    "count_other": "{{count}} certificados",
-    "notConfigured": "Configure CERTVAULT_URL e CERTVAULT_API_KEY (ou CERTVAULT_API_KEY_FILE) para mostrar a integridade dos certificados.",
-    "openCertVault": "Abrir CertVault",
-    "refresh": "Atualizar",
-    "loading": "Carregando…",
-    "empty": "O CertVault não possui certificados visíveis para esta chave de API.",
     "protectingService": "Certificado",
-    "matchedServices": "Serviços correspondentes",
-    "noMatchingServices": "Nenhum serviço correspondente no DockDash",
     "noDnsNames": "Nenhum nome DNS informado",
-    "notIssued": "Não emitido",
     "unknown": "Desconhecido",
     "yes": "Sim",
     "no": "Não",
@@ -62,10 +50,8 @@
     "expirationWithDays": "{{date}} ({{remaining}})",
     "latestNotDeployed": "O certificado mais recente do CertVault não está implantado neste endpoint.",
     "fields": {
-      "renewalStatus": "Status da renovação",
       "expires": "Expira em",
       "issuer": "Emissor",
-      "keyType": "Tipo de chave",
       "trusted": "Confiável",
       "serial": "Número de série",
       "sha256Fingerprint": "Impressão digital SHA-256"
@@ -76,11 +62,6 @@
       "expired": "Expirado",
       "error": "Erro",
       "pending": "Pendente"
-    },
-    "deployment": {
-      "in-use": "Em uso",
-      "different": "Certificado diferente",
-      "unverified": "Não verificado"
     },
     "health": {
       "healthy": "O certificado está saudável",

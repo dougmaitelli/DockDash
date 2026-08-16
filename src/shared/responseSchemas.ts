@@ -254,12 +254,6 @@ export const certVaultCertificateResponseSchema = z.object({
   matchedServices: z.array(certVaultMatchedServiceResponseSchema),
 });
 
-export const certVaultCertificatesResponseSchema = z.object({
-  configured: z.boolean(),
-  consoleUrl: z.string().nullable(),
-  certificates: z.array(certVaultCertificateResponseSchema),
-});
-
 export const tlsCertificateResponseSchema = z.object({
   serviceId: z.string(),
   hostname: z.string(),
@@ -304,7 +298,6 @@ export type ChangelogResponse = z.infer<typeof changelogResponseSchema>;
 export type CheckAllServicesResponse = z.infer<typeof checkAllServicesResponseSchema>;
 export type ContainerStats = z.infer<typeof containerStatsResponseSchema>;
 export type CertVaultCertificate = z.infer<typeof certVaultCertificateResponseSchema>;
-export type CertVaultCertificatesResponse = z.infer<typeof certVaultCertificatesResponseSchema>;
 export type TlsCertificate = z.infer<typeof tlsCertificateResponseSchema>;
 export type DashboardConfig = z.infer<typeof dashboardConfigResponseSchema>;
 export type DockerHostHealth = z.infer<typeof dockerHostHealthResponseSchema>[number];

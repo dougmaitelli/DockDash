@@ -2,7 +2,6 @@
   "nav": {
     "dashboard": "Dashboard",
     "services": "Services",
-    "certificates": "Certificates",
     "discovery": "Discovery",
     "settings": "Settings",
     "logout": "Logout",
@@ -41,19 +40,8 @@
     "updateBadge": "Update"
   },
   "certificates": {
-    "title": "Certificates",
-    "count": "{{count}} certificate",
-    "count_other": "{{count}} certificates",
-    "notConfigured": "Configure CERTVAULT_URL and CERTVAULT_API_KEY (or CERTVAULT_API_KEY_FILE) to show certificate health.",
-    "openCertVault": "Open CertVault",
-    "refresh": "Refresh",
-    "loading": "Loading…",
-    "empty": "CertVault has no certificates visible to this API key.",
     "protectingService": "Certificate",
-    "matchedServices": "Matched services",
-    "noMatchingServices": "No matching DockDash services",
     "noDnsNames": "No DNS names reported",
-    "notIssued": "Not issued",
     "unknown": "Unknown",
     "yes": "Yes",
     "no": "No",
@@ -62,10 +50,8 @@
     "expirationWithDays": "{{date}} ({{remaining}})",
     "latestNotDeployed": "CertVault’s latest certificate is not deployed on this endpoint.",
     "fields": {
-      "renewalStatus": "Renewal status",
       "expires": "Expires",
       "issuer": "Issuer",
-      "keyType": "Key type",
       "trusted": "Trusted",
       "serial": "Serial",
       "sha256Fingerprint": "SHA-256 fingerprint"
@@ -76,11 +62,6 @@
       "expired": "Expired",
       "error": "Error",
       "pending": "Pending"
-    },
-    "deployment": {
-      "in-use": "In use",
-      "different": "Different certificate",
-      "unverified": "Unverified"
     },
     "health": {
       "healthy": "Certificate is healthy",
