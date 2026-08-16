@@ -124,12 +124,15 @@ Without OIDC, protect DockDash with an authenticated reverse proxy and do not ma
 
 ## TLS certificates and CertVault integration
 
-DockDash probes HTTPS services directly on port 443 by default and shows the certificate actually
-served by each hostname. This live certificate health is enabled without additional configuration.
+DockDash probes each HTTPS service using the port in its host URL when present, otherwise its
+configured check port, and finally port 443 as the default. The service list, dashboard, and service
+drawer show the health of the certificate actually served by that endpoint. This live certificate
+health is enabled without additional configuration.
 
-The optional CertVault integration adds its certificate inventory and renewal state. DockDash also
-matches CertVault domains and wildcard domains to services and warns when CertVault's latest
-certificate fingerprint differs from the certificate currently deployed on the service.
+The optional CertVault integration matches CertVault domains and wildcard domains to services. When
+a match exists, DockDash compares the latest CertVault certificate fingerprint with the certificate
+served by the service. A valid live certificate is shown as a warning when the fingerprints differ;
+services without a matching CertVault certificate retain their live TLS health status.
 
 | Variable                 | Default | Description                                      |
 | ------------------------ | ------- | ------------------------------------------------ |
