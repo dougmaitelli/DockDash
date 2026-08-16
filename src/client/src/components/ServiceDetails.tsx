@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { CertVaultCertificate, Service, TlsCertificate } from "@shared";
+import type { Service, TlsCertificate } from "@shared";
 import { isContainerService, resolveTlsEndpoint, ServiceProtocol } from "@shared";
 import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useConfig } from "@/context/ConfigContext";
 import { useFormValidation } from "@/hooks/useFormValidation";
-import { certificateApi, tlsCertificateApi } from "@/services/api";
+import { tlsCertificateApi } from "@/services/api";
 
 import { ContainerResourceMonitor } from "./ContainerResourceMonitor";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
@@ -37,7 +37,6 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
   const [editCheckPort, setEditCheckPort] = useState(service.checkPort?.toString() ?? "");
   const [metadataExpanded, setMetadataExpanded] = useState(false);
   const [certificatesExpanded, setCertificatesExpanded] = useState(false);
-  const [certificates, setCertificates] = useState<CertVaultCertificate[]>([]);
   const [liveCertificate, setLiveCertificate] = useState<TlsCertificate | null>(null);
   const [certificateError, setCertificateError] = useState<string | null>(null);
   const { errors, validate, clearError } = useFormValidation({
@@ -60,7 +59,6 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
     : [];
 
   useEffect(() => {
-    setCertificates([]);
     setLiveCertificate(null);
     setCertificateError(null);
     setCertificatesExpanded(false);
@@ -83,17 +81,10 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
         if (!cancelled) setCertificateError(err instanceof Error ? err.message : String(err));
       });
 
-    if (config?.certVaultConfigured) {
-      certificateApi
-        .getForService(service.id!)
-        .then(({ data }) => !cancelled && setCertificates(data))
-        .catch(() => undefined);
-    }
-
     return () => {
       cancelled = true;
     };
-  }, [config?.certVaultConfigured, service.checkPort, service.host, service.id, service.protocol]);
+  }, [service.checkPort, service.host, service.id, service.protocol]);
 
   const handlePortsChange = (vals: string[]) => {
     setEditPorts(vals.map(Number).sort((a, b) => a - b));
@@ -182,20 +173,7 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
             {certificatesExpanded && (
               <div className="space-y-2">
                 {liveCertificate ? (
-                  <LiveCertificateSummary
-                    certificate={liveCertificate}
-                    latestDeployed={
-                      certificates.length > 0
-                        ? certificates.some((certificate) =>
-                            certificate.matchedServices.some(
-                              (matchedService) =>
-                                matchedService.id === service.id &&
-                                matchedService.deploymentStatus === "in-use",
-                            ),
-                          )
-                        : undefined
-                    }
-                  />
+                  <LiveCertificateSummary certificate={liveCertificate} />
                 ) : certificateError ? (
                   <p className="text-xs text-destructive">{certificateError}</p>
                 ) : null}

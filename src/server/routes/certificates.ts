@@ -1,35 +1,28 @@
-import axios from "axios";
 import { Router } from "express";
+
+import type { TlsCertificate } from "@shared";
 
 import { certVaultService } from "../services/certVaultService.js";
 import { tlsCertificateService } from "../services/tlsCertificateService.js";
 
 const router = Router();
 
-function integrationError(err: unknown): string {
-  if (axios.isAxiosError(err)) {
-    if (err.response) return `CertVault returned HTTP ${err.response.status}`;
+async function withCertVaultStatus(certificates: TlsCertificate[]): Promise<TlsCertificate[]> {
+  const statuses = await certVaultService
+    .getDeploymentStatuses(certificates)
+    .catch(() => new Map());
 
-    return `Unable to reach CertVault: ${err.message}`;
-  }
+  return certificates.map((certificate) => {
+    const certVaultStatus = statuses.get(certificate.serviceId);
 
-  return err instanceof Error ? err.message : String(err);
+    return certVaultStatus ? { ...certificate, certVaultStatus } : certificate;
+  });
 }
 
-router.get("/services/:id/certificates", async (req, res) => {
-  try {
-    const certificates = await certVaultService.getCertificatesForService(req.params.id);
-
-    if (certificates === null) return res.status(404).json({ error: "Service not found" });
-
-    res.json(certificates);
-  } catch (err) {
-    res.status(502).json({ error: integrationError(err) });
-  }
-});
-
 router.get("/tls-certificates", async (req, res) => {
-  res.json(await tlsCertificateService.getAll(req.query.refresh === "true"));
+  const certificates = await tlsCertificateService.getAll(req.query.refresh === "true");
+
+  res.json(await withCertVaultStatus(certificates));
 });
 
 router.get("/services/:id/tls-certificate", async (req, res) => {
@@ -40,7 +33,7 @@ router.get("/services/:id/tls-certificate", async (req, res) => {
 
   if (!certificate) return res.status(404).json({ error: "Service has no HTTPS endpoint" });
 
-  res.json(certificate);
+  res.json((await withCertVaultStatus([certificate]))[0]);
 });
 
 export default router;

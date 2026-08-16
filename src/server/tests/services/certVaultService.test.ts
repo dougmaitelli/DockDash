@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
+import { ServiceProtocol, ServiceSource, ServiceStatus, type TlsCertificate } from "@shared";
 
 const mockConfig = vi.hoisted(() => ({
   certVaultConfigured: true,
@@ -11,17 +11,11 @@ const mockAxiosGet = vi.hoisted(() => vi.fn());
 const mockServiceRepository = vi.hoisted(() => ({
   getService: vi.fn(),
 }));
-const mockTlsCertificateService = vi.hoisted(() => ({
-  getForService: vi.fn(),
-}));
 
 vi.mock("axios", () => ({ default: { get: mockAxiosGet } }));
 vi.mock("@server/lib/config.js", () => ({ config: mockConfig }));
 vi.mock("@server/db/serviceRepository.js", () => ({
   serviceRepository: mockServiceRepository,
-}));
-vi.mock("@server/services/tlsCertificateService.js", () => ({
-  tlsCertificateService: mockTlsCertificateService,
 }));
 
 const rawCertificate = {
@@ -57,61 +51,78 @@ function service(
   };
 }
 
+function liveCertificate(serviceId: string, fingerprintSha256: string): TlsCertificate {
+  return {
+    serviceId,
+    hostname: "example.com",
+    port: 443,
+    health: "healthy",
+    trusted: true,
+    hostnameValid: true,
+    validFrom: "2026-07-01T00:00:00Z",
+    validTo: "2026-10-01T00:00:00Z",
+    daysRemaining: 30,
+    issuer: "Let's Encrypt",
+    serial: "123",
+    fingerprintSha256,
+    domains: ["example.com"],
+  };
+}
+
 describe("CertVaultService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     mockConfig.certVaultConfigured = true;
     mockAxiosGet.mockResolvedValue({ data: [rawCertificate] });
-    mockTlsCertificateService.getForService.mockResolvedValue({
-      serviceId: "exact",
-      fingerprintSha256: "abc",
-    });
   });
 
-  it("fetches certificates and reports whether the service uses the current version", async () => {
+  it("reports when the current CertVault certificate is deployed", async () => {
     mockServiceRepository.getService.mockReturnValue(
       service("exact", "https://example.com:443/path"),
     );
     const { certVaultService } = await import("@server/services/certVaultService.js");
-    const result = await certVaultService.getCertificatesForService("exact");
+    const result = await certVaultService.getDeploymentStatuses([liveCertificate("exact", "abc")]);
 
     expect(mockAxiosGet).toHaveBeenCalledWith(
       "https://certvault.example.com/api/v1/certificates",
       expect.objectContaining({ headers: { Authorization: "Bearer test-key" } }),
     );
-    expect(result?.[0]).toMatchObject({
-      name: "homelab",
-      health: "healthy",
-      currentVersion: { fingerprintSha256: "abc" },
-      matchedServices: [expect.objectContaining({ id: "exact", deploymentStatus: "in-use" })],
-    });
+    expect(result.get("exact")).toBe("in-use");
   });
 
-  it("returns no certificates when CertVault is disabled", async () => {
-    mockConfig.certVaultConfigured = false;
+  it("reports a different deployed certificate", async () => {
     mockServiceRepository.getService.mockReturnValue(service("exact", "example.com"));
     const { certVaultService } = await import("@server/services/certVaultService.js");
 
-    await expect(certVaultService.getCertificatesForService("exact")).resolves.toEqual([]);
-    expect(mockAxiosGet).not.toHaveBeenCalled();
-    expect(mockTlsCertificateService.getForService).not.toHaveBeenCalled();
+    const result = await certVaultService.getDeploymentStatuses([
+      liveCertificate("exact", "different"),
+    ]);
+
+    expect(result.get("exact")).toBe("different");
   });
 
-  it("only probes the requested service for the service-specific response", async () => {
-    mockServiceRepository.getService.mockReturnValue(
-      service("exact", "https://example.com:443/path"),
-    );
+  it("does not report a status when no CertVault certificate matches", async () => {
+    mockServiceRepository.getService.mockReturnValue(service("other", "other.test"));
     const { certVaultService } = await import("@server/services/certVaultService.js");
 
-    const result = await certVaultService.getCertificatesForService("exact");
-
-    expect(mockTlsCertificateService.getForService).toHaveBeenCalledWith("exact");
-    expect(result).toEqual([
-      expect.objectContaining({
-        matchedServices: [expect.objectContaining({ id: "exact", deploymentStatus: "in-use" })],
-      }),
+    const result = await certVaultService.getDeploymentStatuses([
+      liveCertificate("other", "different"),
     ]);
+
+    expect(result.has("other")).toBe(false);
+  });
+
+  it("returns no statuses when CertVault is disabled", async () => {
+    mockConfig.certVaultConfigured = false;
+    const { certVaultService } = await import("@server/services/certVaultService.js");
+
+    const result = await certVaultService.getDeploymentStatuses([
+      liveCertificate("exact", "different"),
+    ]);
+
+    expect(result.size).toBe(0);
+    expect(mockAxiosGet).not.toHaveBeenCalled();
   });
 
   it("uses one-label wildcard matching", async () => {

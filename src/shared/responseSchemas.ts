@@ -225,40 +225,12 @@ export const dashboardConfigResponseSchema = z
   { version: string; appriseConfigured: boolean; certVaultConfigured: boolean } & ClientSchemaConfig
 >;
 
-export const certVaultMatchedServiceResponseSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  host: z.string(),
-  deploymentStatus: z.enum(["in-use", "different", "unverified"]),
-  deploymentError: z.string().optional(),
-});
-
-export const certVaultCertificateResponseSchema = z.object({
-  name: z.string(),
-  domains: z.array(z.string()),
-  keyType: z.string(),
-  status: z.string(),
-  renewBeforeSeconds: z.number(),
-  lastError: z.string().optional(),
-  currentVersion: z
-    .object({
-      serial: z.string(),
-      issuer: z.string(),
-      fingerprintSha256: z.string(),
-      notBefore: z.string(),
-      notAfter: z.string(),
-    })
-    .nullable(),
-  daysRemaining: z.number().int().nullable(),
-  health: z.enum(["healthy", "warning", "expired", "error", "pending"]),
-  matchedServices: z.array(certVaultMatchedServiceResponseSchema),
-});
-
 export const tlsCertificateResponseSchema = z.object({
   serviceId: z.string(),
   hostname: z.string(),
   port: z.number().int(),
   health: z.enum(["healthy", "warning", "error"]),
+  certVaultStatus: z.enum(["in-use", "different"]).optional(),
   trusted: z.boolean(),
   hostnameValid: z.boolean(),
   validFrom: z.string().nullable(),
@@ -297,7 +269,6 @@ export type ChangelogRelease = z.infer<typeof changelogReleaseResponseSchema>;
 export type ChangelogResponse = z.infer<typeof changelogResponseSchema>;
 export type CheckAllServicesResponse = z.infer<typeof checkAllServicesResponseSchema>;
 export type ContainerStats = z.infer<typeof containerStatsResponseSchema>;
-export type CertVaultCertificate = z.infer<typeof certVaultCertificateResponseSchema>;
 export type TlsCertificate = z.infer<typeof tlsCertificateResponseSchema>;
 export type DashboardConfig = z.infer<typeof dashboardConfigResponseSchema>;
 export type DockerHostHealth = z.infer<typeof dockerHostHealthResponseSchema>[number];

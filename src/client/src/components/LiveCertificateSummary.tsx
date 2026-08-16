@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { TlsCertificate } from "@shared";
 
 import { Badge } from "@/components/ui/Badge";
+import { effectiveCertificateHealth } from "@/context/CertificateHealthContext";
 
 const badgeVariant = {
   healthy: "success",
@@ -10,14 +11,9 @@ const badgeVariant = {
   error: "destructive",
 } as const;
 
-export function LiveCertificateSummary({
-  certificate,
-  latestDeployed,
-}: {
-  certificate: TlsCertificate;
-  latestDeployed?: boolean;
-}) {
+export function LiveCertificateSummary({ certificate }: { certificate: TlsCertificate }) {
   const { t } = useTranslation();
+  const effectiveHealth = effectiveCertificateHealth(certificate);
   const expires = certificate.validTo ? new Date(certificate.validTo).toLocaleDateString() : null;
   const expiration = expires
     ? certificate.daysRemaining === null
@@ -39,8 +35,8 @@ export function LiveCertificateSummary({
             {certificate.domains.join(", ") || t("certificates.noDnsNames")}
           </p>
         </div>
-        <Badge variant={badgeVariant[certificate.health]}>
-          {t(`certificates.status.${certificate.health}`)}
+        <Badge variant={badgeVariant[effectiveHealth]}>
+          {t(`certificates.status.${effectiveHealth}`)}
         </Badge>
       </div>
 
@@ -74,7 +70,7 @@ export function LiveCertificateSummary({
       </div>
 
       {certificate.error && <p className="text-xs text-destructive">{certificate.error}</p>}
-      {latestDeployed === false && (
+      {certificate.certVaultStatus === "different" && (
         <p className="text-xs text-warning">{t("certificates.latestNotDeployed")}</p>
       )}
     </div>

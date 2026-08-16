@@ -7,6 +7,12 @@ import { tlsCertificateApi } from "../services/api";
 
 export type CertificateHealth = TlsCertificate["health"];
 
+export function effectiveCertificateHealth(certificate: TlsCertificate): CertificateHealth {
+  return certificate.health === "healthy" && certificate.certVaultStatus === "different"
+    ? "warning"
+    : certificate.health;
+}
+
 const CertificateHealthContext = createContext<ReadonlyMap<string, CertificateHealth>>(new Map());
 
 export function CertificateHealthProvider({ children }: { children: ReactNode }) {
@@ -31,7 +37,13 @@ export function CertificateHealthProvider({ children }: { children: ReactNode })
   }, []);
 
   const healthByService = useMemo(
-    () => new Map(certificates.map(({ serviceId, health }) => [serviceId, health])),
+    () =>
+      new Map(
+        certificates.map((certificate) => [
+          certificate.serviceId,
+          effectiveCertificateHealth(certificate),
+        ]),
+      ),
     [certificates],
   );
 
