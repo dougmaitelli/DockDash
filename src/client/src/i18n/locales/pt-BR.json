@@ -58,14 +58,12 @@
     },
     "status": {
       "healthy": "Saudável",
-      "warning": "Expira em breve",
-      "expired": "Expirado",
-      "error": "Erro",
-      "pending": "Pendente"
+      "warning": "Aviso",
+      "error": "Erro"
     },
     "health": {
       "healthy": "O certificado está saudável",
-      "warning": "O certificado está próximo da expiração",
+      "warning": "O certificado tem um aviso",
       "error": "O certificado tem um problema"
     }
   },

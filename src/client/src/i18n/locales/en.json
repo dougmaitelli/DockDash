@@ -58,14 +58,12 @@
     },
     "status": {
       "healthy": "Healthy",
-      "warning": "Expiring soon",
-      "expired": "Expired",
-      "error": "Error",
-      "pending": "Pending"
+      "warning": "Warning",
+      "error": "Error"
     },
     "health": {
       "healthy": "Certificate is healthy",
-      "warning": "Certificate is near expiration",
+      "warning": "Certificate has a warning",
       "error": "Certificate has an issue"
     }
   },
