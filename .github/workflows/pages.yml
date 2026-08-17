@@ -53,7 +53,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs/dist
 
