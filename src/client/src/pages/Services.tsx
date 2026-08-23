@@ -8,6 +8,7 @@ import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 import { CertificateHealthDot } from "@/components/CertificateHealthDot";
 import { Icons } from "@/components/Icons";
 import { PortTag } from "@/components/PortTag";
+import { ServiceIcon } from "@/components/ServiceIcon";
 import type { SortState } from "@/components/Table";
 import { FilterHeader, SortHeader } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -321,15 +322,20 @@ export default function Services() {
                         {sourcePresentation.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{service.name}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      <span className="inline-flex items-center gap-2">
+                        <ServiceIcon service={service} size={18} />
+                        {service.name}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs text-secondary-foreground">
                       <ServiceHost service={service} />
                     </td>
                     <td className="px-4 py-3">
                       {service.ports.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {service.ports.map((p) => (
-                            <PortTag key={p}>:{p}</PortTag>
+                          {service.ports.map((port) => (
+                            <PortTag key={port}>:{port}</PortTag>
                           ))}
                         </div>
                       ) : (

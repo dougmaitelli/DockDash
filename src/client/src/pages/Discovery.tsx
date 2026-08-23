@@ -6,6 +6,7 @@ import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 import { Icons } from "@/components/Icons";
 import { PortTag } from "@/components/PortTag";
+import { ServiceIcon } from "@/components/ServiceIcon";
 import { TagArrayInput } from "@/components/TagArrayInput";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -277,15 +278,17 @@ export default function Discovery() {
                   >
                     <div className="flex flex-col gap-0.5">
                       <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                        <StatusDot status={svc.status} /> {svc.name}
+                        <StatusDot status={svc.status} />
+                        <ServiceIcon service={svc} size={18} />
+                        {svc.name}
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-2">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase bg-accent-purple/10 text-accent-purple">
                           {t("discovery.tagDocker")}
                         </span>
                         {svc.host}
-                        {svc.ports?.map((p) => (
-                          <PortTag key={p}>:{p}</PortTag>
+                        {svc.ports?.map((port) => (
+                          <PortTag key={port}>:{port}</PortTag>
                         ))}
                       </div>
                     </div>
@@ -353,8 +356,10 @@ export default function Discovery() {
                       className="flex items-center justify-between px-4 py-3 bg-background border border-border rounded-lg"
                     >
                       <div>
-                        <div className="text-sm font-medium">
-                          <StatusDot status={svc.status} /> {svc.name}
+                        <div className="text-sm font-medium flex items-center gap-1.5">
+                          <StatusDot status={svc.status} />
+                          <ServiceIcon service={svc} size={18} />
+                          {svc.name}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {svc.metadata?.kubernetesContext} · {svc.metadata?.namespace} ·{" "}
@@ -444,15 +449,17 @@ export default function Discovery() {
                   >
                     <div className="flex flex-col gap-0.5">
                       <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                        <StatusDot status={svc.status} /> {svc.name}
+                        <StatusDot status={svc.status} />
+                        <ServiceIcon service={svc} size={18} />
+                        {svc.name}
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center gap-2">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase bg-success/10 text-success">
                           {t("discovery.tagNetwork")}
                         </span>
                         {svc.host}
-                        {svc.ports?.map((p) => (
-                          <PortTag key={p}>:{p}</PortTag>
+                        {svc.ports?.map((port) => (
+                          <PortTag key={port}>:{port}</PortTag>
                         ))}
                       </div>
                     </div>

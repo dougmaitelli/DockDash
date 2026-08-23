@@ -5,6 +5,7 @@ import { isContainerService, Service, ServiceStatus } from "@shared";
 import { CertificateHealthDot } from "@/components/CertificateHealthDot";
 import { Icons } from "@/components/Icons";
 import { PortTag } from "@/components/PortTag";
+import { ServiceIcon } from "@/components/ServiceIcon";
 import { useCertificateHealth } from "@/context/CertificateHealthContext";
 import { cn } from "@/lib/utils";
 
@@ -277,11 +278,7 @@ export function ServiceNode({
 
         <div className="bg-card rounded-[10px] px-3 py-2.5">
           <div className="text-[0.85rem] font-semibold text-foreground flex items-center gap-1.5 overflow-hidden">
-            {isContainerService(service) ? (
-              <Icons.Docker size={14} className="text-muted-foreground" />
-            ) : (
-              <Icons.Globe size={14} className="text-muted-foreground" />
-            )}
+            <ServiceIcon service={service} size={14} />
             <span className="whitespace-nowrap overflow-hidden text-ellipsis" title={service.name}>
               {service.name}
             </span>
@@ -306,8 +303,8 @@ export function ServiceNode({
           <div className="text-[0.7rem] text-muted-foreground mt-0.5 font-mono flex items-center flex-wrap gap-1">
             {service.host}
             <CertificateHealthDot health={certificateHealth} />
-            {service.ports?.map((p) => (
-              <PortTag key={p}>:{p}</PortTag>
+            {service.ports?.map((port) => (
+              <PortTag key={port}>:{port}</PortTag>
             ))}
           </div>
 

@@ -7,6 +7,7 @@ import { ContainerAction, isContainerService } from "@shared";
 import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
 import { Icons } from "@/components/Icons";
+import { ServiceIcon } from "@/components/ServiceIcon";
 import { cn } from "@/lib/utils";
 
 import { useConfig } from "../../context/ConfigContext";
@@ -160,11 +161,7 @@ export function ServiceDrawer({
             </div>
           )}
           <div className="flex items-start gap-2.5 px-5 pb-4 pt-3">
-            {isContainer ? (
-              <Icons.Docker size={18} className="text-muted-foreground mt-0.5 shrink-0" />
-            ) : (
-              <Icons.Globe size={18} className="text-muted-foreground mt-0.5 shrink-0" />
-            )}
+            <ServiceIcon service={service} size={18} className="mt-0.5" />
             <div className="flex-1 min-w-0">
               <div className="text-[0.95rem] font-semibold text-foreground truncate">
                 {service.name}
