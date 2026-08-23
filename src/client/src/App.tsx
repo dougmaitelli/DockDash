@@ -7,6 +7,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { CertificateHealthProvider } from "./context/CertificateHealthContext";
 import { ConfigProvider } from "./context/ConfigContext";
 import { ThemeProvider } from "./context/ThemeContext";
+
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Discovery = lazy(() => import("./pages/Discovery"));
 const Login = lazy(() => import("./pages/Login"));

@@ -4,6 +4,7 @@ import { Readable } from "stream";
 import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 
 import { sanitizeDockerError } from "../lib/errors.js";
+
 const DOCKER_STREAM_HEADER_SIZE = 8;
 
 class FileService {

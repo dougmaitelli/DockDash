@@ -1,5 +1,6 @@
 import ts from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import importPlugin from "eslint-plugin-import";
 import react from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
@@ -23,6 +24,7 @@ export default [
     },
     plugins: {
       "@typescript-eslint": ts,
+      import: importPlugin,
       react,
       "react-hooks": reactHooks,
       "simple-import-sort": simpleImportSort,
@@ -33,6 +35,8 @@ export default [
       },
     },
     rules: {
+      "import/first": "error",
+      "import/newline-after-import": "error",
       "no-console": "error",
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
@@ -45,7 +49,7 @@ export default [
       ...reactHooks.configs.recommended.rules,
       "react-hooks/set-state-in-effect": "off",
       "simple-import-sort/imports": [
-        "warn",
+        "error",
         {
           groups: [
             // External packages
@@ -61,7 +65,7 @@ export default [
           ],
         },
       ],
-      "simple-import-sort/exports": "warn",
+      "simple-import-sort/exports": "error",
       "padding-line-between-statements": [
         "warn",
         { blankLine: "always", prev: "*", next: "return" },

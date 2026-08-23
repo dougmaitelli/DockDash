@@ -1,3 +1,4 @@
+import type { appUpdateService as AppUpdateServiceType } from "@server/services/appUpdateService.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockAxios = vi.hoisted(() => ({ get: vi.fn() }));
@@ -10,8 +11,6 @@ const mockConfig = vi.hoisted(() => ({
 
 vi.mock("axios", () => ({ default: mockAxios }));
 vi.mock("@server/lib/config.js", () => ({ config: mockConfig }));
-
-import type { appUpdateService as AppUpdateServiceType } from "@server/services/appUpdateService.js";
 
 // Reset the module between tests to clear the in-memory cache
 let appUpdateService: typeof AppUpdateServiceType;
