@@ -3,10 +3,12 @@ import tls from "node:tls";
 import { isIpHostname, resolveTlsEndpoint, type Service, type TlsCertificate } from "@shared";
 
 import { serviceRepository } from "../db/serviceRepository.js";
+import { ConcurrentService } from "./ConcurrentService.js";
 
 const CACHE_TTL_MS = 60_000;
 const WARNING_DAYS = 30;
 const TIMEOUT_MS = 5_000;
+const PROBE_CONCURRENCY = 10;
 
 export { resolveTlsEndpoint };
 
@@ -149,8 +151,15 @@ export function probeTlsCertificate(service: Service): Promise<TlsCertificate> {
   });
 }
 
-class TlsCertificateService {
+export class TlsCertificateService extends ConcurrentService {
+  protected readonly concurrencyLimit = PROBE_CONCURRENCY;
   private cache = new Map<string, { expiresAt: number; value: TlsCertificate }>();
+
+  constructor(
+    private readonly probe: (service: Service) => Promise<TlsCertificate> = probeTlsCertificate,
+  ) {
+    super();
+  }
 
   async getForService(serviceId: string, forceRefresh = false): Promise<TlsCertificate | null> {
     const service = serviceRepository.getService(serviceId);
@@ -163,7 +172,7 @@ class TlsCertificateService {
 
     if (!forceRefresh && cached && cached.expiresAt > Date.now()) return cached.value;
 
-    const value = await probeTlsCertificate(service);
+    const value = await this.probe(service);
 
     this.cache.set(serviceId, { value, expiresAt: Date.now() + CACHE_TTL_MS });
 
@@ -171,12 +180,14 @@ class TlsCertificateService {
   }
 
   async getAll(forceRefresh = false): Promise<TlsCertificate[]> {
-    return Promise.all(
-      serviceRepository
-        .getServices()
-        .filter((service) => resolveTlsEndpoint(service))
-        .map((service) => this.getForService(service.id!, forceRefresh)),
-    ).then((values) => values.filter((value): value is TlsCertificate => value !== null));
+    const services = serviceRepository
+      .getServices()
+      .filter((service) => resolveTlsEndpoint(service));
+    const values = await this.mapWithConcurrency(services, (service) =>
+      this.getForService(service.id!, forceRefresh),
+    );
+
+    return values.filter((value): value is TlsCertificate => value !== null);
   }
 }
 

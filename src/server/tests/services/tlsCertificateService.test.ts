@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
+import { type Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
+
+const mocks = vi.hoisted(() => ({
+  getService: vi.fn<(id: string) => Service | undefined>(),
+  getServices: vi.fn<() => Service[]>(() => []),
+}));
 
 vi.mock("@server/db/serviceRepository.js", () => ({
-  serviceRepository: { getService: vi.fn(), getServices: vi.fn(() => []) },
+  serviceRepository: mocks,
 }));
 
 function service(
@@ -102,5 +107,56 @@ describe("resolveTlsServername", () => {
 
     expect(resolveTlsServername("192.168.0.3")).toBeUndefined();
     expect(resolveTlsServername("2001:db8::1")).toBeUndefined();
+  });
+});
+
+describe("TlsCertificateService", () => {
+  it("limits concurrent bulk probes", async () => {
+    const services = Array.from({ length: 11 }, (_, index) => ({
+      ...service(`service-${index}.example.com`, [], ServiceProtocol.HTTPS),
+      id: `service-${index}`,
+    }));
+    let active = 0;
+    let maxActive = 0;
+    let release: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const probe = vi.fn(async (current: Service) => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      await gate;
+      active--;
+
+      return {
+        serviceId: current.id,
+        hostname: current.host,
+        port: 443,
+        health: "healthy" as const,
+        trusted: true,
+        hostnameValid: true,
+        validFrom: null,
+        validTo: null,
+        daysRemaining: null,
+        issuer: null,
+        serial: null,
+        fingerprintSha256: null,
+        domains: [],
+      };
+    });
+
+    mocks.getServices.mockReturnValue(services);
+    mocks.getService.mockImplementation((id: string) => services.find((item) => item.id === id));
+    const { TlsCertificateService } = await import("@server/services/tlsCertificateService.js");
+    const certificateService = new TlsCertificateService(probe);
+    const load = certificateService.getAll(true);
+
+    await expect.poll(() => active).toBe(10);
+    expect(probe).toHaveBeenCalledTimes(10);
+    release!();
+    await load;
+
+    expect(maxActive).toBe(10);
+    expect(probe).toHaveBeenCalledTimes(11);
   });
 });
