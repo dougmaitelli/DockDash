@@ -47,12 +47,12 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.6.2",
     "express-session": "^1.19.0",
-    "i18next": "^26.3.6",
-    "lucide-react": "^1.31.0",
-    "openid-client": "^6.8.5",
+    "i18next": "^26.4.0",
+    "lucide-react": "^1.33.0",
+    "openid-client": "^6.8.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-i18next": "^17.0.11",
+    "react-i18next": "^17.0.12",
     "react-markdown": "^10.1.0",
     "react-router": "^8.3.0",
     "rehype-raw": "^7.0.0",
@@ -94,7 +94,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
     "typescript": "^6.0.3",
-    "vite": "^8.2.1",
+    "vite": "^8.2.2",
     "vitest": "^4.1.10"
   }
 }
