@@ -3,6 +3,8 @@ import path from "path";
 import { chromium } from "playwright";
 import { fileURLToPath } from "url";
 
+import { dashboardConfigResponseSchema } from "../src/shared/responseSchemas.js";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, "..");
 const PORT = 8089;
@@ -193,7 +195,7 @@ const DASHBOARD = {
   ],
 };
 
-const CONFIG = {
+const CONFIG = dashboardConfigResponseSchema.parse({
   version: "dev",
   certVaultConfigured: false,
   certVaultUrl: null,
@@ -205,6 +207,8 @@ const CONFIG = {
   healthCheckInterval: 30000,
   resourceMonitorInterval: 5000,
   updateCheckInterval: 3600000,
+  certificateCheckInterval: 21_600_000,
+  certificateExpiryThresholds: "30,14,7,3,1",
   healthHistoryTtlDays: 30,
   appriseConfigured: false,
   containerControlsEnabled: true,
@@ -215,7 +219,7 @@ const CONFIG = {
   spikeDurationThreshold: 300,
   fileExplorerEnabled: true,
   terminalEnabled: true,
-};
+});
 
 const STATS = {
   cpuPercent: 3.2,
