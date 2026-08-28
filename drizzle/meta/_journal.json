@@ -71,6 +71,13 @@
       "when": 1786421840558,
       "tag": "0009_chubby_silver_surfer",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1787877942514,
+      "tag": "0010_naive_thor",
+      "breakpoints": true
     }
   ]
 }

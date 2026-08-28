@@ -8,6 +8,8 @@ const mockConfig = vi.hoisted(() => ({
   networkCidrs: ["192.168.0.0/24"],
   healthCheckInterval: 30000,
   updateCheckInterval: 3600000,
+  certificateCheckInterval: 21600000,
+  certificateExpiryThresholds: "30,14,7,3,1",
   healthHistoryTtlDays: 30,
   appriseConfigured: false,
   certVaultConfigured: true,

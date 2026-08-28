@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 
 import { closeConnection, createSessionStore } from "./db/connection.js";
 import type { BackgroundJob } from "./jobs/BackgroundJob.js";
+import { CertificateCheckJob } from "./jobs/CertificateCheckJob.js";
 import { HealthCheckJob } from "./jobs/HealthCheckJob.js";
 import { HistoryCleanupJob } from "./jobs/HistoryCleanupJob.js";
 import { HistoryRollupJob } from "./jobs/HistoryRollupJob.js";
@@ -43,6 +44,7 @@ const GENERAL_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const GENERAL_RATE_LIMIT_REQUESTS = 300;
 const jobs: BackgroundJob[] = [
   new HealthCheckJob(),
+  new CertificateCheckJob(),
   new HistoryCleanupJob(),
   new HistoryRollupJob(),
   new ResourceStatsJob(),
@@ -174,6 +176,7 @@ const server = app.listen(PORT, () => {
   logger.info(`Health check interval: ${config.healthCheckInterval}ms`);
   logger.info(`Resource monitor interval: ${config.resourceMonitorInterval}ms`);
   logger.info(`Update check interval: ${config.updateCheckInterval}ms`);
+  logger.info(`Certificate check interval: ${config.certificateCheckInterval}ms`);
   logger.info(`Auth: ${config.oidcEnabled ? "OIDC enabled" : "disabled (unsecured)"}`);
 
   jobs.slice(0, -1).forEach((job) => job.start());

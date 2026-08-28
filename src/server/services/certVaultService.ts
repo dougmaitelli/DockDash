@@ -1,7 +1,7 @@
 import axios from "axios";
 import { z } from "zod";
 
-import { type Service, ServiceProtocol, type TlsCertificate } from "@shared";
+import { type CertVaultStatus, type Service, ServiceProtocol, type TlsCertificate } from "@shared";
 
 import { serviceRepository } from "../db/serviceRepository.js";
 import { config } from "../lib/config.js";
@@ -106,11 +106,11 @@ class CertVaultService {
 
   async getDeploymentStatuses(
     liveCertificates: TlsCertificate[],
-  ): Promise<ReadonlyMap<string, "in-use" | "different">> {
+  ): Promise<ReadonlyMap<string, CertVaultStatus>> {
     if (!config.certVaultConfigured || liveCertificates.length === 0) return new Map();
 
     const certificates = await this.fetchCertificates();
-    const statuses = new Map<string, "in-use" | "different">();
+    const statuses = new Map<string, CertVaultStatus>();
 
     for (const liveCertificate of liveCertificates) {
       const service = serviceRepository.getService(liveCertificate.serviceId);

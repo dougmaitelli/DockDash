@@ -217,6 +217,8 @@ export const dashboardConfigResponseSchema = z
     healthCheckInterval: z.number(),
     resourceMonitorInterval: z.number(),
     updateCheckInterval: z.number(),
+    certificateCheckInterval: z.number(),
+    certificateExpiryThresholds: z.string(),
     containerControlsEnabled: z.boolean(),
     healthHistoryEnabled: z.boolean(),
     healthHistoryTtlDays: z.number(),
@@ -276,6 +278,8 @@ export type ChangelogResponse = z.infer<typeof changelogResponseSchema>;
 export type CheckAllServicesResponse = z.infer<typeof checkAllServicesResponseSchema>;
 export type ContainerStats = z.infer<typeof containerStatsResponseSchema>;
 export type TlsCertificate = z.infer<typeof tlsCertificateResponseSchema>;
+export type CertificateHealth = TlsCertificate["health"];
+export type CertVaultStatus = NonNullable<TlsCertificate["certVaultStatus"]>;
 export type DashboardConfig = z.infer<typeof dashboardConfigResponseSchema>;
 export type DockerHostHealth = z.infer<typeof dockerHostHealthResponseSchema>[number];
 export type KubernetesClusterHealth = z.infer<typeof kubernetesClusterHealthResponseSchema>[number];

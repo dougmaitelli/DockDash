@@ -16,6 +16,18 @@
     "memorySpikeBody": "{{name}} memory usage is at {{percent}}%.",
     "memoryRecovered": "✅ Memory Recovered: {{name}}",
     "memoryRecoveredBody": "{{name}} memory usage has returned to normal.",
+    "certificateExpiring": "⚠️ Certificate Expiring: {{name}}",
+    "certificateExpiringBody": "{{name}} ({{target}}) expires in {{days}} days on {{date}}.",
+    "certificateError": "❌ Certificate Error: {{name}}",
+    "certificateErrorBody": "{{name}} ({{target}}) has a TLS certificate problem: {{error}}",
+    "certificateRecovered": "✅ Certificate Recovered: {{name}}",
+    "certificateRecoveredBody": "{{name}} ({{target}}) is serving a healthy TLS certificate again.",
+    "certificateRenewed": "✅ Certificate Renewed: {{name}}",
+    "certificateRenewedBody": "{{name}} ({{target}}) is serving a new TLS certificate.",
+    "certificateMismatch": "⚠️ Certificate Deployment Mismatch: {{name}}",
+    "certificateMismatchBody": "{{name}} ({{target}}) is not serving the current certificate from CertVault.",
+    "certificateMismatchResolved": "✅ Certificate Deployment Updated: {{name}}",
+    "certificateMismatchResolvedBody": "{{name}} ({{target}}) is now serving the current certificate from CertVault.",
     "testTitle": "Test Notification",
     "testBody": "Apprise notifications are configured correctly."
   }

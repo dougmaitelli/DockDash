@@ -28,6 +28,8 @@ export const CONFIG_SCHEMA = {
   healthCheckInterval:      { env: "HEALTH_CHECK_INTERVAL",     type: "number",         default: 30_000,               showOnUi: true, format: "ms" },
   resourceMonitorInterval:  { env: "RESOURCE_MONITOR_INTERVAL", type: "number",         default: 5_000,                showOnUi: true, format: "ms" },
   updateCheckInterval:      { env: "UPDATE_CHECK_INTERVAL",     type: "number",         default: 3_600_000,            showOnUi: true, format: "ms" },
+  certificateCheckInterval: { env: "CERTIFICATE_CHECK_INTERVAL",type: "number",         default: 21_600_000,           showOnUi: true, format: "ms" },
+  certificateExpiryThresholds:{env:"CERTIFICATE_EXPIRY_THRESHOLDS",type:"string",        default: "30,14,7,3,1",       showOnUi: true },
   containerControlsEnabled: { env: "DISABLE_CONTAINER_CONTROLS",type: "boolean-disable",                               showOnUi: true },
   healthHistoryEnabled:     { env: "DISABLE_HEALTH_HISTORY",    type: "boolean-disable",                               showOnUi: true },
   healthHistoryTtlDays:     { env: "HEALTH_HISTORY_TTL_DAYS",   type: "number",         default: 30,                   showOnUi: true },

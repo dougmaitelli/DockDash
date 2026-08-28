@@ -96,13 +96,14 @@ These restrictions are enforced on the server as well as represented in the UI.
 
 ## Monitoring
 
-| Variable                    | Default   | Description                                                                                |
-| --------------------------- | --------- | ------------------------------------------------------------------------------------------ |
-| `HEALTH_CHECK_INTERVAL`     | `30000`   | Health-check interval in milliseconds                                                      |
-| `RESOURCE_MONITOR_INTERVAL` | `5000`    | Docker resource-sampling interval in milliseconds                                          |
-| `UPDATE_CHECK_INTERVAL`     | `3600000` | Container image update-check interval in milliseconds                                      |
-| `HEALTH_HISTORY_TTL_DAYS`   | `30`      | Health and resource history retention period in days                                       |
-| `GITHUB_TOKEN`              | unset     | Token for private GHCR images, GitHub Packages lookups, changelogs, and higher rate limits |
+| Variable                     | Default    | Description                                                                                |
+| ---------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
+| `HEALTH_CHECK_INTERVAL`      | `30000`    | Health-check interval in milliseconds                                                      |
+| `RESOURCE_MONITOR_INTERVAL`  | `5000`     | Docker resource-sampling interval in milliseconds                                          |
+| `UPDATE_CHECK_INTERVAL`      | `3600000`  | Container image update-check interval in milliseconds                                      |
+| `CERTIFICATE_CHECK_INTERVAL` | `21600000` | TLS certificate check interval in milliseconds                                             |
+| `HEALTH_HISTORY_TTL_DAYS`    | `30`       | Health and resource history retention period in days                                       |
+| `GITHUB_TOKEN`               | unset      | Token for private GHCR images, GitHub Packages lookups, changelogs, and higher rate limits |
 
 ## Notifications
 
@@ -117,8 +118,8 @@ The optional [CertVault](https://github.com/dougmaitelli/CertVault) integration 
 matches [CertVault](https://github.com/dougmaitelli/CertVault) domains and wildcard domains to services and warns when [CertVault's](https://github.com/dougmaitelli/CertVault) latest
 certificate fingerprint differs from the certificate currently deployed on the service.
 
-| Variable                 | Default | Description                                      |
-| ------------------------ | ------- | ------------------------------------------------ |
+| Variable                 | Default | Description                                                                                   |
+| ------------------------ | ------- | --------------------------------------------------------------------------------------------- |
 | `CERTVAULT_URL`          | unset   | Public base URL of the [CertVault](https://github.com/dougmaitelli/CertVault) instance        |
 | `CERTVAULT_API_KEY`      | unset   | [CertVault](https://github.com/dougmaitelli/CertVault) API key with `certificates:read` scope |
 | `CERTVAULT_API_KEY_FILE` | unset   | File containing the [CertVault](https://github.com/dougmaitelli/CertVault) API key            |
