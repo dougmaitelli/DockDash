@@ -162,6 +162,15 @@ const SERVICES = [
   ),
 ];
 
+const RESOURCE_USAGE: Record<string, { cpuPercent: number; memoryPercent: number }> = {
+  [IDS.traefik]: { cpuPercent: 12.4, memoryPercent: 22.8 },
+  [IDS.nginx]: { cpuPercent: 18.7, memoryPercent: 12.3 },
+  [IDS.postgres]: { cpuPercent: 31.2, memoryPercent: 48.6 },
+  [IDS.redis]: { cpuPercent: 8.5, memoryPercent: 18.4 },
+  [IDS.grafana]: { cpuPercent: 24.3, memoryPercent: 35.7 },
+  [IDS.prometheus]: { cpuPercent: 36.8, memoryPercent: 42.1 },
+};
+
 const POSITIONS = [
   { serviceId: IDS.traefik, x: 420, y: 80 },
   { serviceId: IDS.nginx, x: 140, y: 300 },
@@ -556,7 +565,13 @@ async function main() {
     if (p === "/api/dashboard") return route.fulfill({ json: DASHBOARD });
 
     if (p === "/api/serviceStatuses")
-      return route.fulfill({ json: SERVICES.map((s) => ({ id: s.id, status: s.status })) });
+      return route.fulfill({
+        json: SERVICES.map((service) => ({
+          id: service.id,
+          status: service.status,
+          ...RESOURCE_USAGE[service.id],
+        })),
+      });
 
     if (p === "/api/docker/health")
       return route.fulfill({
