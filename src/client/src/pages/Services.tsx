@@ -179,7 +179,7 @@ export default function Services() {
   };
 
   return (
-    <div className="p-6 max-w-6xl xl:max-w-screen-2xl mx-auto flex flex-col gap-4">
+    <div className="p-6 w-full min-w-0 max-w-6xl xl:max-w-screen-2xl mx-auto flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-xl font-semibold text-foreground">
           {t("services.title")}
@@ -209,9 +209,9 @@ export default function Services() {
 
       {error && !loading && <p className="text-sm text-destructive">{error}</p>}
 
-      <Card className="overflow-hidden p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[850px]">
+      <Card className="w-full min-w-0 overflow-hidden p-0">
+        <div className="w-full min-w-0 overflow-x-auto">
+          <table className="w-full table-fixed text-sm min-w-[850px]">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <FilterHeader
