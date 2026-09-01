@@ -4,6 +4,7 @@ import type { CheckAllServicesResponse } from "@shared/responseSchemas.js";
 
 import { serviceRepository } from "../db/serviceRepository.js";
 import { logger } from "../lib/logService.js";
+import { containerRuntimeService } from "../services/containerRuntime/containerRuntimeService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
 
 const router = Router();
@@ -11,7 +12,10 @@ const router = Router();
 router.get("/dashboard", (_req, res) => {
   const data = serviceRepository.getDashboardData();
 
-  res.json(data);
+  res.json({
+    ...data,
+    services: data.services.map((service) => containerRuntimeService.withSourceName(service)),
+  });
 });
 
 router.post("/checkAllServices", (_req, res) => {

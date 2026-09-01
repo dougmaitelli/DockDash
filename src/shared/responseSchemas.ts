@@ -3,7 +3,13 @@ import { z } from "zod";
 import type { ClientSchemaConfig } from "./configSchema.js";
 import type { Service } from "./Service.js";
 import type { ServiceWithPosition } from "./ServiceWithPosition.js";
-import type { DashboardData, ServiceLink, ServicePosition, ServiceStatusItem } from "./types.js";
+import type {
+  DashboardData,
+  DockerHostDescriptor,
+  ServiceLink,
+  ServicePosition,
+  ServiceStatusItem,
+} from "./types.js";
 import { ServiceLinkType, ServiceProtocol, ServiceSource, ServiceStatus } from "./types.js";
 
 export const serviceMetadataResponseSchema = z
@@ -39,6 +45,7 @@ export const serviceResponseSchema = z
     source: z.enum(ServiceSource),
     status: z.enum(ServiceStatus),
     metadata: serviceMetadataResponseSchema.optional(),
+    sourceName: z.string().optional(),
     onDashboard: z.boolean().optional(),
     cpuPercent: z.number().optional(),
     memoryPercent: z.number().optional(),
@@ -103,19 +110,20 @@ export const resourceHistoryResponseSchema = z.array(
   z.object({ cpuPercent: z.number(), memoryPercent: z.number() }).strip().nullable(),
 );
 
+export const dockerHostDescriptorResponseSchema = z
+  .object({ id: z.string(), name: z.string(), host: z.string() })
+  .strip() satisfies z.ZodType<DockerHostDescriptor>;
+
 export const dockerHostHealthResponseSchema = z.array(
-  z
-    .object({
-      host: z.string(),
-      connected: z.boolean(),
-      containers: z.number().int().optional(),
-      containersRunning: z.number().int().optional(),
-      containersPaused: z.number().int().optional(),
-      containersStopped: z.number().int().optional(),
-      serverVersion: z.string().optional(),
-      error: z.string().optional(),
-    })
-    .strip(),
+  dockerHostDescriptorResponseSchema.extend({
+    connected: z.boolean(),
+    containers: z.number().int().optional(),
+    containersRunning: z.number().int().optional(),
+    containersPaused: z.number().int().optional(),
+    containersStopped: z.number().int().optional(),
+    serverVersion: z.string().optional(),
+    error: z.string().optional(),
+  }),
 );
 
 export const kubernetesClusterHealthResponseSchema = z.array(

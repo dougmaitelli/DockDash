@@ -226,9 +226,12 @@ export default function Discovery() {
             {health ? (
               health.map((h) =>
                 h.connected ? (
-                  <StatusBadge key={h.host} ok={true}>
+                  <StatusBadge key={h.id} ok={true}>
                     <Icons.Check size={12} />
-                    {h.host} —{" "}
+                    <span className="max-w-48 truncate" title={`${h.name} — ${h.host}`}>
+                      {h.name}
+                    </span>{" "}
+                    —{" "}
                     {t("discovery.connected", {
                       version: h.serverVersion,
                       running: h.containersRunning,
@@ -236,9 +239,12 @@ export default function Discovery() {
                     })}
                   </StatusBadge>
                 ) : (
-                  <StatusBadge key={h.host} ok={false}>
+                  <StatusBadge key={h.id} ok={false}>
                     <Icons.X size={12} />
-                    {h.host} — {t("discovery.notConnected", { error: h.error })}
+                    <span className="max-w-48 truncate" title={`${h.name} — ${h.host}`}>
+                      {h.name}
+                    </span>{" "}
+                    — {t("discovery.notConnected", { error: h.error })}
                   </StatusBadge>
                 ),
               )
@@ -286,6 +292,11 @@ export default function Discovery() {
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[0.65rem] font-semibold uppercase bg-accent-purple/10 text-accent-purple">
                           {t("discovery.tagDocker")}
                         </span>
+                        {svc.sourceName && (
+                          <span className="max-w-48 truncate" title={svc.sourceName}>
+                            {svc.sourceName}
+                          </span>
+                        )}
                         {svc.host}
                         {svc.ports?.map((port) => (
                           <PortTag key={port}>:{port}</PortTag>
@@ -361,9 +372,11 @@ export default function Discovery() {
                           <ServiceIcon service={svc} size={18} />
                           {svc.name}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {svc.metadata?.kubernetesContext} · {svc.metadata?.namespace} ·{" "}
-                          {svc.metadata?.podName}
+                        <div
+                          className="max-w-xl truncate text-xs text-muted-foreground"
+                          title={`${svc.sourceName} · ${svc.metadata?.namespace} · ${svc.metadata?.podName}`}
+                        >
+                          {svc.sourceName} · {svc.metadata?.namespace} · {svc.metadata?.podName}
                         </div>
                       </div>
                       {imported ? (

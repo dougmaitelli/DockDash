@@ -214,6 +214,39 @@ describe("DockerRuntime.hostId", () => {
       DockerRuntime.hostId("tcp://host-b:2375"),
     );
   });
+
+  it("keeps the same ID when a configured host is renamed", () => {
+    process.env.DOCKER_HOSTS = "Home=tcp://docker-host:2375";
+    const original = new DockerRuntime()
+      .createDockerClients()
+      .find(({ host }) => host === "tcp://docker-host:2375")!;
+
+    process.env.DOCKER_HOSTS = "Renamed=tcp://docker-host:2375";
+    const renamed = new DockerRuntime()
+      .createDockerClients()
+      .find(({ host }) => host === "tcp://docker-host:2375")!;
+
+    delete process.env.DOCKER_HOSTS;
+
+    expect(original).toMatchObject({ name: "Home", host: "tcp://docker-host:2375" });
+    expect(renamed).toMatchObject({ name: "Renamed", host: "tcp://docker-host:2375" });
+    expect(renamed.id).toBe(original.id);
+  });
+
+  it("resolves host metadata from the client snapshot created at startup", () => {
+    const host = "tcp://docker-host:2375";
+
+    process.env.DOCKER_HOSTS = `Home=${host}`;
+    const runtime = new DockerRuntime();
+    const dockerHostId = DockerRuntime.hostId(host);
+
+    process.env.DOCKER_HOSTS = `Renamed=${host}`;
+
+    expect(runtime.sourceName({ metadata: { dockerHostId } } as never)).toBe("Home");
+    expect(runtime.resolveHost(dockerHostId)).toBe(host);
+
+    delete process.env.DOCKER_HOSTS;
+  });
 });
 
 describe("DockerRuntime.getContainerStats", () => {

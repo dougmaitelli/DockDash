@@ -7,7 +7,7 @@ DockDash builds a single service inventory from container runtimes, network scan
 
 ## Docker
 
-DockDash connects to the local Docker socket by default. You can also configure multiple local or remote daemons with `DOCKER_HOSTS`.
+DockDash connects to the local Docker socket by default. You can also configure multiple local or remote daemons with `DOCKER_HOSTS`, with optional friendly names such as `Home=tcp://192.168.1.100:2375`.
 
 A scan reads running containers and their exposed ports. Each imported service keeps its Docker host, container name, image, tag, digest, networks, and port information so DockDash can monitor and operate the correct container later.
 

@@ -18,7 +18,7 @@ import {
   DOCKER_CONTAINER_STATE,
   dockerRuntime,
 } from "./containerRuntime/dockerRuntime.js";
-import { kubernetesRuntime } from "./kubernetesRuntime.js";
+import { kubernetesRuntime } from "./containerRuntime/kubernetesRuntime.js";
 import { notificationService } from "./notificationService.js";
 
 const HTTP_TIMEOUT = 1000;

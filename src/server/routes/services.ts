@@ -17,13 +17,18 @@ import { config } from "../lib/config.js";
 import { logger } from "../lib/logService.js";
 import { validateBody } from "../middleware/validateRequest.js";
 import { changelogService } from "../services/changelogService.js";
+import { containerRuntimeService } from "../services/containerRuntime/containerRuntimeService.js";
 import { healthCheckService } from "../services/healthCheckService.js";
 import { resourceStatsService } from "../services/resourceStatsService.js";
 
 const router = Router();
 
 router.get("/services", (_req, res) => {
-  res.json(serviceRepository.getServices());
+  res.json(
+    serviceRepository
+      .getServices()
+      .map((service) => containerRuntimeService.withSourceName(service)),
+  );
 });
 
 router.get("/serviceStatuses", (_req, res) => {
@@ -50,7 +55,7 @@ router.get("/services/:id", (req, res) => {
 
   if (!service) return res.status(404).json({ error: "Service not found" });
 
-  res.json(service);
+  res.json(containerRuntimeService.withSourceName(service));
 });
 
 router.post("/services", validateBody(createServiceRequestSchema), (req, res) => {
@@ -73,7 +78,7 @@ router.post("/services", validateBody(createServiceRequestSchema), (req, res) =>
       logger.error(`Health check failed: ${err instanceof Error ? err.message : String(err)}`),
     );
 
-  res.status(201).json(service);
+  res.status(201).json(containerRuntimeService.withSourceName(service));
 });
 
 router.put("/services/:id", validateBody(updateServiceRequestSchema), (req, res) => {
@@ -95,7 +100,7 @@ router.put("/services/:id", validateBody(updateServiceRequestSchema), (req, res)
         logger.error(`Health check failed: ${err instanceof Error ? err.message : String(err)}`),
       );
 
-    res.json(service);
+    res.json(containerRuntimeService.withSourceName(service));
   } catch (err) {
     res.status(404).json({ error: err instanceof Error ? err.message : String(err) });
   }

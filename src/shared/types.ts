@@ -55,6 +55,12 @@ export interface ServiceStatusItem {
   memoryPercent?: number;
 }
 
+export interface DockerHostDescriptor {
+  id: string;
+  name: string;
+  host: string;
+}
+
 export interface ServiceMetadata {
   dockerHostId?: string;
   containerId?: string;

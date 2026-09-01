@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import type { Service } from "@shared";
-import { ContainerAction, isContainerService } from "@shared";
+import { ContainerAction, isContainerService, ServiceSource } from "@shared";
 import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
 import { Icons } from "@/components/Icons";
@@ -169,6 +169,19 @@ export function ServiceDrawer({
               <div className="text-[0.65rem] text-muted-foreground font-mono mt-0.5 truncate">
                 {service.id}
               </div>
+              {service.sourceName && (
+                <div
+                  title={service.sourceName}
+                  className="text-[0.7rem] text-muted-foreground mt-1 flex min-w-0 items-center gap-1"
+                >
+                  {service.source === ServiceSource.DOCKER ? (
+                    <Icons.Docker size={11} className="shrink-0" />
+                  ) : (
+                    <Icons.Server size={11} className="shrink-0" />
+                  )}
+                  <span className="truncate">{service.sourceName}</span>
+                </div>
+              )}
             </div>
             <button
               type="button"

@@ -17,7 +17,10 @@ router.get("/config", (_req, res) => {
   const schemaValues = Object.fromEntries(
     (Object.keys(CONFIG_SCHEMA) as ConfigKey[])
       .filter((k) => (CONFIG_SCHEMA[k] as SchemaEntry).showOnUi)
-      .map((k) => [k, (config as unknown as SchemaConfig)[k]]),
+      .map((k) => [
+        k,
+        k === "dockerHosts" ? config.dockerHostEntries : (config as unknown as SchemaConfig)[k],
+      ]),
   );
 
   const cfg: DashboardConfig = {

@@ -10,7 +10,7 @@ const fileService = vi.hoisted(() => ({
 }));
 const terminalService = vi.hoisted(() => ({ openSession: vi.fn() }));
 
-vi.mock("@server/lib/config.js", () => ({ config: { dockerHosts: [] } }));
+vi.mock("@server/lib/config.js", () => ({ config: { dockerHostConfigs: [] } }));
 vi.mock("@server/services/fileService.js", () => ({ fileService }));
 vi.mock("@server/services/terminalService.js", () => ({ terminalService }));
 

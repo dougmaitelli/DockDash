@@ -34,7 +34,7 @@ See the [authentication guide](./authentication/) for the complete OIDC settings
 
 | Variable                | Default                            | Description                                                   |
 | ----------------------- | ---------------------------------- | ------------------------------------------------------------- |
-| `DOCKER_HOSTS`          | Local Docker socket when available | Comma-separated Docker socket or TCP endpoints                |
+| `DOCKER_HOSTS`          | Local Docker socket when available | Comma-separated Docker endpoints, optionally named            |
 | `KUBERNETES_ENABLED`    | `false`                            | Enables Kubernetes discovery and container operations         |
 | `KUBERNETES_KUBECONFIG` | In-cluster or default kubeconfig   | Optional path to a mounted kubeconfig                         |
 | `KUBERNETES_CONTEXTS`   | Current context                    | Comma-separated kubeconfig contexts                           |
@@ -59,6 +59,16 @@ Set `DOCKER_HOSTS` to one or more comma-separated Docker daemon endpoints:
 ```properties
 DOCKER_HOSTS=tcp://192.168.1.100:2375,tcp://192.168.1.101:2375
 ```
+
+Prefix an endpoint with `name=` to show a friendly host name in DockDash:
+
+```properties
+DOCKER_HOSTS=Home=tcp://192.168.1.100:2375,NAS=tcp://192.168.1.101:2375
+```
+
+Named and unnamed entries can be mixed. Names are configuration-only and are resolved at runtime;
+imported services continue to identify their Docker host by an endpoint-derived ID, so renaming a host
+does not require re-importing services or migrating the database.
 
 :::caution[Protect Docker daemon access]
 Review the [Docker daemon access security guidance](../security/#docker-daemon-access) before configuring local or remote Docker hosts. It covers restricted socket proxies, least-privilege API access, and the risks of unprotected Docker TCP endpoints.

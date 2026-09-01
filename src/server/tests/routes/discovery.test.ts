@@ -3,9 +3,18 @@ import { EventEmitter } from "stream";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ServiceSource } from "@shared";
+
 const mockDockerService = vi.hoisted(() => ({
   createDockerClients: vi.fn(),
   scanDockerContainers: vi.fn(),
+  sourceName: vi.fn(),
+}));
+
+const mockKubernetesRuntime = vi.hoisted(() => ({
+  health: vi.fn(),
+  scan: vi.fn(),
+  sourceName: vi.fn(),
 }));
 
 const mockNetworkScanner = vi.hoisted(() => ({
@@ -23,6 +32,9 @@ const mockLogger = vi.hoisted(() => ({
 vi.mock("@server/services/containerRuntime/dockerRuntime.js", () => ({
   dockerRuntime: mockDockerService,
 }));
+vi.mock("@server/services/containerRuntime/kubernetesRuntime.js", () => ({
+  kubernetesRuntime: mockKubernetesRuntime,
+}));
 vi.mock("@server/services/networkScanner.js", () => ({
   networkScanner: mockNetworkScanner,
 }));
@@ -37,6 +49,11 @@ const dockerScanHandler = (
     stack: { route?: { path: string; stack: { handle: RouteHandler }[] } }[];
   }
 ).stack.find((layer) => layer.route?.path === "/docker/scan/stream")!.route!.stack[0].handle;
+const kubernetesScanHandler = (
+  routerModule.default as unknown as {
+    stack: { route?: { path: string; stack: { handle: RouteHandler }[] } }[];
+  }
+).stack.find((layer) => layer.route?.path === "/kubernetes/scan/stream")!.route!.stack[0].handle;
 const networkScanHandler = (
   routerModule.default as unknown as {
     stack: { route?: { path: string; stack: { handle: RouteHandler }[] } }[];
@@ -47,6 +64,18 @@ const app = express();
 
 app.use(express.json());
 app.use("/api", routerModule.default);
+
+function createRequestAndResponse() {
+  const req = new EventEmitter();
+  const res = {
+    setHeader: vi.fn(),
+    flushHeaders: vi.fn(),
+    write: vi.fn(),
+    end: vi.fn(),
+  };
+
+  return { req, res };
+}
 
 describe("GET /api/docker/health", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -62,7 +91,12 @@ describe("GET /api/docker/health", () => {
     const mockDocker = { info: vi.fn().mockResolvedValue(mockDockerInfo) };
 
     mockDockerService.createDockerClients.mockReturnValue([
-      { host: "unix:///var/run/docker.sock", docker: mockDocker },
+      {
+        id: "local-id",
+        name: "Local Docker",
+        host: "unix:///var/run/docker.sock",
+        docker: mockDocker,
+      },
     ]);
 
     const res = await request(app).get("/api/docker/health");
@@ -70,6 +104,8 @@ describe("GET /api/docker/health", () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body[0]).toMatchObject({
+      id: "local-id",
+      name: "Local Docker",
       host: "unix:///var/run/docker.sock",
       connected: true,
       containers: 5,
@@ -81,7 +117,12 @@ describe("GET /api/docker/health", () => {
     const mockDocker = { info: vi.fn().mockRejectedValue(new Error("Connection refused")) };
 
     mockDockerService.createDockerClients.mockReturnValue([
-      { host: "unix:///var/run/docker.sock", docker: mockDocker },
+      {
+        id: "home-id",
+        name: "Home",
+        host: "unix:///var/run/docker.sock",
+        docker: mockDocker,
+      },
     ]);
 
     const res = await request(app).get("/api/docker/health");
@@ -89,6 +130,8 @@ describe("GET /api/docker/health", () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body[0]).toMatchObject({
+      id: "home-id",
+      name: "Home",
       host: "unix:///var/run/docker.sock",
       connected: false,
       error: "Connection refused",
@@ -106,22 +149,11 @@ describe("GET /api/docker/health", () => {
 });
 
 describe("GET /api/docker/scan/stream", () => {
-  function createRequestAndResponse() {
-    const req = new EventEmitter();
-    const res = {
-      setHeader: vi.fn(),
-      flushHeaders: vi.fn(),
-      write: vi.fn(),
-      end: vi.fn(),
-    };
-
-    return { req, res };
-  }
-
   beforeEach(() => {
     vi.clearAllMocks();
     mockDockerService.createDockerClients.mockReturnValue([]);
     mockDockerService.scanDockerContainers.mockImplementation(async function* () {});
+    mockDockerService.sourceName.mockReturnValue(undefined);
   });
 
   it("sets SSE headers and sends an empty completion event", async () => {
@@ -139,18 +171,20 @@ describe("GET /api/docker/scan/stream", () => {
 
   it("streams services from every Docker host and reports the total count", async () => {
     const clients = [
-      { host: "docker-a", docker: { id: "a" } },
-      { host: "docker-b", docker: { id: "b" } },
+      { name: "Home", host: "docker-a", docker: { id: "a" } },
+      { name: "NAS", host: "docker-b", docker: { id: "b" } },
     ];
 
     mockDockerService.createDockerClients.mockReturnValue(clients);
+    mockDockerService.sourceName.mockReturnValue("Home");
     mockDockerService.scanDockerContainers.mockImplementation(async function* (
       _docker: unknown,
       host: string,
     ) {
-      yield { id: `${host}-1`, name: "service" };
+      yield { id: `${host}-1`, name: "service", source: ServiceSource.DOCKER };
 
-      if (host === "docker-a") yield { id: `${host}-2`, name: "another" };
+      if (host === "docker-a")
+        yield { id: `${host}-2`, name: "another", source: ServiceSource.DOCKER };
     });
 
     const { req, res } = createRequestAndResponse();
@@ -167,7 +201,10 @@ describe("GET /api/docker/scan/stream", () => {
       clients[1].docker,
       "docker-b",
     );
-    expect(res.write).toHaveBeenCalledWith('data: {"id":"docker-a-1","name":"service"}\n\n');
+    expect(res.write).toHaveBeenCalledWith(
+      'data: {"id":"docker-a-1","name":"service","source":"docker","sourceName":"Home"}\n\n',
+    );
+    expect(mockDockerService.sourceName).toHaveBeenCalledTimes(3);
     expect(res.write).toHaveBeenCalledWith('event: done\ndata: {"count":3}\n\n');
     expect(res.end).toHaveBeenCalledOnce();
   });
@@ -212,6 +249,37 @@ describe("GET /api/docker/scan/stream", () => {
     expect(mockDockerService.scanDockerContainers).toHaveBeenCalledTimes(1);
     expect(context.res.write).not.toHaveBeenCalled();
     expect(context.res.end).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/kubernetes/scan/stream", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockKubernetesRuntime.scan.mockImplementation(async function* () {});
+    mockKubernetesRuntime.sourceName.mockReturnValue(undefined);
+  });
+
+  it("streams services enriched with the Kubernetes context", async () => {
+    mockKubernetesRuntime.sourceName.mockReturnValue("production");
+    mockKubernetesRuntime.scan.mockImplementation(async function* () {
+      yield {
+        id: "kube-1",
+        name: "api",
+        source: ServiceSource.KUBERNETES,
+        metadata: { kubernetesContext: "production" },
+      };
+    });
+
+    const { req, res } = createRequestAndResponse();
+
+    await kubernetesScanHandler(req, res);
+
+    expect(res.write).toHaveBeenCalledWith(
+      'data: {"id":"kube-1","name":"api","source":"kubernetes","metadata":{"kubernetesContext":"production"},"sourceName":"production"}\n\n',
+    );
+    expect(mockKubernetesRuntime.sourceName).toHaveBeenCalledOnce();
+    expect(res.write).toHaveBeenCalledWith('event: done\ndata: {"count":1}\n\n');
+    expect(res.end).toHaveBeenCalledOnce();
   });
 });
 

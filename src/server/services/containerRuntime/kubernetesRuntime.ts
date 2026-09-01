@@ -13,11 +13,11 @@ import {
 } from "@shared";
 import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 
-import { serviceRepository } from "../db/serviceRepository.js";
-import { config } from "../lib/config.js";
-import { detectProtocolByPort } from "../lib/constants.js";
-import type { ContainerRuntime, RuntimeTerminalSession } from "./containerRuntime/types.js";
-import { terminalService } from "./terminalService.js";
+import { serviceRepository } from "../../db/serviceRepository.js";
+import { config } from "../../lib/config.js";
+import { detectProtocolByPort } from "../../lib/constants.js";
+import { terminalService } from "../terminalService.js";
+import type { ContainerRuntime, RuntimeTerminalSession } from "./types.js";
 
 type Client = { context: string; id: string; kc: k8s.KubeConfig; api: k8s.CoreV1Api };
 
@@ -68,6 +68,10 @@ export class KubernetesRuntime implements ContainerRuntime {
 
   configured(): boolean {
     return this.clients.size > 0;
+  }
+
+  sourceName(service: Service): string | undefined {
+    return service.metadata?.kubernetesContext;
   }
 
   async health(): Promise<KubernetesHealth[]> {

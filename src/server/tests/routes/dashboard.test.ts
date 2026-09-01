@@ -10,6 +10,13 @@ const mockHealthCheckService = vi.hoisted(() => ({
   checkAllServices: vi.fn(),
 }));
 
+const mockContainerRuntimeService = vi.hoisted(() => ({
+  withSourceName: vi.fn((service: Record<string, unknown>) => ({
+    ...service,
+    sourceName: "Home",
+  })),
+}));
+
 const mockLogger = vi.hoisted(() => ({
   error: vi.fn(),
   warn: vi.fn(),
@@ -20,6 +27,9 @@ const mockLogger = vi.hoisted(() => ({
 vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockDb }));
 vi.mock("@server/services/healthCheckService.js", () => ({
   healthCheckService: mockHealthCheckService,
+}));
+vi.mock("@server/services/containerRuntime/containerRuntimeService.js", () => ({
+  containerRuntimeService: mockContainerRuntimeService,
 }));
 vi.mock("@server/lib/logService.js", () => ({ logger: mockLogger }));
 
@@ -42,6 +52,19 @@ describe("GET /api/dashboard", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(dashboardData);
+  });
+
+  it("enriches dashboard services with their runtime source names", async () => {
+    const service = { id: "service-1", name: "Plex", source: "docker" };
+
+    mockDb.getDashboardData.mockReturnValue({ services: [service], links: [] });
+
+    const res = await request(app).get("/api/dashboard");
+
+    expect(res.status).toBe(200);
+    expect(res.body.services).toEqual([{ ...service, sourceName: "Home" }]);
+    expect(mockContainerRuntimeService.withSourceName).toHaveBeenCalledOnce();
+    expect(mockContainerRuntimeService.withSourceName).toHaveBeenCalledWith(service);
   });
 });
 

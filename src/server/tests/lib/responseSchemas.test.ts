@@ -18,6 +18,7 @@ const service = {
   source: ServiceSource.DOCKER,
   status: ServiceStatus.UP,
   metadata: { containerId: "abc123", image: "example/web:1.0" },
+  sourceName: "Home",
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 };

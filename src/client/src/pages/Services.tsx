@@ -148,6 +148,7 @@ export default function Services() {
         q &&
         !s.name.toLowerCase().includes(q) &&
         !s.host.toLowerCase().includes(q) &&
+        !s.sourceName?.toLowerCase().includes(q) &&
         !s.ports.some((p) => String(p).includes(q))
       ) {
         return false;
@@ -292,11 +293,13 @@ export default function Services() {
                 const sourcePresentation = {
                   [ServiceSource.DOCKER]: {
                     icon: <Icons.Docker size={12} />,
-                    label: t("services.sourceDocker"),
+                    label: service.sourceName
+                      ? `${t("services.sourceDocker")} · ${service.sourceName}`
+                      : t("services.sourceDocker"),
                   },
                   [ServiceSource.KUBERNETES]: {
                     icon: <Icons.Server size={12} />,
-                    label: "Kubernetes",
+                    label: service.sourceName ? `Kubernetes · ${service.sourceName}` : "Kubernetes",
                   },
                   [ServiceSource.NETWORK]: {
                     icon: <Icons.Globe size={12} />,
@@ -317,9 +320,12 @@ export default function Services() {
                     )}
                   >
                     <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5 px-[6px] py-px rounded text-[0.65rem] bg-warning/10 text-warning">
-                        {sourcePresentation.icon}
-                        {sourcePresentation.label}
+                      <span
+                        title={sourcePresentation.label}
+                        className="inline-flex max-w-48 items-center gap-1.5 px-[6px] py-px rounded text-[0.65rem] bg-warning/10 text-warning"
+                      >
+                        <span className="shrink-0">{sourcePresentation.icon}</span>
+                        <span className="truncate">{sourcePresentation.label}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">

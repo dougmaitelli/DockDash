@@ -8,8 +8,9 @@ import type {
 import { SSE_EVENT } from "@shared/types.js";
 
 import { validateNetworkCidr } from "../lib/validate.js";
+import { containerRuntimeService } from "../services/containerRuntime/containerRuntimeService.js";
 import { dockerRuntime } from "../services/containerRuntime/dockerRuntime.js";
-import { kubernetesRuntime } from "../services/kubernetesRuntime.js";
+import { kubernetesRuntime } from "../services/containerRuntime/kubernetesRuntime.js";
 import { networkScanner } from "../services/networkScanner.js";
 
 const router = Router();
@@ -32,7 +33,7 @@ router.get("/kubernetes/scan/stream", async (req, res) => {
     for await (const service of kubernetesRuntime.scan()) {
       if (closed) break;
 
-      res.write(`data: ${JSON.stringify(service)}\n\n`);
+      res.write(`data: ${JSON.stringify(containerRuntimeService.withSourceName(service))}\n\n`);
       count++;
     }
   } catch (err) {
@@ -53,11 +54,13 @@ router.get("/docker/health", async (_req, res) => {
   const clients = dockerRuntime.createDockerClients();
 
   const results: DockerHostHealth[] = await Promise.all(
-    clients.map(async ({ host, docker }): Promise<DockerHostHealth> => {
+    clients.map(async ({ id, name, host, docker }): Promise<DockerHostHealth> => {
       try {
         const info = await docker.info();
 
         return {
+          id,
+          name,
           host,
           connected: true,
           containers: info.Containers,
@@ -67,7 +70,13 @@ router.get("/docker/health", async (_req, res) => {
           serverVersion: info.ServerVersion,
         };
       } catch (err) {
-        return { host, connected: false, error: err instanceof Error ? err.message : String(err) };
+        return {
+          id,
+          name,
+          host,
+          connected: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
       }
     }),
   );
@@ -97,7 +106,7 @@ router.get("/docker/scan/stream", async (req, res) => {
       for await (const service of dockerRuntime.scanDockerContainers(docker, host)) {
         if (closed) break;
 
-        res.write(`data: ${JSON.stringify(service)}\n\n`);
+        res.write(`data: ${JSON.stringify(containerRuntimeService.withSourceName(service))}\n\n`);
         count++;
       }
     }

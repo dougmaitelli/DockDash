@@ -22,6 +22,8 @@ export type ContainerStateMap = Map<
   { containerId: string; state: string; imageTag: string; imageDigest: string | undefined }
 >;
 
+type DockerHostClient = { id: string; name: string; host: string; docker: Docker };
+
 export const DOCKER_CONTAINER_STATE = {
   RUNNING: "running",
   EXITED: "exited",
@@ -37,18 +39,35 @@ export const DOCKER_CONTAINER_DOWN_STATES: string[] = [
 
 export class DockerRuntime implements ContainerRuntime {
   private readonly logStreams = new Set<PassThrough>();
-  private readonly clients: Map<string, Docker>;
+  private readonly clientsByHost: Map<string, DockerHostClient>;
+  private readonly clientsById: Map<string, DockerHostClient>;
 
   constructor() {
-    this.clients = new Map(config.dockerHosts.map((host) => [host, this.buildClient(host)]));
+    const clients = config.dockerHostConfigs.map(({ name, host }) => ({
+      id: DockerRuntime.hostId(host),
+      name,
+      host,
+      docker: this.buildClient(host),
+    }));
+
+    this.clientsByHost = new Map(clients.map((client) => [client.host, client]));
+    this.clientsById = new Map(clients.map((client) => [client.id, client]));
   }
 
   static hostId(host: string): string {
     return createHash("sha256").update(host).digest("hex").slice(0, 16);
   }
 
+  sourceName(service: Service): string | undefined {
+    const dockerHostId = service.metadata?.dockerHostId;
+
+    if (!dockerHostId) return undefined;
+
+    return this.clientsById.get(dockerHostId)?.name;
+  }
+
   resolveHost(dockerHostId: string): string | undefined {
-    return config.dockerHosts.find((host) => DockerRuntime.hostId(host) === dockerHostId);
+    return this.clientsById.get(dockerHostId)?.host;
   }
 
   getContainer(service: Service): Docker.Container {
@@ -78,15 +97,15 @@ export class DockerRuntime implements ContainerRuntime {
   }
 
   createDockerClientForHost(host: string): Docker {
-    const client = this.clients.get(host);
+    const client = this.clientsByHost.get(host)?.docker;
 
     if (!client) throw new Error(`Docker host not configured: ${host}`);
 
     return client;
   }
 
-  createDockerClients(): { host: string; docker: Docker }[] {
-    return [...this.clients.entries()].map(([host, docker]) => ({ host, docker }));
+  createDockerClients(): DockerHostClient[] {
+    return [...this.clientsByHost.values()].map((client) => ({ ...client }));
   }
 
   async *scanDockerContainers(docker: Docker, dockerHost: string): AsyncGenerator<Service> {

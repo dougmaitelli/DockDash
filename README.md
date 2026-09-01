@@ -47,7 +47,7 @@ This makes version pinning the expected workflow rather than an obstacle. You de
 - **Changelogs for available versions** — resolves the source repository and displays the matching GitHub release notes before you upgrade
 - **Digest fallback for floating tags** — still detects changes to `latest`, `stable`, `dev`, and other non-version tags
 - **Update notifications** — sends current-to-latest version details through any notification platform supported by Apprise
-- **Multi-host Docker discovery** — scans one or more local or remote Docker daemons and imports containers and their exposed ports as services
+- **Multi-host Docker discovery** — scans one or more optionally named local or remote Docker daemons and imports containers and their exposed ports as services
 - **Network discovery** — scans configurable CIDR ranges, with quick and deep scan modes, to find services not managed by Docker
 - **Service management** — add services manually or import scan results, then search, filter, sort, edit, and choose which services appear on the dashboard
 - **Health monitoring and history** — checks every service periodically and visualizes uptime over the last 1, 7, or 30 days

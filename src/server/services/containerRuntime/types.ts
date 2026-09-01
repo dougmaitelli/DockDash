@@ -7,6 +7,7 @@ export interface RuntimeTerminalSession {
 }
 
 export interface ContainerRuntime {
+  sourceName(service: Service): string | undefined;
   action(service: Service, action: ContainerAction): Promise<void>;
   stats(service: Service): Promise<ContainerStats>;
   logs(service: Service): Promise<NodeJS.ReadableStream & { destroy: () => void }>;

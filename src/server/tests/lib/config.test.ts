@@ -64,6 +64,45 @@ describe("config", () => {
     expect(config.networkCidrs).toEqual(["10.0.0.0/8", "192.168.1.0/24"]);
   });
 
+  it("parses named Docker hosts while preserving legacy unnamed entries", async () => {
+    vi.stubEnv(
+      "DOCKER_HOSTS",
+      " Home = tcp://home.example:2375 ,tcp://legacy.example:2375,NAS=tcp://nas.example:2375 ",
+    );
+    const config = await freshConfig();
+
+    expect(config.dockerHostConfigs).toEqual([
+      { name: "Home", host: "tcp://home.example:2375" },
+      { name: "tcp://legacy.example:2375", host: "tcp://legacy.example:2375" },
+      { name: "NAS", host: "tcp://nas.example:2375" },
+    ]);
+    expect(config.dockerHosts).toEqual([
+      "tcp://home.example:2375",
+      "tcp://legacy.example:2375",
+      "tcp://nas.example:2375",
+    ]);
+    expect(config.dockerHostEntries).toEqual([
+      "Home=tcp://home.example:2375",
+      "tcp://legacy.example:2375",
+      "NAS=tcp://nas.example:2375",
+    ]);
+  });
+
+  it("rejects malformed or duplicate named Docker host entries", async () => {
+    vi.stubEnv("DOCKER_HOSTS", "=tcp://home.example:2375");
+    let config = await freshConfig();
+
+    expect(() => config.dockerHostConfigs).toThrow("Invalid DOCKER_HOSTS entry");
+
+    vi.stubEnv("DOCKER_HOSTS", "Home=tcp://home.example:2375,home=tcp://other.example:2375");
+    config = await freshConfig();
+    expect(() => config.dockerHostConfigs).toThrow("Duplicate Docker host name");
+
+    vi.stubEnv("DOCKER_HOSTS", "Home=tcp://home.example:2375,Other=tcp://home.example:2375");
+    config = await freshConfig();
+    expect(() => config.dockerHostConfigs).toThrow("Duplicate Docker endpoint");
+  });
+
   it("only disables features for the exact value true", async () => {
     vi.stubEnv("DISABLE_FILE_EXPLORER", "true");
     vi.stubEnv("DISABLE_TERMINAL", "TRUE");
@@ -81,10 +120,15 @@ describe("config", () => {
     let config = await freshConfig();
 
     expect(config.dockerHosts).toEqual(["unix:///var/run/docker.sock", "tcp://remote:2375"]);
+    expect(config.dockerHostConfigs[0]).toEqual({
+      name: "Local Docker",
+      host: "unix:///var/run/docker.sock",
+    });
 
-    vi.stubEnv("DOCKER_HOSTS", "unix:///var/run/docker.sock,tcp://remote:2375");
+    vi.stubEnv("DOCKER_HOSTS", "Machine=unix:///var/run/docker.sock,tcp://remote:2375");
     config = await freshConfig();
     expect(config.dockerHosts).toEqual(["unix:///var/run/docker.sock", "tcp://remote:2375"]);
+    expect(config.dockerHostConfigs[0].name).toBe("Machine");
   });
 
   it("enables OIDC only when issuer, client ID, and client secret are present", async () => {

@@ -1,4 +1,5 @@
 import express from "express";
+import { createHash } from "node:crypto";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -37,6 +38,7 @@ const mockChangelogService = vi.hoisted(() => ({
 const mockConfig = vi.hoisted(() => ({
   healthHistoryEnabled: true,
   resourceMonitorEnabled: true,
+  dockerHostConfigs: [{ name: "Home", host: "tcp://home.example:2375" }],
 }));
 
 const mockLogger = vi.hoisted(() => ({
@@ -94,6 +96,38 @@ describe("GET /api/services", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(services);
+  });
+
+  it("adds the configured Docker host name without mutating the stored service", async () => {
+    const dockerHostId = createHash("sha256")
+      .update("tcp://home.example:2375")
+      .digest("hex")
+      .slice(0, 16);
+    const service = makeService({
+      source: ServiceSource.DOCKER,
+      metadata: { dockerHostId, containerName: "web" },
+    });
+
+    mockSvcRepo.getServices.mockReturnValue([service]);
+
+    const res = await request(app).get("/api/services");
+
+    expect(res.body[0].sourceName).toBe("Home");
+    expect(service).not.toHaveProperty("sourceName");
+  });
+
+  it("uses the Kubernetes context as the runtime name", async () => {
+    const service = makeService({
+      source: ServiceSource.KUBERNETES,
+      metadata: { clusterId: "cluster-id", kubernetesContext: "production" },
+    });
+
+    mockSvcRepo.getServices.mockReturnValue([service]);
+
+    const res = await request(app).get("/api/services");
+
+    expect(res.body[0].sourceName).toBe("production");
+    expect(service).not.toHaveProperty("sourceName");
   });
 });
 

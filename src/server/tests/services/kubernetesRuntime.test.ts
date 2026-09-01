@@ -65,7 +65,8 @@ vi.mock("@kubernetes/client-node", () => {
   };
 });
 
-const { KubernetesRuntime } = await import("@server/services/kubernetesRuntime.js");
+const { KubernetesRuntime } =
+  await import("@server/services/containerRuntime/kubernetesRuntime.js");
 
 const pod = {
   metadata: {

@@ -523,7 +523,16 @@ async function main() {
 
     if (p === "/api/docker/health")
       return route.fulfill({
-        json: [{ host: "local", connected: true, containers: 6, containersRunning: 6 }],
+        json: [
+          {
+            id: "local",
+            name: "Local Docker",
+            host: "unix:///var/run/docker.sock",
+            connected: true,
+            containers: 6,
+            containersRunning: 6,
+          },
+        ],
       });
 
     if (p === "/api/app-update") return route.fulfill({ json: { hasUpdate: false } });
