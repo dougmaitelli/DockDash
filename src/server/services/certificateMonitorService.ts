@@ -11,12 +11,12 @@ import { tlsCertificateService } from "./tlsCertificateService.js";
 type Notice = { title: string; body: string; type: NotificationType };
 
 export function certVaultStatusObservation(
-  certificate: TlsCertificate,
+  serviceId: string,
   statuses: ReadonlyMap<string, CertVaultStatus> | null,
 ): CertVaultStatus | null | undefined {
-  if (statuses === null || certificate.fingerprintSha256 === null) return undefined;
+  if (statuses === null) return undefined;
 
-  return statuses.get(certificate.serviceId) ?? null;
+  return statuses.get(serviceId) ?? null;
 }
 
 export function expiryThreshold(daysRemaining: number | null, raw: string): number | null {
@@ -43,7 +43,7 @@ export class CertificateMonitorService {
     for (const certificate of certificates) {
       await this.process(
         certificate,
-        certVaultStatusObservation(certificate, certVaultStatuses),
+        certVaultStatusObservation(certificate.serviceId, certVaultStatuses),
       ).catch(() => {
         // NotificationService logs delivery failures. Continue processing other services;
         // this service's state remains unchanged so its notices are retried next time.
@@ -55,6 +55,10 @@ export class CertificateMonitorService {
     certificate: TlsCertificate,
     certVaultStatus: CertVaultStatus | null | undefined,
   ): Promise<void> {
+    // Connection and transport failures are covered by service health notifications. Without a
+    // peer certificate, there is no TLS certificate validity state to alert on or persist.
+    if (certificate.health === "error" && certificate.fingerprintSha256 === null) return;
+
     const service = serviceRepository.getService(certificate.serviceId);
 
     if (!service) return;
@@ -77,7 +81,11 @@ export class CertificateMonitorService {
         body: t("notifications.certificateRenewedBody", { name: service.name, target }),
         type: "success",
       });
-    } else if (previous?.health === "error" && certificate.health === "healthy") {
+    } else if (
+      previous?.health === "error" &&
+      previous.fingerprintSha256 !== null &&
+      certificate.health === "healthy"
+    ) {
       notices.push({
         title: t("notifications.certificateRecovered", { name: service.name }),
         body: t("notifications.certificateRecoveredBody", { name: service.name, target }),
