@@ -10,6 +10,15 @@ import { tlsCertificateService } from "./tlsCertificateService.js";
 
 type Notice = { title: string; body: string; type: NotificationType };
 
+export function certVaultStatusObservation(
+  certificate: TlsCertificate,
+  statuses: ReadonlyMap<string, CertVaultStatus> | null,
+): CertVaultStatus | null | undefined {
+  if (statuses === null || certificate.fingerprintSha256 === null) return undefined;
+
+  return statuses.get(certificate.serviceId) ?? null;
+}
+
 export function expiryThreshold(daysRemaining: number | null, raw: string): number | null {
   if (daysRemaining === null) return null;
 
@@ -34,9 +43,7 @@ export class CertificateMonitorService {
     for (const certificate of certificates) {
       await this.process(
         certificate,
-        certVaultStatuses === null
-          ? undefined
-          : (certVaultStatuses.get(certificate.serviceId) ?? null),
+        certVaultStatusObservation(certificate, certVaultStatuses),
       ).catch(() => {
         // NotificationService logs delivery failures. Continue processing other services;
         // this service's state remains unchanged so its notices are retried next time.

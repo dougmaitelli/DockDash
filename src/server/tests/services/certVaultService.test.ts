@@ -51,7 +51,7 @@ function service(
   };
 }
 
-function liveCertificate(serviceId: string, fingerprintSha256: string): TlsCertificate {
+function liveCertificate(serviceId: string, fingerprintSha256: string | null): TlsCertificate {
   return {
     serviceId,
     hostname: "example.com",
@@ -111,6 +111,15 @@ describe("CertVaultService", () => {
     ]);
 
     expect(result.has("other")).toBe(false);
+  });
+
+  it("does not treat a failed probe without a fingerprint as a mismatch", async () => {
+    mockServiceRepository.getService.mockReturnValue(service("exact", "example.com"));
+    const { certVaultService } = await import("@server/services/certVaultService.js");
+
+    const result = await certVaultService.getDeploymentStatuses([liveCertificate("exact", null)]);
+
+    expect(result.has("exact")).toBe(false);
   });
 
   it("returns no statuses when CertVault is disabled", async () => {

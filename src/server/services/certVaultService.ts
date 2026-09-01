@@ -124,6 +124,11 @@ class CertVaultService {
       if (matchingCertificates.length === 0) continue;
 
       const liveFingerprint = normalizeFingerprint(liveCertificate.fingerprintSha256);
+
+      // A connection failure can produce a TLS result without a certificate. That is an
+      // unknown deployment state, not evidence that a different certificate is deployed.
+      if (liveFingerprint === null) continue;
+
       const currentIsDeployed = matchingCertificates.some(
         (certificate) =>
           normalizeFingerprint(certificate.current_version?.fingerprint_sha256) === liveFingerprint,
