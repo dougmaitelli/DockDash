@@ -175,7 +175,7 @@ export class MockDockerRuntime extends DockerRuntime {
   }
 
   override createDockerClients(): { id: string; name: string; host: string; docker: Docker }[] {
-    return [{ id: MOCK_HOST_ID, name: "Local Docker", host: MOCK_HOST, docker: stubDockerClient }];
+    return [{ id: MOCK_HOST_ID, name: "Local", host: MOCK_HOST, docker: stubDockerClient }];
   }
 
   override async *scanDockerContainers(

@@ -93,7 +93,7 @@ describe("GET /api/docker/health", () => {
     mockDockerService.createDockerClients.mockReturnValue([
       {
         id: "local-id",
-        name: "Local Docker",
+        name: "Local",
         host: "unix:///var/run/docker.sock",
         docker: mockDocker,
       },
@@ -105,7 +105,7 @@ describe("GET /api/docker/health", () => {
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body[0]).toMatchObject({
       id: "local-id",
-      name: "Local Docker",
+      name: "Local",
       host: "unix:///var/run/docker.sock",
       connected: true,
       containers: 5,

@@ -34,6 +34,7 @@ function makeService(
   image: string,
   imageTag: string,
   networks: string[],
+  labels: string[],
 ) {
   return {
     id,
@@ -42,7 +43,9 @@ function makeService(
     ports,
     checkPort: ports[0],
     source: "docker",
+    sourceName: "Local",
     status,
+    labels,
     onDashboard: true,
     metadata: {
       dockerHostId: "local",
@@ -69,6 +72,7 @@ const SERVICES = [
       "traefik",
       "v3.2",
       ["web", "internal"],
+      ["Production", "Edge", "Public"],
     ),
     protocol: "https",
     checkPort: 443,
@@ -85,16 +89,42 @@ const SERVICES = [
     },
   },
   {
-    ...makeService(IDS.nginx, "nginx", "app.example.com", [80, 443], "up", "nginx", "1.27", [
-      "web",
-    ]),
+    ...makeService(
+      IDS.nginx,
+      "nginx",
+      "app.example.com",
+      [80, 443],
+      "up",
+      "nginx",
+      "1.27",
+      ["web"],
+      ["Production", "Frontend", "Public", "Customer-facing"],
+    ),
     protocol: "https",
     checkPort: 443,
   },
-  makeService(IDS.postgres, "postgres", "172.17.0.12", [5432], "up", "postgres", "17", [
-    "internal",
-  ]),
-  makeService(IDS.redis, "redis", "172.17.0.13", [6379], "up", "redis", "7", ["internal"]),
+  makeService(
+    IDS.postgres,
+    "postgres",
+    "172.17.0.12",
+    [5432],
+    "up",
+    "postgres",
+    "17",
+    ["internal"],
+    ["Production", "Database", "Internal"],
+  ),
+  makeService(
+    IDS.redis,
+    "redis",
+    "172.17.0.13",
+    [6379],
+    "up",
+    "redis",
+    "7",
+    ["internal"],
+    ["Production", "Cache", "Internal"],
+  ),
   {
     ...makeService(
       IDS.grafana,
@@ -105,6 +135,7 @@ const SERVICES = [
       "grafana/grafana",
       "11.4.0",
       ["monitoring", "web"],
+      ["Monitoring", "Internal"],
     ),
     metadata: {
       dockerHostId: "local",
@@ -127,6 +158,7 @@ const SERVICES = [
     "prom/prometheus",
     "v2.55.1",
     ["monitoring"],
+    ["Monitoring", "Metrics", "Internal"],
   ),
 ];
 
@@ -516,6 +548,11 @@ async function main() {
 
     if (p === "/api/services") return route.fulfill({ json: SERVICES });
 
+    if (p === "/api/labels")
+      return route.fulfill({
+        json: [...new Set(SERVICES.flatMap(({ labels }) => labels))].sort(),
+      });
+
     if (p === "/api/dashboard") return route.fulfill({ json: DASHBOARD });
 
     if (p === "/api/serviceStatuses")
@@ -526,7 +563,7 @@ async function main() {
         json: [
           {
             id: "local",
-            name: "Local Docker",
+            name: "Local",
             host: "unix:///var/run/docker.sock",
             connected: true,
             containers: 6,

@@ -121,7 +121,7 @@ describe("config", () => {
 
     expect(config.dockerHosts).toEqual(["unix:///var/run/docker.sock", "tcp://remote:2375"]);
     expect(config.dockerHostConfigs[0]).toEqual({
-      name: "Local Docker",
+      name: "Local",
       host: "unix:///var/run/docker.sock",
     });
 

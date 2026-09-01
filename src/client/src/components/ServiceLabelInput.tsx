@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { normalizeServiceLabel, SERVICE_LABEL_MAX_COUNT, SERVICE_LABEL_MAX_LENGTH } from "@shared";
 
-import { getServiceLabelColorClass } from "@/lib/serviceLabelColors";
+import { getServiceLabelColorStyle } from "@/lib/serviceLabelColors";
 import { cn } from "@/lib/utils";
 
 import { Icons } from "./Icons";
@@ -104,10 +104,8 @@ export function ServiceLabelInput({ values, suggestions, onChange }: ServiceLabe
           {values.map((value) => (
             <span
               key={normalizeServiceLabel(value)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.8rem]",
-                getServiceLabelColorClass(value),
-              )}
+              style={getServiceLabelColorStyle(value)}
+              className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.8rem]"
             >
               {value}
               <button

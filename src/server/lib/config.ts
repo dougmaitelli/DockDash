@@ -8,7 +8,7 @@ import { logger } from "./logService.js";
 import "dotenv/config";
 
 export const DEFAULT_DOCKER_SOCKET = "unix:///var/run/docker.sock";
-export const DEFAULT_LOCAL_DOCKER_HOST_NAME = "Local Docker";
+export const DEFAULT_LOCAL_DOCKER_HOST_NAME = "Local";
 
 export interface ConfiguredDockerHost {
   name: string;

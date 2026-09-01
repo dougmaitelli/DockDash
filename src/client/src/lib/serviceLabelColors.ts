@@ -1,15 +1,12 @@
+import type { CSSProperties } from "react";
+
 import { normalizeServiceLabel } from "@shared";
 
-const SERVICE_LABEL_COLOR_CLASSES = [
-  "border-accent-blue/30 bg-accent-blue/10 text-accent-blue",
-  "border-accent-green/30 bg-accent-green/15 text-accent-green",
-  "border-accent-purple/30 bg-accent-purple/10 text-accent-purple",
-  "border-accent-yellow/30 bg-accent-yellow/10 text-accent-yellow",
-  "border-accent-red/30 bg-accent-red/15 text-accent-red",
-  "border-accent-cyan/30 bg-accent-cyan/10 text-accent-cyan",
-] as const;
+export type ServiceLabelColorStyle = CSSProperties & {
+  "--service-label-color": string;
+};
 
-export function getServiceLabelColorClass(label: string): string {
+function hashLabel(label: string): number {
   let hash = 2166136261;
 
   for (const character of normalizeServiceLabel(label)) {
@@ -17,5 +14,28 @@ export function getServiceLabelColorClass(label: string): string {
     hash = Math.imul(hash, 16777619);
   }
 
-  return SERVICE_LABEL_COLOR_CLASSES[(hash >>> 0) % SERVICE_LABEL_COLOR_CLASSES.length];
+  // Avalanche the FNV result so hue, lightness, and chroma use well-mixed bits.
+  hash ^= 0x000285d1;
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b);
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35);
+  hash ^= hash >>> 16;
+
+  return hash >>> 0;
+}
+
+export function getServiceLabelColorStyle(label: string): ServiceLabelColorStyle {
+  const hash = hashLabel(label);
+  const hue = hash % 360;
+  const lightness = 62 + ((hash >>> 9) % 17);
+  const chroma = (0.15 + ((hash >>> 17) % 8) / 100).toFixed(2);
+  const color = `oklch(${lightness}% ${chroma} ${hue})`;
+
+  return {
+    "--service-label-color": color,
+    color: "color-mix(in oklch, var(--service-label-color) 75%, var(--foreground))",
+    backgroundColor: "color-mix(in srgb, var(--service-label-color) 16%, transparent)",
+    borderColor: "color-mix(in srgb, var(--service-label-color) 45%, transparent)",
+  };
 }

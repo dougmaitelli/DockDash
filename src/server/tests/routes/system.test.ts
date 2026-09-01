@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockConfig = vi.hoisted(() => ({
   appVersion: "1.0.0",
   dockerHosts: ["unix:///var/run/docker.sock"],
-  dockerHostEntries: ["Local Docker=unix:///var/run/docker.sock"],
-  dockerHostConfigs: [{ name: "Local Docker", host: "unix:///var/run/docker.sock" }],
+  dockerHostEntries: ["Local=unix:///var/run/docker.sock"],
+  dockerHostConfigs: [{ name: "Local", host: "unix:///var/run/docker.sock" }],
   networkCidrs: ["192.168.0.0/24"],
   healthCheckInterval: 30000,
   updateCheckInterval: 3600000,

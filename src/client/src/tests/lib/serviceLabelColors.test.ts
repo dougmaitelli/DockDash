@@ -1,22 +1,42 @@
 import { describe, expect, it } from "vitest";
 
-import { getServiceLabelColorClass } from "../../lib/serviceLabelColors";
+import { getServiceLabelColorStyle } from "../../lib/serviceLabelColors";
 
 describe("service label colors", () => {
   it("keeps a label's color stable and case-insensitive", () => {
-    const color = getServiceLabelColorClass("Production");
+    const color = getServiceLabelColorStyle("Production");
 
-    expect(getServiceLabelColorClass("Production")).toBe(color);
-    expect(getServiceLabelColorClass(" production ")).toBe(color);
+    expect(getServiceLabelColorStyle("Production")).toEqual(color);
+    expect(getServiceLabelColorStyle(" production ")).toEqual(color);
   });
 
-  it("distributes label names across the color palette", () => {
+  it("generates a distinct base color for representative labels", () => {
+    const labels = [
+      "Production",
+      "Backend",
+      "Database",
+      "Monitoring",
+      "Internal",
+      "Public",
+      "Edge",
+      "Frontend",
+      "Customer-facing",
+      "Cache",
+      "Metrics",
+    ];
     const colors = new Set(
-      ["Production", "Backend", "Database", "Monitoring", "Internal", "Public"].map(
-        getServiceLabelColorClass,
-      ),
+      labels.map((label) => getServiceLabelColorStyle(label)["--service-label-color"]),
     );
+    const hues = [...colors]
+      .map((color) => Number(color.match(/ ([0-9]+)\)$/)?.[1]))
+      .sort((a, b) => a - b);
+    const hueGaps = hues.map((hue, index) => {
+      const nextHue = hues[index + 1] ?? hues[0] + 360;
 
-    expect(colors.size).toBeGreaterThan(1);
+      return nextHue - hue;
+    });
+
+    expect(colors.size).toBe(labels.length);
+    expect(Math.min(...hueGaps)).toBeGreaterThanOrEqual(25);
   });
 });
