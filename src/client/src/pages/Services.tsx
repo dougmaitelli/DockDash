@@ -23,6 +23,7 @@ import { ServiceDrawer } from "../components/modals/ServiceDrawer";
 import { useCertificateHealth } from "../context/CertificateHealthContext";
 import { useConfig } from "../context/ConfigContext";
 import { useServices } from "../hooks/useData";
+import { getServiceLabelColorClass } from "../lib/serviceLabelColors";
 
 type SourceFilter = "all" | ServiceSource;
 type StatusFilter = "all" | ServiceStatus;
@@ -149,6 +150,7 @@ export default function Services() {
         !s.name.toLowerCase().includes(q) &&
         !s.host.toLowerCase().includes(q) &&
         !s.sourceName?.toLowerCase().includes(q) &&
+        !s.labels?.some((label) => label.toLowerCase().includes(q)) &&
         !s.ports.some((p) => String(p).includes(q))
       ) {
         return false;
@@ -209,7 +211,7 @@ export default function Services() {
 
       <Card className="overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
+          <table className="w-full text-sm min-w-[850px]">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <FilterHeader
@@ -235,6 +237,7 @@ export default function Services() {
                   value={sort}
                   onChange={setSort}
                 />
+                <th className="px-4 py-2.5 font-medium">{t("services.colLabels")}</th>
                 <SortHeader
                   col="host"
                   label={t("services.colHost")}
@@ -333,6 +336,34 @@ export default function Services() {
                         <ServiceIcon service={service} size={18} />
                         {service.name}
                       </span>
+                    </td>
+                    <td
+                      className="px-4 py-3"
+                      title={service.labels?.length ? service.labels.join(", ") : undefined}
+                    >
+                      {service.labels?.length ? (
+                        <div className="flex max-w-64 flex-wrap gap-1">
+                          {service.labels.slice(0, 3).map((label) => (
+                            <Badge
+                              key={label.toLocaleLowerCase()}
+                              variant="outline"
+                              className={cn(
+                                "max-w-28 truncate font-normal",
+                                getServiceLabelColorClass(label),
+                              )}
+                            >
+                              {label}
+                            </Badge>
+                          ))}
+                          {service.labels.length > 3 && (
+                            <Badge variant="outline" className="font-normal">
+                              +{service.labels.length - 3}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="font-mono text-xs text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-secondary-foreground">
                       <ServiceHost service={service} />

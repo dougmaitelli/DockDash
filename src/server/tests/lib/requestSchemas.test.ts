@@ -8,6 +8,7 @@ import {
   terminalInputRequestSchema,
   updateServiceRequestSchema,
 } from "@shared/requestSchemas.js";
+import { SERVICE_LABEL_MAX_COUNT, SERVICE_LABEL_MAX_LENGTH } from "@shared/serviceLabels.js";
 import { ServiceProtocol } from "@shared/types.js";
 
 describe("request schemas", () => {
@@ -25,6 +26,20 @@ describe("request schemas", () => {
       protocol: ServiceProtocol.HTTPS,
       ports: [5000],
     });
+  });
+
+  it("accepts labels and trims their display names", () => {
+    const result = updateServiceRequestSchema.parse({ labels: ["  Production  ", "Backend"] });
+
+    expect(result.labels).toEqual(["Production", "Backend"]);
+  });
+
+  it.each([
+    { labels: ["Production", "production"] },
+    { labels: ["x".repeat(SERVICE_LABEL_MAX_LENGTH + 1)] },
+    { labels: Array.from({ length: SERVICE_LABEL_MAX_COUNT + 1 }, (_, index) => `label-${index}`) },
+  ])("rejects invalid service labels %#", (input) => {
+    expect(updateServiceRequestSchema.safeParse(input).success).toBe(false);
   });
 
   it.each([

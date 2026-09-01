@@ -1,4 +1,5 @@
 export { certificateNotificationStates } from "./certificateNotificationStates.js";
+export { labels, serviceLabels } from "./labels.js";
 export { serviceHealthHistory } from "./serviceHealthHistory.js";
 export { serviceHealthRollup } from "./serviceHealthRollup.js";
 export { serviceLinks } from "./serviceLinks.js";

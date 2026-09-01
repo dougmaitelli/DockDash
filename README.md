@@ -49,7 +49,7 @@ This makes version pinning the expected workflow rather than an obstacle. You de
 - **Update notifications** — sends current-to-latest version details through any notification platform supported by Apprise
 - **Multi-host Docker discovery** — scans one or more optionally named local or remote Docker daemons and imports containers and their exposed ports as services
 - **Network discovery** — scans configurable CIDR ranges, with quick and deep scan modes, to find services not managed by Docker
-- **Service management** — add services manually or import scan results, then search, filter, sort, edit, and choose which services appear on the dashboard
+- **Service management** — add services manually or import scan results, apply reusable labels, then search, filter, sort, edit, and choose which services appear on the dashboard
 - **Health monitoring and history** — checks every service periodically and visualizes uptime over the last 1, 7, or 30 days
 - **Resource monitoring and history** — tracks container CPU, memory, network, and disk I/O with current readings and historical charts
 - **Container controls** — start, stop, and restart containers from the service drawer
@@ -81,7 +81,7 @@ This makes version pinning the expected workflow rather than an obstacle. You de
 <tr>
 <td width="33%">
 <a href="screenshots/4.png"><img src="screenshots/4.png" alt="Services table"></a>
-<p><em>Services table — flat list of all discovered services with live status, image version, ports, and certificate health.</em></p>
+<p><em>Services table — flat list of all discovered services with reusable labels, live status, image version, ports, and certificate health.</em></p>
 </td>
 <td width="33%">
 <a href="screenshots/5.png"><img src="screenshots/5.png" alt="Service drawer — Changelog tab"></a>

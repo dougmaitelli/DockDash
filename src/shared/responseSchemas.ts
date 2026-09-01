@@ -45,6 +45,7 @@ export const serviceResponseSchema = z
     source: z.enum(ServiceSource),
     status: z.enum(ServiceStatus),
     metadata: serviceMetadataResponseSchema.optional(),
+    labels: z.array(z.string()).default([]),
     sourceName: z.string().optional(),
     onDashboard: z.boolean().optional(),
     cpuPercent: z.number().optional(),
@@ -144,6 +145,7 @@ export const sseScanDoneResponseSchema = z
 export const sseScanErrorResponseSchema = z.object({ message: z.string() }).strip();
 
 export const apiSuccessResponseSchema = z.object({ success: z.boolean() }).strip();
+export const serviceLabelsResponseSchema = z.array(z.string());
 
 export const savePositionsResponseSchema = z
   .object({ positions: z.array(servicePositionResponseSchema) })

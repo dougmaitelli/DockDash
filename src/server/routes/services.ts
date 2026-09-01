@@ -12,6 +12,7 @@ import {
 import type { ApiSuccess, SavePositionsResponse } from "@shared/responseSchemas.js";
 
 import { historyRepository } from "../db/historyRepository.js";
+import { labelRepository } from "../db/labelRepository.js";
 import { serviceRepository } from "../db/serviceRepository.js";
 import { config } from "../lib/config.js";
 import { logger } from "../lib/logService.js";
@@ -29,6 +30,10 @@ router.get("/services", (_req, res) => {
       .getServices()
       .map((service) => containerRuntimeService.withSourceName(service)),
   );
+});
+
+router.get("/labels", (_req, res) => {
+  res.json(labelRepository.getAll());
 });
 
 router.get("/serviceStatuses", (_req, res) => {
@@ -59,7 +64,7 @@ router.get("/services/:id", (req, res) => {
 });
 
 router.post("/services", validateBody(createServiceRequestSchema), (req, res) => {
-  const { name, host, protocol, ports, checkPort, source, metadata } =
+  const { name, host, protocol, ports, checkPort, source, metadata, labels } =
     req.body as CreateServiceRequest;
 
   const service = serviceRepository.saveService({
@@ -70,6 +75,7 @@ router.post("/services", validateBody(createServiceRequestSchema), (req, res) =>
     checkPort,
     source: source || ServiceSource.NETWORK,
     metadata: metadata || {},
+    labels,
   });
 
   void healthCheckService
@@ -82,7 +88,7 @@ router.post("/services", validateBody(createServiceRequestSchema), (req, res) =>
 });
 
 router.put("/services/:id", validateBody(updateServiceRequestSchema), (req, res) => {
-  const { name, host, protocol, ports, checkPort } = req.body as UpdateServiceRequest;
+  const { name, host, protocol, ports, checkPort, labels } = req.body as UpdateServiceRequest;
 
   try {
     const serviceId = String(req.params.id);
@@ -92,6 +98,7 @@ router.put("/services/:id", validateBody(updateServiceRequestSchema), (req, res)
       protocol,
       ports: Array.isArray(ports) ? ports : undefined,
       checkPort,
+      labels,
     });
 
     void healthCheckService

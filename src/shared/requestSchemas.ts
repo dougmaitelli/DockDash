@@ -1,9 +1,35 @@
 import { z } from "zod";
 
+import {
+  normalizeServiceLabel,
+  SERVICE_LABEL_MAX_COUNT,
+  SERVICE_LABEL_MAX_LENGTH,
+} from "./serviceLabels.js";
 import { ServiceLinkType, ServiceProtocol, ServiceSource } from "./types.js";
 
 const nonEmptyString = z.string().trim().min(1);
 const port = z.number().int().min(1).max(65535);
+const serviceLabel = nonEmptyString.max(SERVICE_LABEL_MAX_LENGTH);
+const serviceLabels = z
+  .array(serviceLabel)
+  .max(SERVICE_LABEL_MAX_COUNT)
+  .superRefine((labels, ctx) => {
+    const seen = new Set<string>();
+
+    labels.forEach((label, index) => {
+      const normalized = normalizeServiceLabel(label);
+
+      if (seen.has(normalized)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Duplicate service label",
+          path: [index],
+        });
+      }
+
+      seen.add(normalized);
+    });
+  });
 
 const serviceMetadataSchema = z
   .object({
@@ -36,6 +62,7 @@ export const createServiceRequestSchema = z
     checkPort: port.optional(),
     source: z.enum(ServiceSource).optional(),
     metadata: serviceMetadataSchema.optional(),
+    labels: serviceLabels.optional(),
   })
   .strict();
 
@@ -46,6 +73,7 @@ export const updateServiceRequestSchema = z
     protocol: z.enum(ServiceProtocol).nullable().optional(),
     ports: z.array(port).nullable().optional(),
     checkPort: port.nullable().optional(),
+    labels: serviceLabels.optional(),
   })
   .strict();
 

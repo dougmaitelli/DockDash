@@ -18,6 +18,10 @@ const mockSvcRepo = vi.hoisted(() => ({
   getServicePositions: vi.fn(),
 }));
 
+const mockLabelRepo = vi.hoisted(() => ({
+  getAll: vi.fn(),
+}));
+
 const mockHistRepo = vi.hoisted(() => ({
   getHealthHistory: vi.fn(),
   getResourceHistory: vi.fn(),
@@ -50,6 +54,7 @@ const mockLogger = vi.hoisted(() => ({
 
 vi.mock("@server/lib/config.js", () => ({ config: mockConfig }));
 vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockSvcRepo }));
+vi.mock("@server/db/labelRepository.js", () => ({ labelRepository: mockLabelRepo }));
 vi.mock("@server/db/historyRepository.js", () => ({ historyRepository: mockHistRepo }));
 vi.mock("@server/services/healthCheckService.js", () => ({
   healthCheckService: mockHealthCheckService,
@@ -78,10 +83,24 @@ const makeService = (overrides = {}) => ({
   source: ServiceSource.NETWORK,
   status: ServiceStatus.UNKNOWN,
   metadata: {},
+  labels: [],
   onDashboard: false,
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,
+});
+
+describe("GET /api/labels", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns the reusable label catalog", async () => {
+    mockLabelRepo.getAll.mockReturnValue(["Backend", "Production"]);
+
+    const res = await request(app).get("/api/labels");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(["Backend", "Production"]);
+  });
 });
 
 describe("GET /api/services", () => {
@@ -240,7 +259,22 @@ describe("POST /api/services", () => {
       checkPort: undefined,
       source: ServiceSource.NETWORK,
       metadata: {},
+      labels: undefined,
     });
+  });
+
+  it("forwards labels when creating a service", async () => {
+    mockSvcRepo.saveService.mockReturnValue(makeService({ labels: ["Production"] }));
+    mockHealthCheckService.checkSingleService.mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post("/api/services")
+      .send({ name: "Svc", host: "host", labels: ["Production"] });
+
+    expect(res.status).toBe(201);
+    expect(mockSvcRepo.saveService).toHaveBeenCalledWith(
+      expect.objectContaining({ labels: ["Production"] }),
+    );
   });
 
   it("returns 400 when name missing", async () => {
@@ -360,6 +394,19 @@ describe("PUT /api/services/:id", () => {
     expect(mockSvcRepo.updateService).toHaveBeenCalledWith(
       "svc-1",
       expect.objectContaining({ protocol: null }),
+    );
+  });
+
+  it("forwards an explicit empty label list", async () => {
+    mockSvcRepo.updateService.mockReturnValue(makeService({ labels: [] }));
+    mockHealthCheckService.checkSingleService.mockResolvedValue(undefined);
+
+    const res = await request(app).put("/api/services/svc-1").send({ labels: [] });
+
+    expect(res.status).toBe(200);
+    expect(mockSvcRepo.updateService).toHaveBeenCalledWith(
+      "svc-1",
+      expect.objectContaining({ labels: [] }),
     );
   });
 });

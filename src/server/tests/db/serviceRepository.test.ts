@@ -1,9 +1,11 @@
+import type { LabelRepository } from "@server/db/labelRepository.js";
 import type { ServiceRepository } from "@server/db/serviceRepository.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ServiceLinkType, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 
 let svcRepo: ServiceRepository;
+let labelRepo: LabelRepository;
 let connSqlite: { close(): void };
 
 beforeEach(async () => {
@@ -14,6 +16,7 @@ beforeEach(async () => {
   const connMod = await import("@server/db/connection.js");
 
   connSqlite = connMod.sqlite;
+  labelRepo = (await import("@server/db/labelRepository.js")).labelRepository;
   svcRepo = (await import("@server/db/serviceRepository.js")).serviceRepository;
 });
 
@@ -106,6 +109,78 @@ describe("updateService", () => {
     expect(() => svcRepo.updateService("nonexistent", { name: "x", host: "y", ports: [] })).toThrow(
       "Service not found",
     );
+  });
+});
+
+describe("service labels", () => {
+  it("saves labels and hydrates them on individual and list reads", () => {
+    const service = svcRepo.saveService({
+      name: "labeled",
+      host: "host",
+      source: ServiceSource.NETWORK,
+      labels: ["Production", "Backend"],
+    });
+
+    expect(service.labels).toEqual(["Backend", "Production"]);
+    expect(svcRepo.getService(service.id!)?.labels).toEqual(["Backend", "Production"]);
+    expect(svcRepo.getServices().find(({ id }) => id === service.id)?.labels).toEqual([
+      "Backend",
+      "Production",
+    ]);
+    expect(labelRepo.getAll()).toEqual(["Backend", "Production"]);
+  });
+
+  it("reuses labels case-insensitively and preserves the original display name", () => {
+    const first = svcRepo.saveService({
+      name: "first",
+      host: "first",
+      source: ServiceSource.NETWORK,
+      labels: ["Production"],
+    });
+    const second = svcRepo.saveService({
+      name: "second",
+      host: "second",
+      source: ServiceSource.NETWORK,
+      labels: ["production"],
+    });
+
+    expect(first.labels).toEqual(["Production"]);
+    expect(second.labels).toEqual(["Production"]);
+    expect(labelRepo.getAll()).toEqual(["Production"]);
+  });
+
+  it("preserves omitted labels, clears explicit empty labels, and removes orphans", () => {
+    const service = svcRepo.saveService({
+      name: "service",
+      host: "host",
+      source: ServiceSource.NETWORK,
+      labels: ["Temporary"],
+    });
+
+    expect(svcRepo.updateService(service.id!, { name: "renamed" }).labels).toEqual(["Temporary"]);
+    expect(svcRepo.updateService(service.id!, { labels: [] }).labels).toEqual([]);
+    expect(labelRepo.getAll()).toEqual([]);
+  });
+
+  it("keeps shared labels until the final assigned service is deleted", () => {
+    const first = svcRepo.saveService({
+      name: "first",
+      host: "first",
+      source: ServiceSource.NETWORK,
+      labels: ["Shared"],
+    });
+    const second = svcRepo.saveService({
+      name: "second",
+      host: "second",
+      source: ServiceSource.NETWORK,
+      labels: ["shared"],
+    });
+
+    svcRepo.deleteService(first.id!);
+    expect(labelRepo.getAll()).toEqual(["Shared"]);
+
+    svcRepo.deleteService(second.id!);
+    expect(labelRepo.getAll()).toEqual([]);
   });
 });
 

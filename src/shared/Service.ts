@@ -13,6 +13,7 @@ export class Service {
   source!: ServiceSource;
   status: ServiceStatus = ServiceStatus.UNKNOWN;
   metadata?: ServiceMetadata;
+  labels?: string[];
   sourceName?: string;
   onDashboard?: boolean;
   cpuPercent?: number;

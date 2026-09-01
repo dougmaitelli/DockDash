@@ -28,6 +28,7 @@ import {
   kubernetesClusterHealthResponseSchema,
   resourceHistoryResponseSchema,
   savePositionsResponseSchema,
+  serviceLabelsResponseSchema,
   serviceLinkResponseSchema,
   serviceResponseSchema,
   serviceStatusResponseSchema,
@@ -94,6 +95,7 @@ export const authApi = {
 // Service management APIs
 export const serviceApi = {
   getAll: () => validated(api.get("/services"), serviceResponseSchema.array()),
+  getLabels: () => validated(api.get("/labels"), serviceLabelsResponseSchema),
   getById: (id: string) => validated(api.get(`/services/${id}`), serviceResponseSchema),
   importService: (data: CreateServiceRequest) =>
     validated(api.post("/services", data), serviceResponseSchema),

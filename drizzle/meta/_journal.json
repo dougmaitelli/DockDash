@@ -78,6 +78,13 @@
       "when": 1787877942514,
       "tag": "0010_naive_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1788240375236,
+      "tag": "0011_fearless_riptide",
+      "breakpoints": true
     }
   ]
 }

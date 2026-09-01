@@ -53,6 +53,13 @@ describe("response schemas", () => {
     expect(parsed.metadata).toEqual({ dockerHostId: "host-id", containerId: "abc123" });
   });
 
+  it("defaults missing service labels and retains returned labels", () => {
+    expect(serviceResponseSchema.parse(service).labels).toEqual([]);
+    expect(serviceResponseSchema.parse({ ...service, labels: ["Production"] }).labels).toEqual([
+      "Production",
+    ]);
+  });
+
   it("rejects malformed SSE completion payloads", () => {
     expect(() => sseScanDoneResponseSchema.parse({ count: -1 })).toThrow();
   });

@@ -19,7 +19,8 @@ import type {
   UpdateServiceRequest,
 } from "@shared/requestSchemas.js";
 
-import { orm } from "./connection.js";
+import { orm, sqlite } from "./connection.js";
+import { labelRepository } from "./labelRepository.js";
 import { serviceLinks, servicePositions, services } from "./schema/index.js";
 
 export class ServiceRepository {
@@ -36,30 +37,39 @@ export class ServiceRepository {
       source: data.source ?? ServiceSource.NETWORK,
       status: ServiceStatus.UNKNOWN,
       metadata: data.metadata,
+      labels: [],
       createdAt: now,
       updatedAt: now,
     };
 
-    orm.insert(services).values(service).run();
+    sqlite.transaction(() => {
+      orm.insert(services).values(service).run();
 
-    return service;
+      if (data.labels?.length) labelRepository.replaceForService(service.id, data.labels);
+    })();
+
+    return this.requireService(service.id);
   }
 
   updateService(id: string, data: UpdateServiceRequest): Service {
     this.requireService(id);
 
-    orm
-      .update(services)
-      .set({
-        name: data.name,
-        host: data.host,
-        protocol: data.protocol,
-        ports: data.ports === null ? [] : data.ports,
-        checkPort: data.checkPort,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(services.id, id))
-      .run();
+    sqlite.transaction(() => {
+      orm
+        .update(services)
+        .set({
+          name: data.name,
+          host: data.host,
+          protocol: data.protocol,
+          ports: data.ports === null ? [] : data.ports,
+          checkPort: data.checkPort,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(services.id, id))
+        .run();
+
+      if (data.labels !== undefined) labelRepository.replaceForService(id, data.labels);
+    })();
 
     return this.requireService(id);
   }
@@ -95,19 +105,24 @@ export class ServiceRepository {
         .all()
         .map((r) => r.serviceId),
     );
+    const labelsByServiceId = labelRepository.getByServiceId();
 
     return orm
       .select()
       .from(services)
       .orderBy(asc(services.name))
       .all()
-      .map((s) => ({ ...s, onDashboard: onDashboardIds.has(s.id) }));
+      .map((s) => ({
+        ...s,
+        labels: labelsByServiceId.get(s.id) ?? [],
+        onDashboard: onDashboardIds.has(s.id),
+      }));
   }
 
   getService(id: string): Service | undefined {
     const row = orm.select().from(services).where(eq(services.id, id)).get();
 
-    return row ?? undefined;
+    return row ? { ...row, labels: labelRepository.getForService(id) } : undefined;
   }
 
   requireService(id: string): Service {
@@ -119,7 +134,10 @@ export class ServiceRepository {
   }
 
   deleteService(id: string): void {
-    orm.delete(services).where(eq(services.id, id)).run();
+    sqlite.transaction(() => {
+      orm.delete(services).where(eq(services.id, id)).run();
+      labelRepository.deleteOrphans();
+    })();
   }
 
   saveServicePosition(position: PositionUpdate): void {

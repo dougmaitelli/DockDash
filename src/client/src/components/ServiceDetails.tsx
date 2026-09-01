@@ -7,12 +7,13 @@ import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
 import { NumberInput } from "@/components/NumberInput";
 import { Select } from "@/components/Select";
+import { ServiceLabelInput } from "@/components/ServiceLabelInput";
 import { NumberTagArrayInput } from "@/components/TagArrayInput";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useConfig } from "@/context/ConfigContext";
 import { useFormValidation } from "@/hooks/useFormValidation";
-import { tlsCertificateApi } from "@/services/api";
+import { serviceApi, tlsCertificateApi } from "@/services/api";
 
 import { ContainerResourceMonitor } from "./ContainerResourceMonitor";
 import { HealthHistoryGraph } from "./HealthHistoryGraph";
@@ -35,6 +36,8 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
   const [editProtocol, setEditProtocol] = useState<ServiceProtocol | "">(service.protocol ?? "");
   const [editPorts, setEditPorts] = useState<number[]>(service.ports ?? []);
   const [editCheckPort, setEditCheckPort] = useState(service.checkPort?.toString() ?? "");
+  const [editLabels, setEditLabels] = useState<string[]>(service.labels ?? []);
+  const [labelSuggestions, setLabelSuggestions] = useState<string[]>(service.labels ?? []);
   const [metadataExpanded, setMetadataExpanded] = useState(false);
   const [certificatesExpanded, setCertificatesExpanded] = useState(false);
   const [liveCertificate, setLiveCertificate] = useState<TlsCertificate | null>(null);
@@ -57,6 +60,19 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
         value: Array.isArray(value) ? value.join(", ") : String(value),
       }))
     : [];
+
+  useEffect(() => {
+    let cancelled = false;
+
+    serviceApi
+      .getLabels()
+      .then(({ data }) => !cancelled && setLabelSuggestions(data))
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [service.id]);
 
   useEffect(() => {
     setLiveCertificate(null);
@@ -111,6 +127,7 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
       protocol: editProtocol || null,
       ports: editPorts,
       checkPort: isNaN(checkPort) ? null : checkPort,
+      labels: editLabels,
     });
   };
 
@@ -212,6 +229,14 @@ export function ServiceDetails({ service, onSave, onDelete, onCancel }: ServiceD
               clearError("checkPort");
             }}
             placeholder={t("modals.checkPortPlaceholder")}
+          />
+        </FormGroup>
+        <FormGroup>
+          <Label>{t("modals.labels")}</Label>
+          <ServiceLabelInput
+            values={editLabels}
+            suggestions={labelSuggestions}
+            onChange={setEditLabels}
           />
         </FormGroup>
 
