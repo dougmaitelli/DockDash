@@ -45,7 +45,7 @@
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.2",
+    "express-rate-limit": "^8.7.0",
     "express-session": "^1.19.0",
     "i18next": "^26.4.0",
     "lucide-react": "^1.33.0",
