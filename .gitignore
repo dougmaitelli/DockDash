@@ -9,3 +9,6 @@ dist
 *.db-wal
 .DS_Store
 coverage
+
+playwright-report/
+test-results/

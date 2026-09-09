@@ -18,7 +18,7 @@ Requirements:
 
 - Node.js 26
 - pnpm 11.x
-- Docker, only when testing real container discovery and controls
+- Docker for the canonical screenshot test environment or real container discovery and controls
 
 Install dependencies and start the mock development environment:
 
@@ -51,9 +51,16 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
+pnpm typecheck:e2e
+pnpm test:e2e:docker
 ```
 
 Use `pnpm lint:fix` to apply supported ESLint and Prettier fixes. New behavior should include tests at the closest applicable layer.
+
+For expected UI changes, review the visual differences and commit updated screenshot
+baselines in the same PR. Generate them with `pnpm test:e2e:docker --update-snapshots`
+and rerun without the update flag. See [Browser tests](e2e/README.md) for filtering
+tests, debugging failures, and reviewing reports.
 
 ## Pull requests
 

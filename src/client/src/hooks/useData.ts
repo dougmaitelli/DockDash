@@ -205,17 +205,27 @@ export function useDashboard() {
   const base = useServices();
   const [positionsById, setPositionsById] = useState<Record<string, ServicePosition>>({});
   const [links, setLinks] = useState<ServiceLink[]>([]);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
 
   const refreshDashboardExtras = useCallback(async () => {
-    const res = await dashboardApi.get();
-    const positions: Record<string, ServicePosition> = {};
+    setDashboardLoading(true);
+    setDashboardError(null);
+    try {
+      const res = await dashboardApi.get();
+      const positions: Record<string, ServicePosition> = {};
 
-    for (const s of res.data.services) {
-      if (s.position) positions[s.id!] = s.position;
+      for (const s of res.data.services) {
+        if (s.position) positions[s.id!] = s.position;
+      }
+
+      setPositionsById(positions);
+      setLinks(res.data.links);
+    } catch (error) {
+      setDashboardError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setDashboardLoading(false);
     }
-
-    setPositionsById(positions);
-    setLinks(res.data.links);
   }, []);
 
   useEffect(() => {
@@ -280,8 +290,8 @@ export function useDashboard() {
     allServices: base.services,
     services,
     links,
-    loading: base.loading,
-    error: base.error,
+    loading: base.loading || dashboardLoading,
+    error: base.error ?? dashboardError,
     refresh,
     updatePosition,
     addService: base.addService,

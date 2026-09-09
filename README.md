@@ -190,11 +190,14 @@ pnpm dev             # starts both Vite (port 8081) and the Express server (port
 pnpm dev:mock        # same as dev but with no Docker dependency — uses an in-memory database pre-seeded with six containers and 30 days of synthetic health and resource history
 pnpm test            # run the server-side test suite
 pnpm test:coverage   # run tests with V8 coverage report (output: coverage/)
+pnpm test:e2e:docker # browser integration tests and screenshot comparisons
 pnpm typecheck       # type-check client and server
 pnpm lint:fix        # auto-fix lint and formatting
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete development workflow, database migration guidance, required checks, and pull-request expectations.
+
+See [Browser tests](e2e/README.md) for local debugging, CI reports, and updating screenshot baselines for intentional UI changes.
 
 ## Community and support
 

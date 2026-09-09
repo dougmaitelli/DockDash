@@ -1,0 +1,33 @@
+name: UI Tests
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: UI integration and screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run in the canonical browser environment
+        run: sh scripts/e2e-docker.sh
+      - name: Upload report, traces, and screenshot differences
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

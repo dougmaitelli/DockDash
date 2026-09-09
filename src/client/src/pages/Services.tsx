@@ -106,7 +106,9 @@ function ServiceHost({ service }: { service: Service }) {
 
   return (
     <div className="flex items-center gap-1.5">
-      <span>{service.host}</span>
+      <span className="truncate" title={service.host}>
+        {service.host}
+      </span>
       <CertificateHealthDot health={certificateHealth} />
     </div>
   );
@@ -211,7 +213,7 @@ export default function Services() {
 
       <Card className="w-full min-w-0 overflow-hidden p-0">
         <div className="w-full min-w-0 overflow-x-auto">
-          <table className="w-full table-fixed text-sm min-w-[850px]">
+          <table className="w-full table-fixed text-sm min-w-[1100px]">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <FilterHeader
@@ -332,9 +334,9 @@ export default function Services() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">
-                      <span className="inline-flex items-center gap-2">
+                      <span className="flex items-center gap-2 min-w-0" title={service.name}>
                         <ServiceIcon service={service} size={18} />
-                        {service.name}
+                        <span className="truncate">{service.name}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-secondary-foreground">
