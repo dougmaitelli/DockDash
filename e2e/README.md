@@ -60,12 +60,16 @@ baselines in the updated image, and review the rendering differences.
 ## Coverage and deterministic inputs
 
 - Desktop dark/light: dashboard nodes and links; service table/search; drawer
-  certificate, resource, changelog, file, log, and terminal views; Docker discovery
+  certificate, resource, changelog, file, log, and terminal views; Docker/Kubernetes discovery
   and importing; CIDR and add-service validation; settings/theme persistence;
   empty states; dashboard error/retry; login and authentication errors.
 - Fixed server/browser dates, locale, timezone, IDs, metrics, and history. No
-  real Docker daemon, registry, identity provider, network scan, or host file
+  real Docker daemon, Kubernetes cluster, registry, identity provider, network scan, or host file
   operations. CDN service icons use one local mock SVG.
+- The default dataset mixes four Docker services with two Kubernetes services
+  in the `homelab` context and `monitoring` namespace. Existing flows check both
+  sources on the dashboard/table, Kubernetes controls and pod resource counters,
+  both runtimes' detail tabs, and discovery/import persistence for each runtime.
 - Browser exceptions and unexpected external browser requests fail the test.
 - One worker prevents shared database races. Fresh browser contexts and database
   resets isolate tests. Tests wait for meaningful UI content and loaded images

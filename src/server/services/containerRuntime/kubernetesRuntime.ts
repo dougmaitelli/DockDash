@@ -12,11 +12,13 @@ import {
   ServiceStatus,
 } from "@shared";
 import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
+import { parseResourceQuantity } from "@shared/resourceQuantity.js";
 
 import { serviceRepository } from "../../db/serviceRepository.js";
 import { config } from "../../lib/config.js";
 import { detectProtocolByPort } from "../../lib/constants.js";
 import { terminalService } from "../terminalService.js";
+import { diskCounters, networkCounters } from "./kubernetesMetrics.js";
 import type { ContainerRuntime, RuntimeTerminalSession } from "./types.js";
 
 type Client = { context: string; id: string; kc: k8s.KubeConfig; api: k8s.CoreV1Api };
@@ -31,6 +33,34 @@ export interface KubernetesHealth {
 
 export class KubernetesRuntime implements ContainerRuntime {
   private readonly clients = new Map<string, Client>();
+  private readonly nodeMetrics = new Map<
+    string,
+    { expires: number; result: Promise<{ summary: unknown; cadvisor: string }> }
+  >();
+
+  private nodeStats(client: Client, node: string) {
+    const key = `${client.id}/${node}`;
+    const cached = this.nodeMetrics.get(key);
+
+    if (cached && cached.expires > Date.now()) return cached.result;
+
+    for (const [id, entry] of this.nodeMetrics)
+      if (entry.expires <= Date.now()) this.nodeMetrics.delete(id);
+
+    const result = Promise.all([
+      client.api
+        .connectGetNodeProxyWithPath({ name: node, path: "stats/summary" })
+        .then((raw) => (typeof raw === "string" ? JSON.parse(raw) : raw))
+        .catch(() => null),
+      client.api
+        .connectGetNodeProxyWithPath({ name: node, path: "metrics/cadvisor" })
+        .catch(() => ""),
+    ]).then(([summary, cadvisor]) => ({ summary, cadvisor }));
+
+    this.nodeMetrics.set(key, { expires: Date.now() + 5000, result });
+
+    return result;
+  }
 
   constructor() {
     if (config.kubernetesEnabled !== "true") return;
@@ -431,8 +461,7 @@ export class KubernetesRuntime implements ContainerRuntime {
     );
   }
 
-  async stats(_service: Service): Promise<ContainerStats> {
-    const service = _service;
+  async stats(service: Service): Promise<ContainerStats> {
     const client = this.resolve(service);
     const metrics = await new k8s.Metrics(client.kc).getPodMetrics(service.metadata!.namespace!);
     const usage = metrics.items
@@ -448,43 +477,42 @@ export class KubernetesRuntime implements ContainerRuntime {
     const spec = pod.spec?.containers.find(
       (container) => container.name === service.metadata!.containerName,
     );
-    const memoryUsed = this.bytes(usage.memory);
-    const memoryLimit = this.bytes(String(spec?.resources?.limits?.memory ?? "0"));
+    const memoryUsed = parseResourceQuantity(usage.memory);
+    let memoryLimit = parseResourceQuantity(String(spec?.resources?.limits?.memory ?? "0"));
+
+    if (!memoryLimit && pod.spec?.nodeName) {
+      const node = await client.api.readNode({ name: pod.spec.nodeName });
+
+      memoryLimit = parseResourceQuantity(
+        String(node.status?.allocatable?.memory ?? node.status?.capacity?.memory ?? "0"),
+      );
+    }
+
+    if (!memoryLimit) throw new Error("Memory limit or node memory capacity is unavailable");
+
+    const extra = pod.spec?.nodeName ? await this.nodeStats(client, pod.spec.nodeName) : null;
+    const network = networkCounters(
+      extra?.summary,
+      pod.metadata?.uid,
+      service.metadata!.namespace!,
+      service.metadata!.podName!,
+    );
+    const disk = diskCounters(
+      extra?.cadvisor ?? "",
+      service.metadata!.namespace!,
+      service.metadata!.podName!,
+      service.metadata!.containerName!,
+    );
 
     return {
-      cpuPercent: Math.round(this.cores(usage.cpu) * 1000) / 10,
+      cpuPercent: Math.round(parseResourceQuantity(usage.cpu) * 1000) / 10,
       memoryUsed,
       memoryLimit,
-      memoryPercent: memoryLimit ? Math.round((memoryUsed / memoryLimit) * 1000) / 10 : 0,
-      networkRx: 0,
-      networkTx: 0,
-      blockRead: 0,
-      blockWrite: 0,
+      memoryPercent: Math.round((memoryUsed / memoryLimit) * 1000) / 10,
+      ...network,
+      networkScope: "pod",
+      ...disk,
     };
-  }
-
-  private cores(value: string): number {
-    if (value.endsWith("n")) return Number(value.slice(0, -1)) / 1e9;
-
-    if (value.endsWith("u")) return Number(value.slice(0, -1)) / 1e6;
-
-    if (value.endsWith("m")) return Number(value.slice(0, -1)) / 1e3;
-
-    return Number(value);
-  }
-
-  private bytes(value: string): number {
-    const units: Record<string, number> = {
-      Ki: 1024,
-      Mi: 1024 ** 2,
-      Gi: 1024 ** 3,
-      K: 1e3,
-      M: 1e6,
-      G: 1e9,
-    };
-    const match = value.match(/^([\d.]+)([A-Za-z]+)?$/);
-
-    return match ? Number(match[1]) * (units[match[2] ?? ""] ?? 1) : 0;
   }
 }
 

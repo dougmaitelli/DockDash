@@ -45,7 +45,7 @@ function makeService(
   };
 }
 
-export const SERVICES = [
+const BASE_SERVICES = [
   {
     ...makeService(
       IDS.traefik,
@@ -146,6 +146,30 @@ export const SERVICES = [
   ),
 ];
 
+export const SERVICES = BASE_SERVICES.map((service) => {
+  if (service.id !== IDS.grafana && service.id !== IDS.prometheus) return service;
+
+  return {
+    ...service,
+    source: "kubernetes",
+    sourceName: "homelab",
+    host: service.id === IDS.grafana ? "10.42.0.14" : "10.42.0.15",
+    metadata: {
+      clusterId: "e2e-cluster",
+      kubernetesContext: "homelab",
+      namespace: "monitoring",
+      podName: `${service.name}-7b8f9c6d5-abcde`,
+      podUid: `${service.id}-pod`,
+      containerName: service.name,
+      workloadKind: "Deployment",
+      workloadName: service.name,
+      image: service.metadata.image,
+      imageTag: service.metadata.imageTag,
+      hasUpdate: false,
+    },
+  };
+});
+
 export const RESOURCE_USAGE: Record<string, { cpuPercent: number; memoryPercent: number }> = {
   [IDS.traefik]: { cpuPercent: 12.4, memoryPercent: 22.8 },
   [IDS.nginx]: { cpuPercent: 18.7, memoryPercent: 12.3 },
@@ -225,9 +249,9 @@ export const CONFIG = dashboardConfigResponseSchema.parse({
   certVaultConfigured: false,
   certVaultUrl: null,
   dockerHosts: ["unix:///var/run/docker.sock"],
-  kubernetesEnabled: "false",
-  kubernetesContexts: [],
-  kubernetesNamespaces: [],
+  kubernetesEnabled: "true",
+  kubernetesContexts: ["homelab"],
+  kubernetesNamespaces: ["monitoring"],
   networkCidrs: [],
   healthCheckInterval: 30000,
   resourceMonitorInterval: 5000,

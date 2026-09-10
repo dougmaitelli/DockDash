@@ -1,4 +1,5 @@
 export * from "./responseSchemas.js";
+export * from "./resourceQuantity.js";
 export * from "./Service.js";
 export * from "./serviceCapabilities.js";
 export * from "./serviceLabels.js";

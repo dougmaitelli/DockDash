@@ -6,6 +6,8 @@ const api = vi.hoisted(() => ({
   listNamespacedPod: vi.fn(),
   readNamespacedPod: vi.fn(),
   deleteNamespacedPod: vi.fn(),
+  readNode: vi.fn(),
+  connectGetNodeProxyWithPath: vi.fn(),
 }));
 const exec = vi.hoisted(() => vi.fn());
 const log = vi.hoisted(() => vi.fn());
@@ -75,6 +77,7 @@ const pod = {
     ownerReferences: [{ name: "web-abcdef1234", kind: "ReplicaSet", controller: true }],
   },
   spec: {
+    nodeName: "node-1",
     containers: [
       {
         name: "web",
@@ -122,6 +125,16 @@ describe("KubernetesRuntime", () => {
     api.listNamespacedPod.mockResolvedValue({ items: [pod] });
     api.readNamespacedPod.mockResolvedValue(pod);
     api.deleteNamespacedPod.mockResolvedValue({});
+    api.readNode.mockResolvedValue({ status: { allocatable: { memory: "1Gi" } } });
+    api.connectGetNodeProxyWithPath.mockResolvedValue("");
+    getPodMetrics.mockResolvedValue({
+      items: [
+        {
+          metadata: { name: "web-abc123" },
+          containers: [{ name: "web", usage: { cpu: "250m", memory: "128Mi" } }],
+        },
+      ],
+    });
     log.mockResolvedValue({ abort: vi.fn() });
     registerSession.mockImplementation((_owner, stream) => ({ sessionId: "session", stream }));
   });
@@ -197,6 +210,16 @@ describe("KubernetesRuntime", () => {
   it("streams logs and aborts the Kubernetes request when closed", async () => {
     const abort = vi.fn();
 
+    api.readNode.mockResolvedValue({ status: { allocatable: { memory: "1Gi" } } });
+    api.connectGetNodeProxyWithPath.mockResolvedValue("");
+    getPodMetrics.mockResolvedValue({
+      items: [
+        {
+          metadata: { name: "web-abc123" },
+          containers: [{ name: "web", usage: { cpu: "250m", memory: "128Mi" } }],
+        },
+      ],
+    });
     log.mockResolvedValueOnce({ abort });
     const output = await new KubernetesRuntime().logs(service());
 
@@ -271,6 +294,94 @@ describe("KubernetesRuntime", () => {
       memoryLimit: 256 * 1024 * 1024,
       memoryPercent: 50,
     });
+  });
+
+  it("reads pod network and container disk counters and shares node requests", async () => {
+    api.connectGetNodeProxyWithPath.mockImplementation(async ({ path }) =>
+      path === "stats/summary"
+        ? JSON.stringify({
+            pods: [
+              {
+                podRef: { uid: "old-pod", name: "web-abc123", namespace: "default" },
+                network: { rxBytes: 999, txBytes: 999 },
+              },
+              {
+                podRef: { uid: "pod-uid", name: "web-abc123", namespace: "default" },
+                network: { rxBytes: 1234, txBytes: 5678 },
+              },
+            ],
+          })
+        : 'container_fs_reads_bytes_total{namespace="default",pod="web-abc123",container="web"} 42\ncontainer_fs_writes_bytes_total{namespace="default",pod="web-abc123",container="web"} 84',
+    );
+    const runtime = new KubernetesRuntime();
+    const results = await Promise.all([runtime.stats(service()), runtime.stats(service())]);
+
+    expect(results[0]).toMatchObject({
+      networkRx: 1234,
+      networkTx: 5678,
+      networkScope: "pod",
+      blockRead: 42,
+      blockWrite: 84,
+    });
+    expect(api.connectGetNodeProxyWithPath).toHaveBeenCalledTimes(2);
+    expect(api.connectGetNodeProxyWithPath).toHaveBeenCalledWith({
+      name: "node-1",
+      path: "stats/summary",
+    });
+  });
+
+  it("keeps CPU and memory when node proxy access is denied", async () => {
+    api.connectGetNodeProxyWithPath.mockRejectedValue(new Error("Forbidden"));
+    await expect(new KubernetesRuntime().stats(service())).resolves.toMatchObject({
+      cpuPercent: 25,
+      memoryPercent: 50,
+      networkRx: null,
+      networkTx: null,
+      blockRead: null,
+      blockWrite: null,
+    });
+  });
+
+  it("uses node allocatable memory when the container has no limit", async () => {
+    api.readNamespacedPod.mockResolvedValueOnce({
+      ...pod,
+      spec: { ...pod.spec, containers: [{ name: "web" }] },
+    });
+    await expect(new KubernetesRuntime().stats(service())).resolves.toMatchObject({
+      memoryLimit: 1024 ** 3,
+      memoryPercent: 12.5,
+    });
+    expect(api.readNode).toHaveBeenCalledWith({ name: "node-1" });
+  });
+
+  it("expires cached node failures so subsequent polls can recover", async () => {
+    let now = 10000;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
+
+    try {
+      api.connectGetNodeProxyWithPath.mockRejectedValue(new Error("Forbidden"));
+      const runtime = new KubernetesRuntime();
+
+      await runtime.stats(service());
+      await runtime.stats(service());
+      expect(api.connectGetNodeProxyWithPath).toHaveBeenCalledTimes(2);
+      now += 5001;
+      api.connectGetNodeProxyWithPath.mockResolvedValue("");
+      await runtime.stats(service());
+      expect(api.connectGetNodeProxyWithPath).toHaveBeenCalledTimes(4);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  it("does not record a fake memory percentage when no denominator is available", async () => {
+    api.readNamespacedPod.mockResolvedValueOnce({
+      ...pod,
+      spec: { containers: [{ name: "web" }] },
+    });
+    await expect(new KubernetesRuntime().stats(service())).rejects.toThrow(
+      "Memory limit or node memory capacity is unavailable",
+    );
   });
 
   it("rejects incomplete metadata and unavailable metrics", async () => {

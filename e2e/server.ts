@@ -17,6 +17,7 @@ import { orm, sqlite } from "../src/server/db/connection.js";
 import { labelRepository } from "../src/server/db/labelRepository.js";
 import { serviceLinks, servicePositions, services } from "../src/server/db/schema/index.js";
 import { BackgroundJob } from "../src/server/jobs/BackgroundJob.js";
+import { config } from "../src/server/lib/config.js";
 import { appUpdateService } from "../src/server/services/appUpdateService.js";
 import { certVaultService } from "../src/server/services/certVaultService.js";
 import { changelogService } from "../src/server/services/changelogService.js";
@@ -24,6 +25,7 @@ import {
   DockerRuntime,
   overrideDockerRuntime,
 } from "../src/server/services/containerRuntime/dockerRuntime.js";
+import { kubernetesRuntime } from "../src/server/services/containerRuntime/kubernetesRuntime.js";
 import { healthCheckService } from "../src/server/services/healthCheckService.js";
 import { MockDockerRuntime } from "../src/server/services/mock/mockDockerRuntime.js";
 import { networkScanner } from "../src/server/services/networkScanner.js";
@@ -68,7 +70,10 @@ function reset(nextScenario = "default") {
         .insert(services)
         .values({
           ...service,
-          metadata: { ...service.metadata, dockerHostId: hostId },
+          metadata:
+            service.source === ServiceSource.DOCKER
+              ? { ...service.metadata, dockerHostId: hostId }
+              : service.metadata,
           status: index === 3 ? ServiceStatus.DOWN : service.status,
         })
         .run();
@@ -113,7 +118,7 @@ class TestRuntime extends MockDockerRuntime {
   override async *scanDockerContainers(_docker: Docker, _host: string): AsyncGenerator<Service> {
     if (scenario === "scan-empty") return;
 
-    for (const service of data.services)
+    for (const service of data.services.filter((item) => item.source === ServiceSource.DOCKER))
       yield { ...service, metadata: { ...service.metadata, dockerHostId: hostId } };
 
     yield {
@@ -178,7 +183,69 @@ mock.method(tlsCertificateService, "getForService", async (id: string) => {
   return certificate ? tlsCertificateResponseSchema.parse(certificate) : null;
 });
 mock.method(networkScanner, "scanNetworkStream", async function* () {});
-overrideDockerRuntime(new TestRuntime());
+const testRuntime = new TestRuntime();
+
+overrideDockerRuntime(testRuntime);
+// Enable the UI after the real Kubernetes runtime initialized disabled, so no
+// kubeconfig or cluster credentials are loaded by this test process.
+mock.getter(config, "kubernetesEnabled", () => "true");
+mock.getter(config, "kubernetesContexts", () => ["homelab"]);
+mock.getter(config, "kubernetesNamespaces", () => ["monitoring"]);
+mock.method(kubernetesRuntime, "configured", () => true);
+mock.method(kubernetesRuntime, "health", async () => [
+  { context: "homelab", connected: true, namespaces: 1, pods: 3 },
+]);
+mock.method(kubernetesRuntime, "scan", async function* () {
+  if (scenario === "scan-empty") return;
+
+  const kubernetesServices = data.services.filter(
+    (item) => item.source === ServiceSource.KUBERNETES,
+  );
+
+  yield* kubernetesServices;
+  yield {
+    ...kubernetesServices[0],
+    id: "discovered-kube-agent",
+    name: "kube-agent",
+    host: "10.42.0.16",
+    metadata: {
+      ...kubernetesServices[0].metadata,
+      podName: "kube-agent-7b8f9c6d5-abcde",
+      podUid: "kube-agent-pod",
+      containerName: "kube-agent",
+      workloadName: "kube-agent",
+    },
+  };
+});
+mock.method(kubernetesRuntime, "stats", async () => ({
+  ...STATS,
+  cpuPercent: 37.5,
+  memoryPercent: 50,
+  memoryUsed: 256 * 1024 ** 2,
+  memoryLimit: 512 * 1024 ** 2,
+  networkScope: "pod",
+  blockRead: null,
+  blockWrite: null,
+}));
+mock.method(kubernetesRuntime, "listFiles", testRuntime.listFiles.bind(testRuntime));
+mock.method(kubernetesRuntime, "readFile", testRuntime.readFile.bind(testRuntime));
+mock.method(kubernetesRuntime, "writeFile", testRuntime.writeFile.bind(testRuntime));
+mock.method(kubernetesRuntime, "logs", async () => {
+  const stream = new PassThrough();
+
+  stream.end("2026-08-16T12:00:00.000Z GET /api/health 200 2ms\n");
+
+  return stream;
+});
+mock.method(kubernetesRuntime, "openTerminal", async (owner: string) => {
+  const stream = new PassThrough();
+  const session = terminalService.registerSession(owner, stream);
+
+  stream.write("root@grafana:/# ");
+
+  return session;
+});
+mock.method(kubernetesRuntime, "action", async () => {});
 reset();
 
 const { default: app } = await import("../src/server/index.js");

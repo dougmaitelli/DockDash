@@ -15,7 +15,9 @@ const PERIODS = [1, 7, 30] as const;
 
 type Period = (typeof PERIODS)[number];
 
-function formatBytes(bytes: number): string {
+function formatBytes(bytes: number | null): string {
+  if (bytes === null) return "—";
+
   if (bytes === 0) return "0 B";
 
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -183,7 +185,7 @@ export function ContainerResourceMonitor({ serviceId }: ContainerResourceMonitor
 
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold uppercase tracking-[0.5px] text-muted-foreground">
-                {`${t("drawer.resourceMonitor.network")} / ${t("drawer.resourceMonitor.disk")}`}
+                {`${t("drawer.resourceMonitor.network")}${stats.networkScope === "pod" ? " (Pod)" : ""} / ${t("drawer.resourceMonitor.disk")}`}
               </span>
               <div className="grid grid-cols-4 gap-2">
                 <StatCell

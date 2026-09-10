@@ -161,10 +161,11 @@ export const containerStatsResponseSchema = z
     memoryUsed: z.number(),
     memoryLimit: z.number(),
     memoryPercent: z.number(),
-    networkRx: z.number(),
-    networkTx: z.number(),
-    blockRead: z.number(),
-    blockWrite: z.number(),
+    networkScope: z.enum(["pod", "container"]).optional(),
+    networkRx: z.number().nullable(),
+    networkTx: z.number().nullable(),
+    blockRead: z.number().nullable(),
+    blockWrite: z.number().nullable(),
   })
   .strip();
 
