@@ -11,8 +11,8 @@ import {
   ServiceSource,
   ServiceStatus,
 } from "@shared";
-import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 import { parseResourceQuantity } from "@shared/resourceQuantity.js";
+import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 
 import { serviceRepository } from "../../db/serviceRepository.js";
 import { config } from "../../lib/config.js";
