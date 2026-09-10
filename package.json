@@ -94,7 +94,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-simple-import-sort": "^14.0.0",
-    "playwright": "1.62.1",
+    "playwright": "1.63.0",
     "prettier": "^3.9.6",
     "supertest": "^7.2.2",
     "tailwindcss": "^4.3.3",
