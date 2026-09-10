@@ -80,6 +80,37 @@ describe("ChangelogService", () => {
 
   afterEach(() => vi.clearAllMocks());
 
+  describe("notification release links", () => {
+    it("resolves the requested update tag, including its v-prefixed variant", async () => {
+      mockAxios.get
+        .mockRejectedValueOnce(new Error("not found"))
+        .mockResolvedValueOnce({ data: mockGithubRelease("v2.0.0") });
+
+      await expect(changelogService.fetchReleaseUrl(makeService(), "2.0.0")).resolves.toBe(
+        "https://github.com/owner/repo/releases/tag/v2.0.0",
+      );
+      expect(mockAxios.get).toHaveBeenLastCalledWith(
+        "https://api.github.com/repos/owner/my-app/releases/tags/v2.0.0",
+        expect.objectContaining({ timeout: 5000 }),
+      );
+    });
+
+    it("returns no link when the image repository cannot be resolved", async () => {
+      await expect(
+        changelogService.fetchReleaseUrl(makeService({ metadata: { image: "nginx" } }), "1.26"),
+      ).resolves.toBeUndefined();
+      expect(mockAxios.get).not.toHaveBeenCalled();
+    });
+
+    it("returns no link when GitHub has no matching release", async () => {
+      mockAxios.get.mockRejectedValue(new Error("not found"));
+
+      await expect(
+        changelogService.fetchReleaseUrl(makeService(), "2.0.0"),
+      ).resolves.toBeUndefined();
+    });
+  });
+
   describe("GitHub repository resolution", () => {
     it("resolves from the org.opencontainers.image.source OCI label", async () => {
       const containerInspect = { Image: "sha256:abc", Config: {} };

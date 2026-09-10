@@ -3,12 +3,19 @@ import { t } from "../i18n/index.js";
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
 import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
+import { changelogService } from "./changelogService.js";
 import { ConcurrentService } from "./ConcurrentService.js";
 import { containerRuntimeService } from "./containerRuntime/containerRuntimeService.js";
 import { notificationService } from "./notificationService.js";
 import { registryClient } from "./registryClient.js";
 
 type Service = ReturnType<typeof serviceRepository.getServices>[number];
+type UpdateNotice = {
+  name: string;
+  currentVersion: string;
+  latestVersion: string;
+  releaseUrl?: string;
+};
 
 export class UpdateCheckerService extends ConcurrentService {
   protected readonly concurrencyLimit = 5;
@@ -22,10 +29,7 @@ export class UpdateCheckerService extends ConcurrentService {
     const results = await this.mapWithConcurrency(containerServices, (service) =>
       this.checkServiceForUpdate(service),
     );
-    const newUpdates = results.filter(
-      (update): update is { name: string; currentVersion: string; latestVersion: string } =>
-        update !== null,
-    );
+    const newUpdates = results.filter((update) => update !== null);
 
     if (newUpdates.length === 0) return;
 
@@ -35,17 +39,15 @@ export class UpdateCheckerService extends ConcurrentService {
 
     const body = newUpdates
       .map(
-        ({ name, currentVersion, latestVersion }) =>
-          `• ${t("notifications.updateEntry", { name, currentVersion, latestVersion })}`,
+        ({ name, currentVersion, latestVersion, releaseUrl }) =>
+          `• ${t("notifications.updateEntry", { name, currentVersion, latestVersion })}${releaseUrl ? `\n  ${releaseUrl}` : ""}`,
       )
       .join("\n");
 
     notificationService.notify(title, body, "warning").catch(() => {});
   }
 
-  private async checkServiceForUpdate(
-    service: Service,
-  ): Promise<{ name: string; currentVersion: string; latestVersion: string } | null> {
+  private async checkServiceForUpdate(service: Service): Promise<UpdateNotice | null> {
     const image = service.metadata?.image;
     const imageTag = service.metadata?.imageTag;
 
@@ -125,7 +127,18 @@ export class UpdateCheckerService extends ConcurrentService {
     });
 
     if (hasUpdate && !previousHasUpdate && currentVersion && latestVersion) {
-      return { name: service.name, currentVersion, latestVersion };
+      let releaseUrl: string | undefined;
+
+      // Digest-only updates have no release tag to resolve.
+      if (notificationService.configured && TagParser.extractSemVer(imageTag)) {
+        try {
+          releaseUrl = await changelogService.fetchReleaseUrl(service, latestVersion);
+        } catch (err) {
+          logger.warn(`Update notification: release lookup failed for "${service.name}"`, err);
+        }
+      }
+
+      return { name: service.name, currentVersion, latestVersion, releaseUrl };
     }
 
     return null;

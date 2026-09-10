@@ -14,6 +14,11 @@ Notifications can be emitted when:
 - A TLS certificate approaches expiry, fails validation, recovers, or is renewed
 - A deployed certificate differs from CertVault, or that mismatch is resolved
 
+Container update notifications include the matching GitHub release URL beneath
+each version change when the repository and release tag can be resolved. Updates
+without a matching release, including digest-only updates, still send the version
+notification without a link. A failed GitHub lookup does not prevent delivery.
+
 ## Configure the endpoint
 
 | Variable       | Default | Description                                                                               |

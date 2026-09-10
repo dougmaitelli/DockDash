@@ -14,7 +14,13 @@ const mockRegistryClient = vi.hoisted(() => ({
 }));
 
 const mockNotificationService = vi.hoisted(() => ({
+  configured: true,
   notify: vi.fn().mockResolvedValue(undefined),
+}));
+const fetchReleaseUrl = vi.hoisted(() => vi.fn());
+
+vi.mock("@server/services/changelogService.js", () => ({
+  changelogService: { fetchReleaseUrl },
 }));
 
 vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockDb }));
@@ -50,6 +56,8 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNotificationService.notify.mockResolvedValue(undefined);
+    mockNotificationService.configured = true;
+    fetchReleaseUrl.mockResolvedValue(undefined);
     // Default: parseImageRef returns a valid ref
     mockRegistryClient.parseImageRef.mockReturnValue({
       registry: "registry-1.docker.io",
@@ -277,6 +285,83 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
   });
 
   describe("notification gating", () => {
+    it("does not invent release links for digest-only updates", async () => {
+      mockDb.getServices.mockReturnValue([
+        makeDockerService({
+          metadata: {
+            image: "owner/app",
+            imageTag: "latest",
+            imageDigest: "sha256:old",
+            hasUpdate: false,
+          },
+        }),
+      ]);
+      mockRegistryClient.getManifestDigest.mockResolvedValue("sha256:new");
+
+      await updateCheckerService.checkAllServicesForUpdates();
+
+      expect(fetchReleaseUrl).not.toHaveBeenCalled();
+      expect(mockNotificationService.notify).toHaveBeenCalledWith(
+        "notifications.updateAvailable",
+        "• notifications.updateEntry",
+        "warning",
+      );
+    });
+
+    it("includes each service's matching GitHub release link in a combined notification", async () => {
+      const first = makeDockerService();
+      const second = makeDockerService({
+        id: "svc-2",
+        name: "second-app",
+        source: ServiceSource.KUBERNETES,
+      });
+
+      mockDb.getServices.mockReturnValue([first, second]);
+      mockRegistryClient.getRepositoryTags.mockResolvedValue(["1.25", "1.26"]);
+      fetchReleaseUrl.mockImplementation(
+        async (service) => `https://github.com/owner/${service.name}/releases/tag/v1.26`,
+      );
+
+      await updateCheckerService.checkAllServicesForUpdates();
+
+      expect(fetchReleaseUrl).toHaveBeenCalledWith(first, "1.26");
+      expect(fetchReleaseUrl).toHaveBeenCalledWith(second, "1.26");
+      expect(mockNotificationService.notify).toHaveBeenCalledWith(
+        "notifications.updatesAvailable",
+        "• notifications.updateEntry\n  https://github.com/owner/my-app/releases/tag/v1.26\n• notifications.updateEntry\n  https://github.com/owner/second-app/releases/tag/v1.26",
+        "warning",
+      );
+    });
+
+    it.each([undefined, new Error("GitHub unavailable")])(
+      "still notifies when no release link is available (%s)",
+      async (result) => {
+        mockDb.getServices.mockReturnValue([makeDockerService()]);
+        mockRegistryClient.getRepositoryTags.mockResolvedValue(["1.25", "1.26"]);
+
+        if (result instanceof Error) fetchReleaseUrl.mockRejectedValue(result);
+        else fetchReleaseUrl.mockResolvedValue(result);
+
+        await updateCheckerService.checkAllServicesForUpdates();
+
+        expect(mockNotificationService.notify).toHaveBeenCalledWith(
+          "notifications.updateAvailable",
+          "• notifications.updateEntry",
+          "warning",
+        );
+      },
+    );
+
+    it("does not look up release links when Apprise is disabled", async () => {
+      mockNotificationService.configured = false;
+      mockDb.getServices.mockReturnValue([makeDockerService()]);
+      mockRegistryClient.getRepositoryTags.mockResolvedValue(["1.25", "1.26"]);
+
+      await updateCheckerService.checkAllServicesForUpdates();
+
+      expect(fetchReleaseUrl).not.toHaveBeenCalled();
+    });
+
     it("sends a notification for a newly discovered update", async () => {
       const svc = makeDockerService();
 
@@ -299,6 +384,7 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
       await updateCheckerService.checkAllServicesForUpdates();
 
       expect(mockNotificationService.notify).not.toHaveBeenCalled();
+      expect(fetchReleaseUrl).not.toHaveBeenCalled();
     });
   });
 

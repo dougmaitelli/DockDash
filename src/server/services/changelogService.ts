@@ -108,6 +108,7 @@ export class ChangelogService {
       try {
         const { data } = await axios.get(`${GITHUB_API}/repos/${repo}/releases/tags/${candidate}`, {
           headers,
+          timeout: 5000,
         });
 
         return {
@@ -206,6 +207,14 @@ export class ChangelogService {
     }
 
     return releases.sort((a, b) => TagParser.compareSemVer(b.version, a.version));
+  }
+
+  async fetchReleaseUrl(service: Service, tag: string): Promise<string | undefined> {
+    const repo = await this.resolveGithubRepo(service);
+
+    if (!repo) return undefined;
+
+    return (await this.fetchRelease(repo, tag))?.htmlUrl;
   }
 
   async fetchChangelog(service: Service): Promise<ChangelogResponse> {
