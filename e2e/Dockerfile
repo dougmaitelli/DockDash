@@ -1,5 +1,6 @@
+ARG PLAYWRIGHT_VERSION
 FROM node:26.7.0-bookworm-slim AS node
-FROM mcr.microsoft.com/playwright:v1.62.1-noble
+FROM mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential python3 \

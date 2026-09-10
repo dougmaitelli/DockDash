@@ -53,9 +53,10 @@ repository's required checks if merges must be blocked on visual regressions.
 already inside the canonical environment. Normal runs never create or update
 baselines, and updating images never bypasses behavioral assertions.
 
-The Playwright package and browser image versions are pinned together. When
-upgrading Playwright, update both dependencies and `e2e/Dockerfile`, regenerate
-baselines in the updated image, and review the rendering differences.
+Both Playwright dependencies must use the same exact version. Dependabot groups
+them in one update, and the Docker runner derives the browser image version from
+that pin. When upgrading, run the tests in the updated image and review any
+rendering differences before updating affected baselines.
 
 ## Coverage and deterministic inputs
 
