@@ -64,7 +64,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-emoji": "^5.0.2",
     "sanitize-html": "^2.17.7",
-    "tailwind-merge": "^3.6.0",
+    "tailwind-merge": "^3.7.0",
     "uuid": "^14.0.2",
     "zod": "^4.5.4"
   },
