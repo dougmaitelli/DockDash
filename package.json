@@ -53,20 +53,20 @@
     "express-rate-limit": "^8.7.0",
     "express-session": "^1.19.0",
     "i18next": "^26.4.2",
-    "lucide-react": "^1.41.0",
+    "lucide-react": "^1.45.0",
     "openid-client": "^6.8.8",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "react-i18next": "^17.0.13",
+    "react-i18next": "^17.0.14",
     "react-markdown": "^10.1.0",
     "react-router": "^8.3.1",
     "rehype-raw": "^7.0.0",
     "rehype-sanitize": "^6.0.0",
     "remark-emoji": "^5.0.2",
     "sanitize-html": "^2.17.7",
-    "tailwind-merge": "^3.6.0",
+    "tailwind-merge": "^3.7.0",
     "uuid": "^14.0.2",
-    "zod": "^4.5.4"
+    "zod": "^4.6.4"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
@@ -81,7 +81,7 @@
     "@types/sanitize-html": "^2.16.1",
     "@types/supertest": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^8.69.0",
-    "@typescript-eslint/parser": "^8.69.0",
+    "@typescript-eslint/parser": "^8.70.0",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "^4.1.10",
     "concurrently": "^10.0.5",
@@ -100,7 +100,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",
-    "vite": "^8.2.2",
+    "vite": "^8.3.0",
     "vitest": "^4.1.10"
   }
 }
