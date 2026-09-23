@@ -53,7 +53,7 @@
     "express-rate-limit": "^8.7.0",
     "express-session": "^1.19.0",
     "i18next": "^26.4.2",
-    "lucide-react": "^1.45.0",
+    "lucide-react": "^1.47.0",
     "openid-client": "^6.8.8",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
