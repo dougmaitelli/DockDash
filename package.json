@@ -48,7 +48,7 @@
     "clsx": "^2.1.1",
     "dockerode": "^5.0.1",
     "dotenv": "^18.0.1",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "express-session": "^1.19.0",
