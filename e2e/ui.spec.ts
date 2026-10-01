@@ -1,5 +1,13 @@
 import { IDS } from "../scripts/fixtures/ui.js";
 import { expect, navigate, screenshot, test } from "./fixtures.js";
+import {
+  expectServicesLayout,
+  openDashboard,
+  openService,
+  showCertificate,
+  showResources,
+  showServiceTab,
+} from "./screens.js";
 
 test("login and authentication error", async ({ page }) => {
   // The identity provider is outside this suite. Exercise the logged-out UI.
@@ -21,13 +29,8 @@ test("login and authentication error", async ({ page }) => {
 });
 
 test("dashboard and navigation", async ({ page }) => {
-  await page.goto("/");
+  await openDashboard(page);
 
-  await expect(page.locator("[data-service-id]")).toHaveCount(6);
-
-  await page.getByRole("button", { name: "Fit to screen" }).click();
-
-  await expect(page.locator("[data-link-id]")).toHaveCount(5);
   await expect(page.locator(`[data-service-id="${IDS.grafana}"]`)).toContainText("kubernetes");
   await expect(page.locator(`[data-service-id="${IDS.prometheus}"]`)).toContainText("kubernetes");
   await screenshot(page, "dashboard.png");
@@ -38,6 +41,7 @@ test("dashboard and navigation", async ({ page }) => {
   await expect(page.locator("tbody tr")).toHaveCount(6);
   await expect(page.locator("tbody tr").filter({ hasText: "Kubernetes" })).toHaveCount(2);
   await expect(page.locator("tbody tr").filter({ hasText: "grafana" })).toContainText("homelab");
+  await expectServicesLayout(page);
   await screenshot(page, "services.png");
 
   await page.getByPlaceholder("Search by name, host, label, or port…").fill("Production");
@@ -52,27 +56,11 @@ test("dashboard and navigation", async ({ page }) => {
 });
 
 test("service details, certificates and resources", async ({ page }) => {
-  await page.goto("/");
-  await page.locator(`[data-service-id="${IDS.traefik}"]`).dblclick();
-
-  await expect(page.locator("[data-drawer]")).toBeVisible();
-  await expect(page.getByText("Health History", { exact: true })).toBeVisible();
-
-  await page.getByRole("button", { name: /Certificate$/ }).click();
-
-  await expect(page.getByText("dashboard.example.com:443")).toBeVisible();
-
-  await page
-    .locator("[data-drawer] .overflow-y-auto")
-    .evaluate((element) => element.scrollTo({ top: 0, behavior: "instant" }));
+  await openService(page);
+  await showCertificate(page);
   await screenshot(page, "service-certificate.png");
 
-  await page.getByRole("button", { name: /Certificate$/ }).click();
-  await page
-    .locator("[data-drawer] .overflow-y-auto")
-    .evaluate((element) => element.scrollTo({ top: element.scrollHeight, behavior: "instant" }));
-
-  await expect(page.getByText("Resource Monitor", { exact: true })).toBeVisible();
+  await showResources(page);
   await screenshot(page, "service-resources.png");
 
   await page.goto("/");
@@ -103,19 +91,11 @@ test("service changelog, files, logs and terminal", async ({ page }) => {
       prompt: "root@grafana",
     },
   ]) {
-    await page.goto("/");
-    await page.locator(`[data-service-id="${service.id}"]`).dblclick();
-
-    await page.getByRole("button", { name: "Changelog", exact: true }).click();
-
-    await expect(
-      page.getByText("Improve WebSocket proxy performance under high connection load"),
-    ).toBeVisible();
+    await openService(page, service.id);
+    await showServiceTab(page, "Changelog");
     await screenshot(page, `${service.prefix}-changelog.png`);
 
-    await page.getByRole("button", { name: "Files", exact: true }).click();
-
-    await expect(page.getByText("traefik", { exact: true }).last()).toBeVisible();
+    await showServiceTab(page, "Files");
     await screenshot(page, `${service.prefix}-files.png`);
 
     await page.getByRole("button", { name: "Logs", exact: true }).click();
@@ -123,13 +103,7 @@ test("service changelog, files, logs and terminal", async ({ page }) => {
     await expect(page.getByText(service.log)).toBeVisible();
     await screenshot(page, `${service.prefix}-logs.png`);
 
-    await page.getByRole("button", { name: "Terminal", exact: true }).click();
-
-    await expect(page.getByText("Connected", { exact: true })).toBeVisible();
-    await expect(page.locator(".xterm-rows")).toContainText(service.prompt);
-
-    // Blur the terminal to make its cursor stable without masking its output.
-    await page.getByRole("button", { name: "Terminal", exact: true }).focus();
+    await showServiceTab(page, "Terminal", service.prompt);
     await screenshot(page, `${service.prefix}-terminal.png`);
   }
 });

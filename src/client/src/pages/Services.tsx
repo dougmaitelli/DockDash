@@ -218,7 +218,7 @@ export default function Services() {
               <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <FilterHeader
                   label={t("services.colSource")}
-                  width="w-32"
+                  width="w-48"
                   value={sourceFilter}
                   onChange={setSourceFilter}
                   filterCycle={[
@@ -287,7 +287,7 @@ export default function Services() {
                 />
                 <th className="px-4 py-2.5 font-medium">{t("services.colLabels")}</th>
                 <th
-                  className="px-4 py-2.5 font-medium w-32"
+                  className="px-4 py-2.5 font-medium w-40"
                   aria-label={t("services.colDashboard")}
                 />
               </tr>
@@ -327,7 +327,7 @@ export default function Services() {
                     <td className="px-4 py-3">
                       <span
                         title={sourcePresentation.label}
-                        className="inline-flex max-w-48 items-center gap-1.5 px-[6px] py-px rounded text-[0.65rem] bg-warning/10 text-warning"
+                        className="inline-flex max-w-full min-w-0 items-center gap-1.5 px-[6px] py-px rounded text-[0.65rem] bg-warning/10 text-warning"
                       >
                         <span className="shrink-0">{sourcePresentation.icon}</span>
                         <span className="truncate">{sourcePresentation.label}</span>
@@ -422,8 +422,8 @@ export default function Services() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       {service.onDashboard ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                          <Icons.Check size={12} />
+                        <span className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
+                          <Icons.Check size={12} className="shrink-0" />
                           {t("services.onDashboard")}
                         </span>
                       ) : (

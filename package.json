@@ -25,7 +25,7 @@
     "test:coverage": "pnpm run test -- --coverage",
     "db:generate": "drizzle-kit generate",
     "db:studio": "drizzle-kit studio",
-    "screenshots": "tsx scripts/take-screenshots.ts",
+    "screenshots": "playwright test --config playwright.docs.config.ts",
     "screenshots:docker": "sh scripts/screenshots-docker.sh",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",

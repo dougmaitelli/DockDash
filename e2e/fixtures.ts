@@ -21,7 +21,7 @@ export const test = base.extend<{ guard: void }>({
 
         if (isServiceIcon)
           return route.fulfill({
-            path: path.join(import.meta.dirname, "assets/mock-icon.svg"),
+            path: path.join(import.meta.dirname, `assets/icons/${isServiceIcon[1]}.svg`),
             contentType: "image/svg+xml",
           });
 
@@ -47,7 +47,7 @@ export async function navigate(page: Page, name: string) {
   await page.getByRole("link", { name, exact: true }).filter({ visible: true }).click();
 }
 
-export async function screenshot(page: Page, name: string, fullPage = false) {
+export async function prepareScreenshot(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(async () => {
     await Promise.all(Array.from(document.images).map((image) => image.decode().catch(() => {})));
@@ -63,5 +63,9 @@ export async function screenshot(page: Page, name: string, fullPage = false) {
     );
   });
   await page.mouse.move(0, 0);
+}
+
+export async function screenshot(page: Page, name: string, fullPage = false) {
+  await prepareScreenshot(page);
   await expect(page).toHaveScreenshot(name, { fullPage });
 }

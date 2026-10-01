@@ -3,6 +3,8 @@
   "include": [
     "e2e/**/*.ts",
     "scripts/start-e2e.ts",
+    "scripts/take-screenshots.ts",
+    "playwright.docs.config.ts",
     "scripts/fixtures/**/*.ts",
     "playwright.config.ts",
     "src/types/**/*.d.ts",

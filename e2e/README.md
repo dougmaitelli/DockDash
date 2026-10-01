@@ -66,7 +66,7 @@ rendering differences before updating affected baselines.
   empty states; dashboard error/retry; login and authentication errors.
 - Fixed server/browser dates, locale, timezone, IDs, metrics, and history. No
   real Docker daemon, Kubernetes cluster, registry, identity provider, network scan, or host file
-  operations. CDN service icons use one local mock SVG.
+  operations. CDN service icons use local SVGs from `assets/icons/`.
 - The default dataset mixes four Docker services with two Kubernetes services
   in the `homelab` context and `monitoring` namespace. Existing flows check both
   sources on the dashboard/table, Kubernetes controls and pod resource counters,
@@ -83,3 +83,17 @@ rendering differences before updating affected baselines.
 When adding a screen or interaction, add a focused test and baseline. Use roles
 and accessible names where available. Keep special API failure mocks explicit
 in the individual test; the default fixture should continue exercising real APIs.
+
+## Documentation screenshots
+
+Run `pnpm screenshots:docker` in the canonical environment, or `pnpm screenshots`
+locally with installed Chromium. This explicitly exports the seven dark-theme
+images used by the README and docs into `screenshots/1.png` through `7.png`.
+Review those images before committing them.
+
+The docs config shares the controlled server, browser settings, database reset,
+screen helpers in `screens.ts`, and rendering preparation with the regression
+suite. Both workflows use locally stored service icons under `assets/icons/`.
+Documentation export never compares or
+updates test baselines, and baseline updates never export documentation images.
+The commands use the same server port, so run them sequentially.
