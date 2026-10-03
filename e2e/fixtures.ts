@@ -16,7 +16,7 @@ export const test = base.extend<{ guard: void }>({
         if (url.startsWith(baseURL + "/") || url.startsWith("data:")) return route.continue();
 
         const isServiceIcon = url.match(
-          /^https:\/\/cdn\.jsdelivr\.net\/gh\/homarr-labs\/dashboard-icons\/svg\/(grafana|nginx|postgresql|prometheus|redis|traefik)\.svg$/,
+          /^https:\/\/cdn\.jsdelivr\.net\/gh\/(?:homarr-labs\/dashboard-icons|selfhst\/icons)\/svg\/(grafana|nginx|postgresql|prometheus|redis|traefik)\.svg$/,
         );
 
         if (isServiceIcon)
