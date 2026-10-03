@@ -8,7 +8,14 @@ import { certVaultService } from "./certVaultService.js";
 import { notificationService, type NotificationType } from "./notificationService.js";
 import { tlsCertificateService } from "./tlsCertificateService.js";
 
-type Notice = { title: string; body: string; type: NotificationType };
+type Notice = { event: string; title: string; body: string; type: NotificationType };
+
+function certificateIdentity(certificate: TlsCertificate): string {
+  return JSON.stringify([
+    certificate.hostname.trim().toLowerCase().replace(/\.$/, ""),
+    certificate.fingerprintSha256?.replaceAll(":", "").trim().toLowerCase() ?? null,
+  ]);
+}
 
 export function certVaultStatusObservation(
   serviceId: string,
@@ -40,10 +47,52 @@ export class CertificateMonitorService {
       .getDeploymentStatuses(certificates)
       .catch(() => null);
 
+    // Share delivery promises, including failures, so each certificate event is sent once
+    // per check. Each service still persists its own state only after successful delivery.
+    const deliveries = new Map<string, Promise<void>>();
+    const names = new Map<string, Set<string>>();
+    const targets = new Map<string, Set<string>>();
+
     for (const certificate of certificates) {
+      const service = serviceRepository.getService(certificate.serviceId);
+
+      if (!service) continue;
+
+      const identity = certificateIdentity(certificate);
+      const group = names.get(identity) ?? new Set<string>();
+
+      group.add(service.name);
+      names.set(identity, group);
+      const endpoints = targets.get(identity) ?? new Set<string>();
+
+      endpoints.add(`${certificate.hostname}:${certificate.port}`);
+      targets.set(identity, endpoints);
+    }
+
+    for (const certificate of certificates) {
+      const identity = certificateIdentity(certificate);
+
       await this.process(
         certificate,
         certVaultStatusObservation(certificate.serviceId, certVaultStatuses),
+        [...(names.get(identity) ?? [])].join(", "),
+        [...(targets.get(identity) ?? [])].join(", "),
+        (notice, threshold) => {
+          const key = JSON.stringify([
+            identity,
+            notice.event,
+            notice.event === "Expiring" ? threshold : null,
+            notice.event === "Error" ? certificate.error : null,
+          ]);
+          let delivery = deliveries.get(key);
+
+          if (!delivery) {
+            delivery = notificationService.notify(notice.title, notice.body, notice.type);
+            deliveries.set(key, delivery);
+          }
+
+          return delivery;
+        },
       ).catch(() => {
         // NotificationService logs delivery failures. Continue processing other services;
         // this service's state remains unchanged so its notices are retried next time.
@@ -54,6 +103,9 @@ export class CertificateMonitorService {
   private async process(
     certificate: TlsCertificate,
     certVaultStatus: CertVaultStatus | null | undefined,
+    name: string,
+    target: string,
+    deliver: (notice: Notice, threshold: number | null) => Promise<void>,
   ): Promise<void> {
     // Connection and transport failures are covered by service health notifications. Without a
     // peer certificate, there is no TLS certificate validity state to alert on or persist.
@@ -68,7 +120,6 @@ export class CertificateMonitorService {
       certificate.health === "warning"
         ? expiryThreshold(certificate.daysRemaining, config.certificateExpiryThresholds)
         : null;
-    const target = `${certificate.hostname}:${certificate.port}`;
     const notices: Notice[] = [];
     const fingerprintChanged =
       previous?.fingerprintSha256 != null &&
@@ -77,8 +128,9 @@ export class CertificateMonitorService {
 
     if (fingerprintChanged) {
       notices.push({
-        title: t("notifications.certificateRenewed", { name: service.name }),
-        body: t("notifications.certificateRenewedBody", { name: service.name, target }),
+        event: "Renewed",
+        title: t("notifications.certificateRenewed", { name }),
+        body: t("notifications.certificateRenewedBody", { name, target }),
         type: "success",
       });
     } else if (
@@ -87,17 +139,19 @@ export class CertificateMonitorService {
       certificate.health === "healthy"
     ) {
       notices.push({
-        title: t("notifications.certificateRecovered", { name: service.name }),
-        body: t("notifications.certificateRecoveredBody", { name: service.name, target }),
+        event: "Recovered",
+        title: t("notifications.certificateRecovered", { name }),
+        body: t("notifications.certificateRecoveredBody", { name, target }),
         type: "success",
       });
     }
 
     if (certificate.health === "error" && previous?.health !== "error") {
       notices.push({
-        title: t("notifications.certificateError", { name: service.name }),
+        event: "Error",
+        title: t("notifications.certificateError", { name }),
         body: t("notifications.certificateErrorBody", {
-          name: service.name,
+          name,
           target,
           error: certificate.error ?? "Unknown TLS error",
         }),
@@ -107,9 +161,10 @@ export class CertificateMonitorService {
 
     if (threshold !== null && previous?.warningThreshold !== threshold) {
       notices.push({
-        title: t("notifications.certificateExpiring", { name: service.name }),
+        event: "Expiring",
+        title: t("notifications.certificateExpiring", { name }),
         body: t("notifications.certificateExpiringBody", {
-          name: service.name,
+          name,
           target,
           days: String(certificate.daysRemaining),
           date: certificate.validTo ?? "unknown",
@@ -120,20 +175,22 @@ export class CertificateMonitorService {
 
     if (certVaultStatus === "different" && previous?.certVaultStatus !== "different") {
       notices.push({
-        title: t("notifications.certificateMismatch", { name: service.name }),
-        body: t("notifications.certificateMismatchBody", { name: service.name, target }),
+        event: "Mismatch",
+        title: t("notifications.certificateMismatch", { name }),
+        body: t("notifications.certificateMismatchBody", { name, target }),
         type: "warning",
       });
     } else if (certVaultStatus === "in-use" && previous?.certVaultStatus === "different") {
       notices.push({
-        title: t("notifications.certificateMismatchResolved", { name: service.name }),
-        body: t("notifications.certificateMismatchResolvedBody", { name: service.name, target }),
+        event: "MismatchResolved",
+        title: t("notifications.certificateMismatchResolved", { name }),
+        body: t("notifications.certificateMismatchResolvedBody", { name, target }),
         type: "success",
       });
     }
 
     for (const notice of notices) {
-      await notificationService.notify(notice.title, notice.body, notice.type);
+      await deliver(notice, threshold);
     }
 
     certificateNotificationStateRepository.save({
