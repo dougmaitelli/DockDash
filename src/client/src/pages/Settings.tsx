@@ -8,6 +8,7 @@ import {
   type SchemaEntry,
 } from "@shared/configSchema";
 
+import { PageContainer } from "@/components/PageContainer";
 import { Select } from "@/components/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -73,7 +74,7 @@ export default function Settings() {
     });
 
   return (
-    <div className="p-6 max-w-3xl mx-auto flex flex-col gap-4">
+    <PageContainer className="flex flex-col gap-4">
       <Card>
         <CardHeader>
           <CardTitle>{t("settings.appearance")}</CardTitle>
@@ -155,6 +156,6 @@ export default function Settings() {
           DockDash {config.version}
         </p>
       )}
-    </div>
+    </PageContainer>
   );
 }

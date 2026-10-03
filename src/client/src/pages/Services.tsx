@@ -7,6 +7,7 @@ import type { UpdateServiceRequest } from "@shared/requestSchemas.js";
 
 import { CertificateHealthDot } from "@/components/CertificateHealthDot";
 import { Icons } from "@/components/Icons";
+import { PageContainer } from "@/components/PageContainer";
 import { PortTag } from "@/components/PortTag";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import type { SortState } from "@/components/Table";
@@ -181,7 +182,7 @@ export default function Services() {
   };
 
   return (
-    <div className="p-6 w-full min-w-0 max-w-6xl xl:max-w-screen-2xl mx-auto flex flex-col gap-4">
+    <PageContainer className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-xl font-semibold text-foreground">
           {t("services.title")}
@@ -484,6 +485,6 @@ export default function Services() {
           onCancel={() => setAddingService(false)}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }

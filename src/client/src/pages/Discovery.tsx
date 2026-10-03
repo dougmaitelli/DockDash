@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Service, ServiceSource, ServiceStatus } from "@shared";
 
 import { Icons } from "@/components/Icons";
+import { PageContainer } from "@/components/PageContainer";
 import { PortTag } from "@/components/PortTag";
 import { ServiceIcon } from "@/components/ServiceIcon";
 import { TagArrayInput } from "@/components/TagArrayInput";
@@ -209,7 +210,7 @@ export default function Discovery() {
   };
 
   return (
-    <div className="p-6 max-w-[1200px] mx-auto">
+    <PageContainer>
       {toast && (
         <div className="fixed top-[70px] right-6 z-[200] bg-card border border-border rounded-lg px-5 py-2.5 text-sm text-foreground shadow-lg">
           {toast}
@@ -505,6 +506,6 @@ export default function Discovery() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   );
 }
