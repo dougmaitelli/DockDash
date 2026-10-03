@@ -4,12 +4,10 @@ import type { Service } from "@shared";
 import { ServiceSource } from "@shared";
 
 import { useTheme } from "@/context/ThemeContext";
-import { getIconUrls, getServiceIconNames } from "@/lib/serviceIcons";
+import { getIconUrls, getServiceIconNames, resolveServiceIcon } from "@/lib/serviceIcons";
 import { cn } from "@/lib/utils";
 
 import { Icons } from "./Icons";
-
-const resolvedUrlCache = new Map<string, string | null>();
 
 function fallbackForService(service: Service, size: number) {
   if (service.source === ServiceSource.DOCKER) {
@@ -43,43 +41,39 @@ export function ServiceIcon({
     () => getIconUrls(namesKey ? namesKey.split("|") : [], darkMode),
     [namesKey, darkMode],
   );
-  const cached = resolvedUrlCache.get(cacheKey);
-  const initialIndex = cached ? Math.max(0, urls.indexOf(cached)) : 0;
-  const [urlIndex, setUrlIndex] = useState(cached === null ? urls.length : initialIndex);
+  const [resolved, setResolved] = useState<{ key: string; url: string | null }>();
 
   useEffect(() => {
-    const resolved = resolvedUrlCache.get(cacheKey);
+    let active = true;
 
-    setUrlIndex(
-      resolved === null ? urls.length : resolved ? Math.max(0, urls.indexOf(resolved)) : 0,
-    );
+    void resolveServiceIcon(urls).then((url) => {
+      if (active) setResolved({ key: cacheKey, url });
+    });
+
+    return () => {
+      active = false;
+    };
   }, [cacheKey, urls]);
 
-  const url = urls[urlIndex];
-
-  if (!url) return fallbackForService(service, size);
+  const url = resolved?.key === cacheKey ? resolved.url : null;
 
   return (
     <span
       className={cn("inline-flex items-center justify-center shrink-0", className)}
       style={{ width: size, height: size }}
     >
-      <img
-        src={url}
-        alt=""
-        width={size}
-        height={size}
-        loading="lazy"
-        className="w-full h-full object-contain rounded-sm"
-        onLoad={() => resolvedUrlCache.set(cacheKey, url)}
-        onError={() => {
-          const nextIndex = urlIndex + 1;
-
-          if (nextIndex >= urls.length) resolvedUrlCache.set(cacheKey, null);
-
-          setUrlIndex(nextIndex);
-        }}
-      />
+      {url ? (
+        <img
+          src={url}
+          alt=""
+          width={size}
+          height={size}
+          className="w-full h-full object-contain rounded-sm"
+          onError={() => setResolved({ key: cacheKey, url: null })}
+        />
+      ) : (
+        fallbackForService(service, size)
+      )}
     </span>
   );
 }

@@ -1,9 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Service } from "@shared";
 import { ServiceSource, ServiceStatus } from "@shared";
 
-import { getIconUrls, getServiceIconNames, normalizeIconName } from "../../lib/serviceIcons";
+import {
+  getIconUrls,
+  getServiceIconNames,
+  normalizeIconName,
+  resolveServiceIcon,
+} from "../../lib/serviceIcons";
 
 function service(overrides: Partial<Service>): Service {
   return {
@@ -66,5 +71,79 @@ describe("service icon resolution", () => {
       "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grafana.svg",
     );
     expect(urls).toContain("https://cdn.jsdelivr.net/gh/selfhst/icons/svg/grafana-light.svg");
+  });
+});
+
+describe("icon loading", () => {
+  const images: Array<{ src: string; onload: (() => void) | null; onerror: (() => void) | null }> =
+    [];
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    images.length = 0;
+    vi.stubGlobal(
+      "Image",
+      class {
+        src = "";
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        constructor() {
+          images.push(this);
+        }
+        removeAttribute() {
+          this.src = "";
+        }
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("uses a working alternative without waiting for a stalled source", async () => {
+    const result = resolveServiceIcon(["race-a", "race-b"]);
+
+    expect(images).toHaveLength(2);
+    images[1].onload?.();
+    expect(await result).toBe("race-b");
+    await vi.runAllTimersAsync();
+  });
+
+  it("times out stalled requests and advances to another pair", async () => {
+    const result = resolveServiceIcon(["timeout-a", "timeout-b", "timeout-c"]);
+
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(images).toHaveLength(3);
+    expect(images[0].src).toBe("");
+    images[2].onload?.();
+    expect(await result).toBe("timeout-c");
+  });
+
+  it("shares requests and caches successful images", async () => {
+    const first = resolveServiceIcon(["shared"]);
+    const second = resolveServiceIcon(["shared"]);
+
+    expect(images).toHaveLength(1);
+    images[0].onload?.();
+    expect(await first).toBe("shared");
+    expect(await second).toBe("shared");
+    expect(await resolveServiceIcon(["shared"])).toBe("shared");
+    expect(images).toHaveLength(1);
+  });
+
+  it("bounds total search time and allows failed sources to be retried later", async () => {
+    const urls = Array.from({ length: 20 }, (_, index) => `budget-${index}`);
+    const result = resolveServiceIcon(urls);
+
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(await result).toBeNull();
+    expect(images.length).toBeLessThan(20);
+    await vi.advanceTimersByTimeAsync(60_000);
+    const retry = resolveServiceIcon([urls[0]]);
+
+    images.at(-1)?.onload?.();
+    expect(await retry).toBe(urls[0]);
   });
 });
