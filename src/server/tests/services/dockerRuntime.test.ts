@@ -509,7 +509,9 @@ describe("DockerRuntime.openLogStream — multiplexed (non-TTY) demux", () => {
     );
 
     const svc = new DockerRuntime();
-    const output = await svc.openLogStream(mockContainerObj as never);
+    const output = await svc.openLogStream(mockContainerObj as never, {
+      maxBufferBytes: 1024 * 1024,
+    });
 
     const lines: string[] = [];
 
@@ -538,7 +540,9 @@ describe("DockerRuntime.openLogStream — multiplexed (non-TTY) demux", () => {
     );
 
     const svc = new DockerRuntime();
-    const output = await svc.openLogStream(mockContainerObj as never);
+    const output = await svc.openLogStream(mockContainerObj as never, {
+      maxBufferBytes: 1024 * 1024,
+    });
 
     const lines: string[] = [];
 
@@ -567,7 +571,9 @@ describe("DockerRuntime.openLogStream — multiplexed (non-TTY) demux", () => {
     );
 
     const svc = new DockerRuntime();
-    const output = await svc.openLogStream(mockContainerObj as never);
+    const output = await svc.openLogStream(mockContainerObj as never, {
+      maxBufferBytes: 1024 * 1024,
+    });
     let result = "";
 
     await new Promise<void>((resolve) => {
@@ -587,7 +593,9 @@ describe("DockerRuntime.openLogStream — multiplexed (non-TTY) demux", () => {
     );
 
     const svc = new DockerRuntime();
-    const output = await svc.openLogStream(mockContainerObj as never);
+    const output = await svc.openLogStream(mockContainerObj as never, {
+      maxBufferBytes: 1024 * 1024,
+    });
     const error = await new Promise<Error>((resolve) => output.once("error", resolve));
 
     expect(error.message).toBe("logs unavailable");
@@ -603,7 +611,9 @@ describe("DockerRuntime.openLogStream — multiplexed (non-TTY) demux", () => {
     );
 
     const svc = new DockerRuntime();
-    const output = await svc.openLogStream(mockContainerObj as never);
+    const output = await svc.openLogStream(mockContainerObj as never, {
+      maxBufferBytes: 1024 * 1024,
+    });
 
     const closed = new Promise<void>((resolve) => output.once("close", resolve));
 
@@ -620,8 +630,12 @@ describe("DockerRuntime.openLogStream — multiplexed (non-TTY) demux", () => {
     );
 
     const svc = new DockerRuntime();
-    const first = await svc.openLogStream(mockContainerObj as never);
-    const second = await svc.openLogStream(mockContainerObj as never);
+    const first = await svc.openLogStream(mockContainerObj as never, {
+      maxBufferBytes: 1024 * 1024,
+    });
+    const second = await svc.openLogStream(mockContainerObj as never, {
+      maxBufferBytes: 1024 * 1024,
+    });
     const firstDestroy = vi.spyOn(first, "destroy");
     const secondDestroy = vi.spyOn(second, "destroy");
 
@@ -629,5 +643,43 @@ describe("DockerRuntime.openLogStream — multiplexed (non-TTY) demux", () => {
 
     expect(firstDestroy).toHaveBeenCalledOnce();
     expect(secondDestroy).toHaveBeenCalledOnce();
+  });
+
+  it("destroys a Docker stream delivered after its output was already closed", async () => {
+    mockContainerObj.inspect.mockResolvedValue({ Config: { Tty: true } });
+    let callback!: (err: null, stream: PassThrough) => void;
+
+    mockContainerObj.logs.mockImplementation((_opts: unknown, cb: typeof callback) => {
+      callback = cb;
+    });
+    const output = await new DockerRuntime().openLogStream(mockContainerObj as never, {
+      maxBufferBytes: 1024 * 1024,
+    });
+
+    output.destroy();
+    const dockerStream = new PassThrough();
+
+    callback(null, dockerStream);
+    expect(dockerStream.destroyed).toBe(true);
+    expect(dockerStream.listenerCount("data")).toBe(0);
+  });
+
+  it("propagates output backpressure to the Docker stream", async () => {
+    mockContainerObj.inspect.mockResolvedValue({ Config: { Tty: true } });
+    const dockerStream = new PassThrough();
+
+    mockContainerObj.logs.mockImplementation(
+      (_opts: unknown, cb: (err: null, stream: PassThrough) => void) => cb(null, dockerStream),
+    );
+    const output = await new DockerRuntime().openLogStream(mockContainerObj as never, {
+      maxBufferBytes: 1024 * 1024,
+    });
+
+    dockerStream.write("x".repeat(128 * 1024));
+    expect(dockerStream.isPaused()).toBe(true);
+    output.resume();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(dockerStream.isPaused()).toBe(false);
+    output.destroy();
   });
 });

@@ -215,12 +215,14 @@ describe("GET /api/services/:id/stats", () => {
 describe("GET /api/services/:id/logs/stream", () => {
   function createRequestAndResponse() {
     const req = Object.assign(new EventEmitter(), { params: { id: "svc-1" } });
-    const res = {
+    const res = Object.assign(new EventEmitter(), {
       setHeader: vi.fn(),
       flushHeaders: vi.fn(),
-      write: vi.fn(),
+      writableLength: 0,
+      write: vi.fn(() => true),
       end: vi.fn(),
-    };
+      destroy: vi.fn(),
+    });
 
     return { req, res };
   }
@@ -289,7 +291,7 @@ describe("GET /api/services/:id/logs/stream", () => {
     const { req, res } = createRequestAndResponse();
 
     await logStreamHandler(req, res);
-    req.emit("close");
+    res.emit("close");
     logStream.emit("data", Buffer.from("late output"));
     logStream.emit("end");
     logStream.emit("error", new Error("late error"));
@@ -310,11 +312,54 @@ describe("GET /api/services/:id/logs/stream", () => {
     const { req, res } = createRequestAndResponse();
     const handling = logStreamHandler(req, res);
 
-    req.emit("close");
+    res.emit("close");
     rejectStream(new Error("late setup failure"));
     await handling;
 
     expect(res.write).not.toHaveBeenCalled();
     expect(res.end).not.toHaveBeenCalled();
+  });
+
+  it("destroys a log stream that opens after the response disconnects", async () => {
+    const logStream = Object.assign(new EventEmitter(), { destroy: vi.fn() });
+    let resolveStream!: (stream: typeof logStream) => void;
+
+    mockDockerService.openLogStream.mockReturnValue(
+      new Promise((resolve) => {
+        resolveStream = resolve;
+      }),
+    );
+    const { req, res } = createRequestAndResponse();
+    const handling = logStreamHandler(req, res);
+
+    res.emit("close");
+    resolveStream(logStream);
+    await handling;
+
+    expect(logStream.destroy).toHaveBeenCalledOnce();
+    expect(logStream.listenerCount("data")).toBe(0);
+    expect(res.write).not.toHaveBeenCalled();
+  });
+
+  it("pauses log output until the HTTP response drains", async () => {
+    const logStream = Object.assign(new EventEmitter(), {
+      destroy: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+    });
+
+    mockDockerService.openLogStream.mockResolvedValue(logStream);
+    const { req, res } = createRequestAndResponse();
+
+    res.write.mockReturnValue(false);
+    await logStreamHandler(req, res);
+    logStream.emit("data", Buffer.from("output"));
+    expect(logStream.pause).toHaveBeenCalledOnce();
+    expect(logStream.resume).not.toHaveBeenCalled();
+
+    res.emit("drain");
+    expect(logStream.resume).toHaveBeenCalledOnce();
+    res.emit("close");
+    expect(res.listenerCount("drain")).toBe(0);
   });
 });

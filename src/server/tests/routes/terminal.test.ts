@@ -37,6 +37,14 @@ app.use(((req, _res, next) => {
 }) as RequestHandler);
 app.use("/api", terminalRouter);
 
+type RouteHandler = (req: unknown, res: unknown) => Promise<void>;
+const streamHandler = (
+  terminalRouter as unknown as {
+    stack: { route?: { path: string; stack: { handle: RouteHandler }[] } }[];
+  }
+).stack.find((layer) => layer.route?.path === "/services/:id/terminal/stream")!.route!.stack[0]
+  .handle;
+
 describe("terminal routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -126,5 +134,54 @@ describe("terminal routes", () => {
     expect(response.status).toBe(200);
     expect(response.text).toContain("event: terminal-error");
     expect(response.text).toContain("cannot exec");
+  });
+
+  it("pauses terminal output until drain and cleans up on response disconnect", async () => {
+    const stream = Object.assign(new EventEmitter(), { pause: vi.fn(), resume: vi.fn() });
+    const req = { params: { id: "svc" }, query: {}, sessionID: "owner" };
+    const res = Object.assign(new EventEmitter(), {
+      setHeader: vi.fn(),
+      flushHeaders: vi.fn(),
+      writableLength: 0,
+      write: vi.fn(() => true),
+      end: vi.fn(),
+      destroy: vi.fn(),
+    });
+
+    mockTerminalService.openSession.mockResolvedValue({ sessionId: "id", stream });
+    await streamHandler(req, res);
+    res.write.mockReturnValue(false);
+    stream.emit("data", Buffer.from("hello"));
+    expect(stream.pause).toHaveBeenCalledOnce();
+    expect(stream.resume).not.toHaveBeenCalled();
+    res.emit("drain");
+    expect(stream.resume).toHaveBeenCalledOnce();
+    res.emit("close");
+    res.emit("close");
+    expect(mockTerminalService.closeSession).toHaveBeenCalledOnce();
+    expect(res.listenerCount("drain")).toBe(0);
+  });
+
+  it("closes a terminal that opens after its response disconnects", async () => {
+    let resolveSession!: (session: { sessionId: string; stream: EventEmitter }) => void;
+
+    mockTerminalService.openSession.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSession = resolve;
+      }),
+    );
+    const req = { params: { id: "svc" }, query: {}, sessionID: "owner" };
+    const res = Object.assign(new EventEmitter(), {
+      setHeader: vi.fn(),
+      flushHeaders: vi.fn(),
+      write: vi.fn(),
+    });
+    const handling = streamHandler(req, res);
+
+    res.emit("close");
+    resolveSession({ sessionId: "id", stream: new EventEmitter() });
+    await handling;
+    expect(mockTerminalService.closeSession).toHaveBeenCalledOnce();
+    expect(res.write).not.toHaveBeenCalled();
   });
 });

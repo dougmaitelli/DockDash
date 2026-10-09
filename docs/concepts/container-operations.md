@@ -19,6 +19,8 @@ Docker containers can be started, stopped, and restarted. Kubernetes works at th
 
 DockDash streams recent and live container output in the browser. It normalizes timestamps and terminal color sequences so Docker and Kubernetes logs remain readable in the same interface.
 
+Log and terminal streams pause output while the browser catches up. Connections close if output remains blocked for 30 seconds or a stream's buffered output exceeds 1 MiB; reconnect to resume viewing output.
+
 ## Terminal access
 
 The terminal opens an interactive shell inside the selected container. DockDash tries Bash when it is installed and falls back to `sh`.

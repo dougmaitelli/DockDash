@@ -93,8 +93,9 @@ class TerminalService {
     const session = this.sessions.get(sessionId);
 
     if (session) {
-      session.stream.end();
       this.sessions.delete(sessionId);
+      session.stream.end();
+      (session.stream as NodeJS.ReadWriteStream & { destroy?: () => void }).destroy?.();
     }
   }
 
@@ -109,8 +110,7 @@ class TerminalService {
 
     for (const [id, session] of this.sessions) {
       if (now - session.lastActivity > TERMINAL_SESSION_TTL_MS) {
-        session.stream.end();
-        this.sessions.delete(id);
+        this.closeSession(id);
       }
     }
   }

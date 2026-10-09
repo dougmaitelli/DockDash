@@ -6,6 +6,7 @@ import { SSE_EVENT } from "@shared/types.js";
 
 import { serviceRepository } from "../db/serviceRepository.js";
 import { config } from "../lib/config.js";
+import { createSseWriter, MAX_STREAM_BUFFER_BYTES } from "../lib/sseWriter.js";
 import { validateBody } from "../middleware/validateRequest.js";
 import { containerRuntimeService } from "../services/containerRuntime/containerRuntimeService.js";
 import { terminalService } from "../services/terminalService.js";
@@ -27,7 +28,7 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
 
   let closed = false;
 
-  req.on("close", () => {
+  res.on("close", () => {
     closed = true;
   });
 
@@ -35,7 +36,9 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
     const service = serviceRepository.requireService(req.params.id);
     const { sessionId, stream } = await containerRuntimeService
       .getRuntime(service)
-      .openTerminal(req.sessionID, service, cols, rows);
+      .openTerminal(req.sessionID, service, cols, rows, {
+        maxBufferBytes: MAX_STREAM_BUFFER_BYTES,
+      });
 
     // Guard so closeSession is only ever called once regardless of which event fires first
     let sessionClosed = false;
@@ -53,18 +56,22 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
       return;
     }
 
+    const writer = createSseWriter(res, stream, safeClose);
     const sessionPayload: SseTerminalSessionPayload = { sessionId };
 
-    res.write(`event: ${SSE_EVENT.TERMINAL_SESSION}\ndata: ${JSON.stringify(sessionPayload)}\n\n`);
+    writer.write(
+      `event: ${SSE_EVENT.TERMINAL_SESSION}\ndata: ${JSON.stringify(sessionPayload)}\n\n`,
+    );
 
     stream.on("data", (chunk: Buffer) => {
       if (!closed) {
         terminalService.touch(sessionId);
-        res.write(`data: ${JSON.stringify(chunk.toString("base64"))}\n\n`);
+        writer.write(`data: ${JSON.stringify(chunk.toString("base64"))}\n\n`);
       }
     });
 
     stream.on("end", () => {
+      writer.dispose();
       safeClose();
 
       if (!closed) {
@@ -74,6 +81,7 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
     });
 
     stream.on("error", (err: Error) => {
+      writer.dispose();
       safeClose();
 
       if (!closed) {
@@ -84,7 +92,15 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
       }
     });
 
-    req.on("close", () => {
+    stream.on("close", () => {
+      writer.dispose();
+      safeClose();
+
+      if (!closed && !res.writableEnded) res.end();
+    });
+
+    res.on("close", () => {
+      writer.dispose();
       safeClose();
     });
   } catch (err) {

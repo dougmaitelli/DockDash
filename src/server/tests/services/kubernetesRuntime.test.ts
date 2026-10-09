@@ -221,7 +221,7 @@ describe("KubernetesRuntime", () => {
       ],
     });
     log.mockResolvedValueOnce({ abort });
-    const output = await new KubernetesRuntime().logs(service());
+    const output = await new KubernetesRuntime().logs(service(), { maxBufferBytes: 1024 * 1024 });
 
     const closed = new Promise<void>((resolve) => output.once("close", resolve));
 
@@ -247,10 +247,42 @@ describe("KubernetesRuntime", () => {
         return { close: vi.fn() };
       },
     );
-    const session = await new KubernetesRuntime().openTerminal("owner", service(), 80, 24);
+    const session = await new KubernetesRuntime().openTerminal("owner", service(), 80, 24, {
+      maxBufferBytes: 1024 * 1024,
+    });
 
     expect(session.sessionId).toBe("session");
     expect(registerSession).toHaveBeenCalledWith("owner", expect.anything());
+  });
+
+  it("closes a late terminal socket when setup exceeds the output limit", async () => {
+    const close = vi.fn();
+
+    exec.mockImplementationOnce(async (_ns, _pod, _container, _command, stdout) => {
+      stdout.write(Buffer.alloc(33));
+
+      return { close };
+    });
+
+    await expect(
+      new KubernetesRuntime().terminal(service(), { maxBufferBytes: 32 }),
+    ).rejects.toThrow("Terminal output buffer limit exceeded");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("destroys terminal pipes when exec setup fails", async () => {
+    let output: { destroyed: boolean } | undefined;
+
+    exec.mockImplementationOnce(async (_ns, _pod, _container, _command, stdout) => {
+      output = stdout;
+
+      throw new Error("connection failed");
+    });
+
+    await expect(
+      new KubernetesRuntime().terminal(service(), { maxBufferBytes: 1024 * 1024 }),
+    ).rejects.toThrow("connection failed");
+    expect(output?.destroyed).toBe(true);
   });
 
   it("lists, reads, and writes files through exec", async () => {
@@ -387,9 +419,9 @@ describe("KubernetesRuntime", () => {
   it("rejects incomplete metadata and unavailable metrics", async () => {
     const runtime = new KubernetesRuntime();
 
-    await expect(runtime.logs(service({ metadata: {} }))).rejects.toThrow(
-      "metadata is unavailable",
-    );
+    await expect(
+      runtime.logs(service({ metadata: {} }), { maxBufferBytes: 1024 * 1024 }),
+    ).rejects.toThrow("metadata is unavailable");
     getPodMetrics.mockResolvedValueOnce({ items: [] });
     await expect(runtime.stats(service())).rejects.toThrow("metrics are unavailable");
   });

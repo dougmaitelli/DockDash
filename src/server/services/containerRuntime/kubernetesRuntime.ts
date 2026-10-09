@@ -19,7 +19,7 @@ import { config } from "../../lib/config.js";
 import { detectProtocolByPort } from "../../lib/constants.js";
 import { terminalService } from "../terminalService.js";
 import { diskCounters, networkCounters } from "./kubernetesMetrics.js";
-import type { ContainerRuntime, RuntimeTerminalSession } from "./types.js";
+import type { ContainerRuntime, RuntimeStreamOptions, RuntimeTerminalSession } from "./types.js";
 
 type Client = { context: string; id: string; kc: k8s.KubeConfig; api: k8s.CoreV1Api };
 
@@ -298,7 +298,7 @@ export class KubernetesRuntime implements ContainerRuntime {
     await this.restart(service);
   }
 
-  async logs(service: Service): Promise<PassThrough> {
+  async logs(service: Service, _options: RuntimeStreamOptions): Promise<PassThrough> {
     const client = this.resolve(service);
     const output = new PassThrough();
     const abort = await new k8s.Log(client.kc).log(
@@ -314,10 +314,16 @@ export class KubernetesRuntime implements ContainerRuntime {
     return output;
   }
 
-  async terminal(service: Service): Promise<NodeJS.ReadWriteStream> {
+  async terminal(service: Service, options: RuntimeStreamOptions): Promise<NodeJS.ReadWriteStream> {
     const client = this.resolve(service);
     const stdin = new PassThrough();
     let socket: { close(): void } | undefined;
+    const closeSocket = () => {
+      const current = socket;
+
+      socket = undefined;
+      current?.close();
+    };
     const stream = new Duplex({
       read() {},
       write(chunk, _encoding, callback) {
@@ -325,32 +331,66 @@ export class KubernetesRuntime implements ContainerRuntime {
       },
       final(callback) {
         stdin.end();
-        socket?.close();
+        closeSocket();
         callback();
+      },
+      destroy(error, callback) {
+        stdin.destroy();
+        stdout.destroy();
+        stderr.destroy();
+        closeSocket();
+        callback(error);
       },
     });
     const stdout = new PassThrough();
     const stderr = new PassThrough();
 
-    stdout.on("data", (chunk) => stream.push(chunk));
-    stderr.on("data", (chunk) => stream.push(chunk));
-    socket = await new k8s.Exec(client.kc).exec(
-      service.metadata!.namespace!,
-      service.metadata!.podName!,
-      service.metadata!.containerName!,
-      [
-        "/bin/sh",
-        "-c",
-        "TERM=xterm-256color; export TERM; [ -x /bin/bash ] && exec bash || exec sh",
-      ],
-      stdout,
-      stderr,
-      stdin,
-      true,
-      () => {
-        stream.push(null);
-      },
-    );
+    // Errors can arrive before the asynchronous exec setup returns to the route.
+    stream.once("error", closeSocket);
+    const forwardOutput = (chunk: Buffer) => {
+      if (stream.destroyed) return;
+
+      // The Kubernetes websocket client ignores writable backpressure.
+      if (stream.readableLength + chunk.length > options.maxBufferBytes) {
+        stream.destroy(new Error("Terminal output buffer limit exceeded"));
+
+        return;
+      }
+
+      stream.push(chunk);
+    };
+
+    stdout.on("data", forwardOutput);
+    stderr.on("data", forwardOutput);
+    socket = await new k8s.Exec(client.kc)
+      .exec(
+        service.metadata!.namespace!,
+        service.metadata!.podName!,
+        service.metadata!.containerName!,
+        [
+          "/bin/sh",
+          "-c",
+          "TERM=xterm-256color; export TERM; [ -x /bin/bash ] && exec bash || exec sh",
+        ],
+        stdout,
+        stderr,
+        stdin,
+        true,
+        () => {
+          stream.push(null);
+        },
+      )
+      .catch((error: unknown) => {
+        stream.destroy();
+
+        throw error;
+      });
+
+    if (stream.destroyed) {
+      closeSocket();
+
+      throw stream.errored ?? new Error("Terminal stream closed during setup");
+    }
 
     return stream;
   }
@@ -360,8 +400,9 @@ export class KubernetesRuntime implements ContainerRuntime {
     service: Service,
     _cols: number,
     _rows: number,
+    options: RuntimeStreamOptions,
   ): Promise<RuntimeTerminalSession> {
-    return terminalService.registerSession(userSessionId, await this.terminal(service));
+    return terminalService.registerSession(userSessionId, await this.terminal(service, options));
   }
 
   private async execCapture(

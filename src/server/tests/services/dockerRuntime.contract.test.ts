@@ -55,7 +55,10 @@ describe("DockerRuntime ContainerRuntime contract", () => {
     vi.spyOn(runtime, "openLogStream").mockResolvedValue(stream);
 
     await expect(runtime.stats(service)).resolves.toBe(stats);
-    await expect(runtime.logs(service)).resolves.toBe(stream);
+    await expect(runtime.logs(service, { maxBufferBytes: 1024 * 1024 })).resolves.toBe(stream);
+    expect(runtime.openLogStream).toHaveBeenCalledWith(container, {
+      maxBufferBytes: 1024 * 1024,
+    });
   });
 
   it("delegates terminal and file operations", async () => {
@@ -66,7 +69,9 @@ describe("DockerRuntime ContainerRuntime contract", () => {
     fileService.readFile.mockResolvedValue({ path: "/a", content: "a" });
     fileService.writeFile.mockResolvedValue(undefined);
 
-    await expect(runtime.openTerminal("owner", service, 80, 24)).resolves.toBe(session);
+    await expect(
+      runtime.openTerminal("owner", service, 80, 24, { maxBufferBytes: 1024 * 1024 }),
+    ).resolves.toBe(session);
     await expect(runtime.listFiles(service, "/")).resolves.toEqual([]);
     await expect(runtime.readFile(service, "/a")).resolves.toEqual({ path: "/a", content: "a" });
     await expect(runtime.writeFile(service, "/a", "b")).resolves.toBeUndefined();

@@ -71,8 +71,10 @@ describe("TerminalService", () => {
 
     service.closeSession("first");
     expect(service.getSession("owner", "first")).toBeUndefined();
+    expect(firstStream.destroyed).toBe(true);
     await vi.advanceTimersByTimeAsync(9 * 60_000);
     expect(service.getSession("owner", "second")).toBeUndefined();
+    expect(secondStream.destroyed).toBe(true);
     service.shutdown();
   });
 

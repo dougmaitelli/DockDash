@@ -10,7 +10,7 @@ import { config } from "../../lib/config.js";
 import { detectProtocolByPort, DOCKER_LATEST_TAG } from "../../lib/constants.js";
 import { fileService } from "../fileService.js";
 import { terminalService } from "../terminalService.js";
-import type { ContainerRuntime, RuntimeTerminalSession } from "./types.js";
+import type { ContainerRuntime, RuntimeStreamOptions, RuntimeTerminalSession } from "./types.js";
 
 // Docker multiplexed stream header: 1 byte type + 3 bytes padding + 4 bytes payload length
 export const DOCKER_STREAM_HEADER_SIZE = 8;
@@ -283,6 +283,7 @@ export class DockerRuntime implements ContainerRuntime {
 
   async openLogStream(
     container: Docker.Container,
+    options: RuntimeStreamOptions,
   ): Promise<NodeJS.ReadableStream & { destroy: () => void }> {
     const inspect = await container.inspect();
     const isTty = inspect.Config?.Tty ?? false;
@@ -300,16 +301,33 @@ export class DockerRuntime implements ContainerRuntime {
           return;
         }
 
+        if (output.destroyed) {
+          (stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy?.();
+
+          return;
+        }
+
         output.once("close", () =>
           (stream as NodeJS.ReadableStream & { destroy?: () => void }).destroy?.(),
         );
 
-        const emitLines = (chunk: Buffer) =>
-          chunk
-            .toString("utf8")
-            .split("\n")
-            .filter(Boolean)
-            .forEach((line) => output.write(line));
+        output.on("drain", () => stream.resume());
+        const emitLines = (chunk: Buffer) => {
+          for (const line of chunk.toString("utf8").split("\n").filter(Boolean)) {
+            if (output.destroyed) return;
+
+            if (
+              output.readableLength + output.writableLength + Buffer.byteLength(line) >
+              options.maxBufferBytes
+            ) {
+              output.destroy(new Error("Log output buffer limit exceeded"));
+
+              return;
+            }
+
+            if (!output.write(line)) stream.pause();
+          }
+        };
 
         if (isTty) {
           stream.on("data", emitLines);
@@ -321,6 +339,12 @@ export class DockerRuntime implements ContainerRuntime {
 
             while (buf.length >= DOCKER_STREAM_HEADER_SIZE) {
               const size = buf.readUInt32BE(4);
+
+              if (size > options.maxBufferBytes) {
+                output.destroy(new Error("Log frame size limit exceeded"));
+
+                return;
+              }
 
               if (buf.length < DOCKER_STREAM_HEADER_SIZE + size) break;
 
@@ -357,8 +381,11 @@ export class DockerRuntime implements ContainerRuntime {
     return this.getContainerStats(this.getContainer(service));
   }
 
-  logs(service: Service): Promise<NodeJS.ReadableStream & { destroy: () => void }> {
-    return this.openLogStream(this.getContainer(service));
+  logs(
+    service: Service,
+    options: RuntimeStreamOptions,
+  ): Promise<NodeJS.ReadableStream & { destroy: () => void }> {
+    return this.openLogStream(this.getContainer(service), options);
   }
 
   openTerminal(
@@ -366,6 +393,7 @@ export class DockerRuntime implements ContainerRuntime {
     service: Service,
     cols: number,
     rows: number,
+    _options: RuntimeStreamOptions,
   ): Promise<RuntimeTerminalSession> {
     return terminalService.openSession(userSessionId, this.getContainer(service), cols, rows);
   }
