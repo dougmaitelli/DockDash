@@ -71,6 +71,9 @@ export class NetworkScanner {
       // Queue for completed results + a notify handle to wake the generator
       const queue: Service[] = [];
       let pingSweepDone = false;
+      let pingProcessDone = false;
+      let pingReadDone = false;
+      let pingSweepError: Error | undefined;
       let pendingScans = 0;
       let notify: (() => void) | null = null;
       const wake = () => {
@@ -116,6 +119,31 @@ export class NetworkScanner {
       const pingProc = spawn("nmap", ["-sn", "-T4", cidr, "-oG", "-"]);
       const pingRl = createInterface({ input: pingProc.stdout, crlfDelay: Infinity });
       let pingSweepStderr = "";
+      const failPingSweep = (error: Error) => {
+        if (signal.aborted) return;
+
+        pingSweepError ??= error;
+        wake();
+      };
+
+      pingProc.on("error", (error) => {
+        failPingSweep(error);
+        pingRl.close();
+      });
+      pingProc.once("close", (code, exitSignal) => {
+        pingProcessDone = true;
+        pingSweepDone = pingReadDone;
+
+        if (!signal.aborted && code !== 0) {
+          failPingSweep(
+            new Error(
+              `nmap ping sweep failed (${exitSignal ? `signal ${exitSignal}` : `exit code ${code}`}): ${pingSweepStderr.trim()}`,
+            ),
+          );
+        }
+
+        wake();
+      });
       const abortPingSweep = () => {
         pingRl.close();
 
@@ -168,18 +196,19 @@ export class NetworkScanner {
             logger.warn(`[NetworkScanner] ping sweep stderr:\n${pingSweepStderr}`);
         } catch (err) {
           if (!isAbortError(err) && !signal?.aborted) {
-            logger.error(
-              `[NetworkScanner] Ping sweep failed: ${err instanceof Error ? err.message : String(err)}`,
-            );
+            failPingSweep(err instanceof Error ? err : new Error(String(err)));
           }
         } finally {
-          pingSweepDone = true;
+          pingReadDone = true;
+          pingSweepDone = pingProcessDone || signal.aborted;
           wake();
         }
       })();
 
       // Yield results as they arrive while work is still in progress
-      while (!pingSweepDone || pendingScans > 0 || queue.length > 0) {
+      while (!signal.aborted && (!pingSweepDone || pendingScans > 0 || queue.length > 0)) {
+        if (pingSweepError) throw pingSweepError;
+
         while (queue.length > 0) yield [queue.shift()!];
 
         if (!pingSweepDone || pendingScans > 0) {
@@ -188,6 +217,8 @@ export class NetworkScanner {
           });
         }
       }
+
+      if (pingSweepError && !signal.aborted) throw pingSweepError;
 
       signal.removeEventListener("abort", releaseQueuedScans);
       signal.removeEventListener("abort", abortPingSweep);

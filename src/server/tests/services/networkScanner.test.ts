@@ -21,7 +21,7 @@ const { networkScanner, NetworkScanner } = await import("@server/services/networ
  * Creates a fake nmap ping-sweep process whose stdout emits the given lines
  * then ends, mimicking the greppable (-oG -) output format.
  */
-function makePingSweepProcess(lines: string[], stderrText = "") {
+function makePingSweepProcess(lines: string[], stderrText = "", exitCode = 0) {
   const stdout = new Readable({ read() {} });
   const stderr = new Readable({ read() {} });
   const proc = new EventEmitter() as NodeJS.EventEmitter & {
@@ -49,6 +49,7 @@ function makePingSweepProcess(lines: string[], stderrText = "") {
     if (stderrText) stderr.push(stderrText);
 
     stderr.push(null);
+    setImmediate(() => proc.emit("close", exitCode, null));
   });
 
   return proc;
@@ -197,6 +198,38 @@ describe("NetworkScanner.scanNetworkStream", () => {
   });
 
   afterEach(() => vi.clearAllMocks());
+
+  it("rejects spawn errors even when the child never emits close", async () => {
+    const proc = makePingSweepProcess([]);
+
+    mockSpawn.mockReturnValueOnce(proc);
+    const result = networkScanner.scanNetworkStream("192.168.1.0/24").next();
+    const assertion = expect(result).rejects.toThrow("spawn nmap ENOENT");
+
+    proc.emit("error", Object.assign(new Error("spawn nmap ENOENT"), { code: "ENOENT" }));
+    await assertion;
+    expect(proc.kill).toHaveBeenCalledOnce();
+  });
+
+  it("waits for process close and rejects a nonzero exit with stderr", async () => {
+    mockSpawn.mockReturnValueOnce(makePingSweepProcess([], "permission denied", 1));
+
+    await expect(networkScanner.scanNetworkStream("192.168.1.0/24").next()).rejects.toThrow(
+      "nmap ping sweep failed (exit code 1): permission denied",
+    );
+  });
+
+  it("rejects an unexpected signal termination", async () => {
+    const proc = makePingSweepProcess([]);
+
+    mockSpawn.mockReturnValueOnce(proc);
+    const assertion = expect(
+      networkScanner.scanNetworkStream("192.168.1.0/24").next(),
+    ).rejects.toThrow("nmap ping sweep failed (signal SIGKILL)");
+
+    proc.emit("close", null, "SIGKILL");
+    await assertion;
+  });
 
   it("yields one Service per discovered host with open ports", async () => {
     const pingSweepLines = [

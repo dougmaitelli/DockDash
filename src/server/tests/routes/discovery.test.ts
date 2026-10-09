@@ -372,6 +372,11 @@ describe("GET /api/network/scan/stream", () => {
 
   it.each([
     [new Error("network scan failed"), "network scan failed"],
+    [new Error("spawn nmap ENOENT"), "spawn nmap ENOENT"],
+    [
+      new Error("nmap ping sweep failed (exit code 1): permission denied"),
+      "nmap ping sweep failed (exit code 1): permission denied",
+    ],
     ["unknown failure", "unknown failure"],
   ])("sends an SSE error and completion when scanning fails", async (failure, message) => {
     mockNetworkScanner.scanNetworkStream.mockImplementation(async function* () {
