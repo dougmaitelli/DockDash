@@ -1,4 +1,4 @@
-import express, { Router } from "express";
+import { Router } from "express";
 
 import { fileContentRequestSchema } from "@shared/requestSchemas.js";
 import type { ApiSuccess, FileContentResponse } from "@shared/responseSchemas.js";
@@ -57,7 +57,6 @@ router.get("/services/:id/files/content", async (req, res) => {
 
 router.put(
   "/services/:id/files/content",
-  express.json({ limit: "10mb" }),
   (_req, res, next) => {
     if (!config.fileExplorerEnabled) {
       res.status(403).json({ error: "File explorer is disabled" });

@@ -18,6 +18,8 @@ import { createGracefulShutdown } from "./lib/gracefulShutdown.js";
 import { logger } from "./lib/logService.js";
 import { serverHealth } from "./lib/serverHealth.js";
 import { requireAuth } from "./middleware/auth.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import requestBody from "./middleware/requestBody.js";
 import authRoutes from "./routes/auth.js";
 import certificateRoutes from "./routes/certificates.js";
 import containerRoutes from "./routes/container.js";
@@ -59,7 +61,7 @@ let shuttingDown = false;
 app.set("trust proxy", config.trustProxySetting);
 
 // Middleware
-app.use(express.json({ limit: "100kb" }));
+app.use(requestBody);
 app.use(
   session({
     store: createSessionStore(),
@@ -157,12 +159,7 @@ app.get("/{*path}", spaFallbackRateLimit, (_req, res) => {
 });
 
 // Error handler
-app.use(
-  (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    logger.error("Server error:", err);
-    res.status(500).json({ error: err instanceof Error ? err.message : "Internal server error" });
-  },
-);
+app.use(errorHandler);
 
 const server = app.listen(PORT, () => {
   if (shuttingDown) return;

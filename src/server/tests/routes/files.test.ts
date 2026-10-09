@@ -1,3 +1,5 @@
+import { errorHandler } from "@server/middleware/errorHandler.js";
+import requestBody from "@server/middleware/requestBody.js";
 import express from "express";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,8 +30,9 @@ vi.mock("@server/services/fileService.js", () => ({ fileService: mockFileService
 const { default: filesRouter } = await import("@server/routes/files.js");
 const app = express();
 
-app.use(express.json());
+app.use(requestBody);
 app.use("/api", filesRouter);
+app.use(errorHandler);
 
 describe("file routes", () => {
   beforeEach(() => {
@@ -103,6 +106,39 @@ describe("file routes", () => {
       .send({ path: "/tmp/a" });
 
     expect(response.status).toBe(400);
+    expect(mockFileService.writeFile).not.toHaveBeenCalled();
+  });
+
+  it("saves file content larger than the general API limit", async () => {
+    const content = "x".repeat(200 * 1024);
+
+    mockFileService.writeFile.mockResolvedValue(undefined);
+    const response = await request(app)
+      .put("/api/services/svc/files/content")
+      .send({ path: "/tmp/large", content });
+
+    expect(response.status).toBe(200);
+    expect(mockFileService.writeFile).toHaveBeenCalledWith({}, "/tmp/large", content);
+  });
+
+  it("rejects file saves exceeding 10 MB with HTTP 413", async () => {
+    const response = await request(app)
+      .put("/api/services/svc/files/content")
+      .send({ path: "/tmp/large", content: "x".repeat(10 * 1024 * 1024) });
+
+    expect(response.status).toBe(413);
+    expect(response.body).toEqual({ error: "request entity too large" });
+    expect(mockFileService.writeFile).not.toHaveBeenCalled();
+  });
+
+  it("returns HTTP 400 for malformed JSON without attempting a write", async () => {
+    const response = await request(app)
+      .put("/api/services/svc/files/content")
+      .set("Content-Type", "application/json")
+      .send('{"path":');
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toEqual(expect.any(String));
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 });
