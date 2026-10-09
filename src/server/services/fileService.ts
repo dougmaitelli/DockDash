@@ -5,6 +5,7 @@ import tar, { type Headers } from "tar-stream";
 import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 
 import { sanitizeDockerError } from "../lib/errors.js";
+import { fileReadError, type FileReadOptions, runFileRead } from "../lib/fileRead.js";
 
 const DOCKER_STREAM_HEADER_SIZE = 8;
 
@@ -34,26 +35,76 @@ class FileService {
     }
   }
 
-  async readFile(container: Docker.Container, filePath: string): Promise<FileContentResponse> {
+  async readFile(
+    container: Docker.Container,
+    filePath: string,
+    options: FileReadOptions,
+  ): Promise<FileContentResponse> {
     try {
-      await this.assertRunning(container);
+      return await runFileRead(options, async (signal) => {
+        await this.assertRunning(container, signal);
+        signal.throwIfAborted();
+        const source = await container.getArchive({ path: filePath, abortSignal: signal });
+        const extract = tar.extract();
+        const chunks: Buffer[] = [];
+        let bytes = 0;
+        let found = false;
+        let abort!: () => void;
 
-      const exec = await container.exec({
-        Cmd: ["cat", "--", filePath],
-        AttachStdout: true,
-        AttachStderr: true,
-        Tty: false,
+        try {
+          signal.throwIfAborted();
+          await new Promise<void>((resolve, reject) => {
+            abort = () => reject(signal.reason);
+            signal.addEventListener("abort", abort, { once: true });
+            source.once("error", reject);
+            extract.once("error", reject);
+            extract.once("finish", () =>
+              found ? resolve() : reject(new Error("File missing from archive")),
+            );
+            extract.on("entry", (header, stream, next) => {
+              if (found || header.type !== "file") {
+                reject(fileReadError("Only regular files can be read", 400));
+
+                return;
+              }
+
+              found = true;
+
+              if ((header.size ?? 0) > options.maxBytes) {
+                reject(fileReadError("File exceeds the read size limit", 413));
+
+                return;
+              }
+
+              stream.on("error", reject);
+              stream.on("data", (chunk: Buffer) => {
+                bytes += chunk.length;
+
+                if (bytes > options.maxBytes) {
+                  reject(fileReadError("File exceeds the read size limit", 413));
+
+                  return;
+                }
+
+                chunks.push(chunk);
+              });
+              stream.once("end", next);
+            });
+            source.pipe(extract);
+          });
+
+          return { path: filePath, content: Buffer.concat(chunks, bytes).toString("utf8") };
+        } finally {
+          if (abort) signal.removeEventListener("abort", abort);
+
+          (source as Readable).destroy();
+          extract.destroy();
+        }
       });
-
-      const stream = await exec.start({ hijack: true, stdin: false });
-
-      const { stdout, stderr } = await this.demuxStream(stream);
-
-      if (!stdout && stderr.trim()) throw new Error(stderr.trim());
-
-      return { path: filePath, content: stdout };
     } catch (err) {
-      throw new Error(sanitizeDockerError(err));
+      throw Object.assign(new Error(sanitizeDockerError(err)), {
+        status: err instanceof Error && "status" in err ? err.status : 500,
+      });
     }
   }
 
@@ -101,8 +152,8 @@ class FileService {
     }
   }
 
-  private async assertRunning(container: Docker.Container): Promise<void> {
-    const info = await container.inspect();
+  private async assertRunning(container: Docker.Container, signal?: AbortSignal): Promise<void> {
+    const info = await container.inspect(signal ? { abortSignal: signal } : {});
 
     if (!info.State?.Running) throw new Error("Container is not running");
   }

@@ -73,7 +73,9 @@ describe("DockerRuntime ContainerRuntime contract", () => {
       runtime.openTerminal("owner", service, 80, 24, { maxBufferBytes: 1024 * 1024 }),
     ).resolves.toBe(session);
     await expect(runtime.listFiles(service, "/")).resolves.toEqual([]);
-    await expect(runtime.readFile(service, "/a")).resolves.toEqual({ path: "/a", content: "a" });
+    await expect(
+      runtime.readFile(service, "/a", { maxBytes: 1024, timeoutMs: 1000 }),
+    ).resolves.toEqual({ path: "/a", content: "a" });
     await expect(runtime.writeFile(service, "/a", "b")).resolves.toBeUndefined();
     expect(terminalService.openSession).toHaveBeenCalledWith("owner", container, 80, 24);
   });

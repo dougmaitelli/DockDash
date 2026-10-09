@@ -17,6 +17,7 @@ import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js"
 import { serviceRepository } from "../../db/serviceRepository.js";
 import { config } from "../../lib/config.js";
 import { detectProtocolByPort } from "../../lib/constants.js";
+import { fileReadError, type FileReadOptions, runFileRead } from "../../lib/fileRead.js";
 import { terminalService } from "../terminalService.js";
 import { diskCounters, networkCounters } from "./kubernetesMetrics.js";
 import type { ContainerRuntime, RuntimeStreamOptions, RuntimeTerminalSession } from "./types.js";
@@ -409,6 +410,7 @@ export class KubernetesRuntime implements ContainerRuntime {
     service: Service,
     command: string[],
     input?: string,
+    capture?: { maxBytes: number; signal: AbortSignal },
   ): Promise<{ stdout: string; stderr: string }> {
     const client = this.resolve(service);
     const stdout = new PassThrough();
@@ -417,10 +419,57 @@ export class KubernetesRuntime implements ContainerRuntime {
     const out: Buffer[] = [];
     const errors: Buffer[] = [];
 
-    stdout.on("data", (chunk: Buffer) => out.push(chunk));
-    stderr.on("data", (chunk: Buffer) => errors.push(chunk));
-
     await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      let bytes = 0;
+      let socket: { close?: () => void } | undefined;
+      const closeSocket = () => {
+        const current = socket;
+
+        socket = undefined;
+        current?.close?.();
+      };
+      const finish = (error?: Error) => {
+        if (settled) return;
+
+        settled = true;
+        capture?.signal.removeEventListener("abort", abort);
+        closeSocket();
+        stdout.destroy();
+        stderr.destroy();
+        stdin.destroy();
+
+        if (error) reject(error);
+        else resolve();
+      };
+      const abort = () => finish(capture?.signal.reason);
+      const collect = (chunks: Buffer[], chunk: Buffer) => {
+        if (settled) return;
+
+        bytes += chunk.length;
+
+        if (capture && bytes > capture.maxBytes) {
+          finish(fileReadError("File exceeds the read size limit", 413));
+
+          return;
+        }
+
+        chunks.push(chunk);
+      };
+
+      stdout.on("error", finish);
+      stderr.on("error", finish);
+      stdin.on("error", finish);
+      stdout.on("data", (chunk: Buffer) => collect(out, chunk));
+      stderr.on("data", (chunk: Buffer) => collect(errors, chunk));
+      capture?.signal.addEventListener("abort", abort, { once: true });
+
+      if (capture?.signal.aborted) {
+        abort();
+
+        return;
+      }
+
       new k8s.Exec(client.kc)
         .exec(
           service.metadata!.namespace!,
@@ -432,14 +481,17 @@ export class KubernetesRuntime implements ContainerRuntime {
           stdin,
           false,
           (status) => {
-            if (status.status === "Failure") reject(new Error(status.message ?? "Exec failed"));
-            else resolve();
+            if (status.status === "Failure") finish(new Error(status.message ?? "Exec failed"));
+            else finish();
           },
         )
-        .then(() => {
-          stdin.end(input);
+        .then((connection) => {
+          socket = connection;
+
+          if (settled) closeSocket();
+          else stdin.end(input);
         })
-        .catch(reject);
+        .catch((error: Error) => finish(error));
     });
 
     return {
@@ -486,12 +538,32 @@ export class KubernetesRuntime implements ContainerRuntime {
     });
   }
 
-  async readFile(service: Service, path: string): Promise<FileContentResponse> {
-    const result = await this.execCapture(service, ["cat", "--", path]);
+  async readFile(
+    service: Service,
+    path: string,
+    options: FileReadOptions,
+  ): Promise<FileContentResponse> {
+    return runFileRead(options, async (signal) => {
+      const result = await this.execCapture(
+        service,
+        [
+          "timeout",
+          `${Math.ceil(options.timeoutMs / 1000)}s`,
+          "sh",
+          "-c",
+          '[ -f "$1" ] && [ ! -L "$1" ] || { echo "Only regular files can be read" >&2; exit 1; }; exec head -c "$2" -- "$1"',
+          "sh",
+          path,
+          String(options.maxBytes + 1),
+        ],
+        undefined,
+        { maxBytes: options.maxBytes, signal },
+      );
 
-    if (!result.stdout && result.stderr.trim()) throw new Error(result.stderr.trim());
+      if (!result.stdout && result.stderr.trim()) throw new Error(result.stderr.trim());
 
-    return { path, content: result.stdout };
+      return { path, content: result.stdout };
+    });
   }
 
   async writeFile(service: Service, path: string, content: string): Promise<void> {

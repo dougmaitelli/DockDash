@@ -4,6 +4,8 @@ import { PassThrough, Readable } from "stream";
 import tar, { type Headers } from "tar-stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const readOptions = { maxBytes: 1024, timeoutMs: 1000 };
+
 function dockerFrame(type: 1 | 2, text: string): Buffer {
   const payload = Buffer.from(text);
   const header = Buffer.alloc(DOCKER_STREAM_HEADER_SIZE);
@@ -106,19 +108,41 @@ describe("FileService", () => {
   });
 
   it("reads empty and non-empty files", async () => {
-    const populated = mockContainer(streamFrom(dockerFrame(1, "hello\n")));
+    const populated = mockContainer();
 
-    await expect(fileService.readFile(populated.container, "/tmp/a")).resolves.toEqual({
-      path: "/tmp/a",
-      content: "hello\n",
+    populated.getArchive.mockImplementationOnce(async () => {
+      const archive = tar.pack();
+
+      archive.entry({ name: "a" }, "hello\n");
+      archive.finalize();
+
+      return archive;
     });
 
-    const empty = mockContainer(streamFrom(dockerFrame(1, "")));
+    await expect(fileService.readFile(populated.container, "/tmp/a", readOptions)).resolves.toEqual(
+      {
+        path: "/tmp/a",
+        content: "hello\n",
+      },
+    );
 
-    await expect(fileService.readFile(empty.container, "/tmp/empty")).resolves.toEqual({
-      path: "/tmp/empty",
-      content: "",
+    const empty = mockContainer();
+
+    empty.getArchive.mockImplementationOnce(async () => {
+      const archive = tar.pack();
+
+      archive.entry({ name: "empty" }, "");
+      archive.finalize();
+
+      return archive;
     });
+
+    await expect(fileService.readFile(empty.container, "/tmp/empty", readOptions)).resolves.toEqual(
+      {
+        path: "/tmp/empty",
+        content: "",
+      },
+    );
   });
 
   it("rejects operations against stopped containers", async () => {
@@ -130,10 +154,83 @@ describe("FileService", () => {
 
   it("rejects malformed Docker streams", async () => {
     const stream = new PassThrough();
-    const { container } = mockContainer(stream);
+    const { container, getArchive } = mockContainer();
 
-    queueMicrotask(() => stream.destroy(new Error("stream failed")));
-    await expect(fileService.readFile(container, "/tmp/a")).rejects.toThrow("stream failed");
+    getArchive.mockResolvedValue(stream);
+    setImmediate(() => stream.destroy(new Error("stream failed")));
+    await expect(fileService.readFile(container, "/tmp/a", readOptions)).rejects.toThrow(
+      "stream failed",
+    );
+  });
+
+  it("rejects an oversized archive entry before buffering its content", async () => {
+    const { container, getArchive, exec } = mockContainer();
+    const archive = tar.pack();
+
+    archive.entry({ name: "large", size: readOptions.maxBytes + 1 });
+    getArchive.mockResolvedValue(archive);
+    await expect(fileService.readFile(container, "/large", readOptions)).rejects.toMatchObject({
+      status: 413,
+    });
+    expect(archive.destroyed).toBe(true);
+    expect(exec).not.toHaveBeenCalled();
+  });
+
+  it.each(["fifo", "character-device", "directory", "symlink"] as const)(
+    "rejects %s targets",
+    async (type) => {
+      const { container, getArchive } = mockContainer();
+      const archive = tar.pack();
+
+      archive.entry({ name: "special", type, linkname: type === "symlink" ? "target" : undefined });
+      archive.finalize();
+      getArchive.mockResolvedValue(archive);
+      await expect(fileService.readFile(container, "/special", readOptions)).rejects.toMatchObject({
+        status: 400,
+      });
+      expect(archive.destroyed).toBe(true);
+    },
+  );
+
+  it("times out stalled archives and closes their streams", async () => {
+    const { container, getArchive } = mockContainer();
+    const stream = new PassThrough();
+
+    getArchive.mockResolvedValue(stream);
+    await expect(
+      fileService.readFile(container, "/stalled", { ...readOptions, timeoutMs: 10 }),
+    ).rejects.toMatchObject({ status: 504 });
+    expect(stream.destroyed).toBe(true);
+  });
+
+  it("closes an archive that arrives after cancellation during setup", async () => {
+    const { container, getArchive } = mockContainer();
+    const controller = new AbortController();
+    const stream = new PassThrough();
+    let release!: (stream: PassThrough) => void;
+    let started!: () => void;
+    const setup = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+
+    getArchive.mockImplementationOnce(() => {
+      started();
+
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    });
+    const result = fileService.readFile(container, "/late", {
+      ...readOptions,
+      signal: controller.signal,
+    });
+    const assertion = expect(result).rejects.toMatchObject({ status: 499 });
+
+    await setup;
+    controller.abort();
+    await assertion;
+    release(stream);
+    await vi.waitFor(() => expect(stream.destroyed).toBe(true));
   });
 
   it("writes a valid tar archive to the containing directory", async () => {

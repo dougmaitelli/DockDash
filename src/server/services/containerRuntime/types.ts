@@ -1,6 +1,8 @@
 import type { ContainerAction, ContainerStats, Service } from "@shared";
 import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 
+import type { FileReadOptions } from "../../lib/fileRead.js";
+
 export interface RuntimeTerminalSession {
   sessionId: string;
   stream: NodeJS.ReadWriteStream;
@@ -26,6 +28,6 @@ export interface ContainerRuntime {
     options: RuntimeStreamOptions,
   ): Promise<RuntimeTerminalSession>;
   listFiles(service: Service, path: string): Promise<FileEntry[]>;
-  readFile(service: Service, path: string): Promise<FileContentResponse>;
+  readFile(service: Service, path: string, options: FileReadOptions): Promise<FileContentResponse>;
   writeFile(service: Service, path: string, content: string): Promise<void>;
 }

@@ -43,15 +43,36 @@ router.get("/services/:id/files/content", async (req, res) => {
     return res.status(400).json({ error: "Invalid path" });
   }
 
+  const controller = new AbortController();
+  const cancel = () => controller.abort();
+
+  res.once("close", cancel);
+
   try {
     const service = serviceRepository.requireService(req.params.id);
     const result: FileContentResponse = await containerRuntimeService
       .getRuntime(service)
-      .readFile(service, rawPath);
+      .readFile(service, rawPath, {
+        maxBytes: 8 * 1024 * 1024,
+        timeoutMs: 15_000,
+        signal: controller.signal,
+      });
 
-    res.json(result);
+    if (!controller.signal.aborted) res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
+    if (!controller.signal.aborted) {
+      const status =
+        err instanceof Error &&
+        "status" in err &&
+        typeof err.status === "number" &&
+        [400, 413, 504].includes(err.status)
+          ? err.status
+          : 500;
+
+      res.status(status).json({ error: err instanceof Error ? err.message : String(err) });
+    }
+  } finally {
+    res.off("close", cancel);
   }
 });
 

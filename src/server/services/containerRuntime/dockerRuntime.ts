@@ -8,6 +8,7 @@ import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js"
 
 import { config } from "../../lib/config.js";
 import { detectProtocolByPort, DOCKER_LATEST_TAG } from "../../lib/constants.js";
+import type { FileReadOptions } from "../../lib/fileRead.js";
 import { fileService } from "../fileService.js";
 import { terminalService } from "../terminalService.js";
 import type { ContainerRuntime, RuntimeStreamOptions, RuntimeTerminalSession } from "./types.js";
@@ -402,8 +403,8 @@ export class DockerRuntime implements ContainerRuntime {
     return fileService.listFiles(this.getContainer(service), path);
   }
 
-  readFile(service: Service, path: string): Promise<FileContentResponse> {
-    return fileService.readFile(this.getContainer(service), path);
+  readFile(service: Service, path: string, options: FileReadOptions): Promise<FileContentResponse> {
+    return fileService.readFile(this.getContainer(service), path, options);
   }
 
   writeFile(service: Service, path: string, content: string): Promise<void> {

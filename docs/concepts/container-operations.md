@@ -30,3 +30,5 @@ Terminal sessions are tied to the signed-in browser session and are closed when 
 ## File access
 
 The file explorer lists directories and reads or writes text files inside Docker and Kubernetes containers. Whether an operation succeeds depends on the tools, filesystem, and permissions available inside that container.
+
+File reads accept regular files up to 8 MiB and have a 15-second deadline. Closing the connection cancels the read. Symbolic links, directories, devices, and named pipes cannot be opened in the editor. Kubernetes reads require `sh`, `head`, and `timeout` inside the container; `timeout` also bounds the remote process lifetime if the connection closes.

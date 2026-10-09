@@ -290,7 +290,7 @@ describe("KubernetesRuntime", () => {
       async (_ns, _pod, _container, command, stdout, _stderr, stdin, _tty, done) => {
         if (command[0] === "ls") stdout.write("-rw-r--r-- 1 root root 4 Jan 1 00:00 file.txt\n");
 
-        if (command[0] === "cat") stdout.write("text");
+        if (command[0] === "timeout") stdout.write("text");
 
         stdin.resume();
         done({ status: "Success" });
@@ -303,11 +303,83 @@ describe("KubernetesRuntime", () => {
     await expect(runtime.listFiles(service(), "/tmp")).resolves.toEqual([
       expect.objectContaining({ name: "file.txt", type: "file", size: 4 }),
     ]);
-    await expect(runtime.readFile(service(), "/tmp/file.txt")).resolves.toEqual({
+    await expect(
+      runtime.readFile(service(), "/tmp/file.txt", { maxBytes: 1024, timeoutMs: 1000 }),
+    ).resolves.toEqual({
       path: "/tmp/file.txt",
       content: "text",
     });
     await expect(runtime.writeFile(service(), "/tmp/file.txt", "updated")).resolves.toBeUndefined();
+  });
+
+  it.each(["stdout", "stderr"])(
+    "bounds Kubernetes file-read %s and closes a late socket",
+    async (output) => {
+      const close = vi.fn();
+
+      exec.mockImplementationOnce(async (_ns, _pod, _container, command, stdout, stderr) => {
+        expect(command).toEqual([
+          "timeout",
+          "1s",
+          "sh",
+          "-c",
+          expect.stringContaining('[ -f "$1" ] && [ ! -L "$1" ]'),
+          "sh",
+          "/large",
+          "33",
+        ]);
+        (output === "stdout" ? stdout : stderr).write(Buffer.alloc(33));
+
+        return { close };
+      });
+      await expect(
+        new KubernetesRuntime().readFile(service(), "/large", { maxBytes: 32, timeoutMs: 1000 }),
+      ).rejects.toMatchObject({ status: 413 });
+      expect(close).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("times out file reads even while Kubernetes exec setup is pending", async () => {
+    let release!: (socket: { close: () => void }) => void;
+    const close = vi.fn();
+
+    exec.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    await expect(
+      new KubernetesRuntime().readFile(service(), "/stalled", { maxBytes: 32, timeoutMs: 10 }),
+    ).rejects.toMatchObject({ status: 504 });
+    release({ close });
+    await vi.waitFor(() => expect(close).toHaveBeenCalledOnce());
+  });
+
+  it("cancels an active Kubernetes file read and closes the websocket", async () => {
+    const close = vi.fn();
+    const controller = new AbortController();
+    let ready!: () => void;
+    const opened = new Promise<void>((resolve) => {
+      ready = resolve;
+    });
+
+    exec.mockImplementationOnce(async () => {
+      ready();
+
+      return { close };
+    });
+    const result = new KubernetesRuntime().readFile(service(), "/active", {
+      maxBytes: 32,
+      timeoutMs: 1000,
+      signal: controller.signal,
+    });
+    const assertion = expect(result).rejects.toMatchObject({ status: 499 });
+
+    await opened;
+    controller.abort();
+    await assertion;
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it("converts Kubernetes metrics into container stats", async () => {
