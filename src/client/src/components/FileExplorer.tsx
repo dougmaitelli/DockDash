@@ -44,80 +44,148 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileRequestRef = useRef(0);
+  const directoryRequestRef = useRef(0);
+  const activeSaveRef = useRef<symbol | null>(null);
+  const editContentRef = useRef("");
+
+  const clearSavedTimer = useCallback(() => {
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+
+    savedTimerRef.current = null;
+  }, []);
 
   const isDirty = loadedContent !== null && editContent !== loadedContent;
 
   const loadPath = useCallback(
     async (p: string) => {
+      const request = ++directoryRequestRef.current;
+      const isCurrent = () => request === directoryRequestRef.current;
+
       setLoading(true);
       setError(null);
       try {
         const res = await serviceApi.listFiles(serviceId, p);
 
+        if (!isCurrent()) return;
+
         setEntries(res.data.entries);
         setPath(res.data.path);
       } catch (err: unknown) {
+        if (!isCurrent()) return;
+
         const axiosErr = err as { response?: { data?: { error?: string } }; message?: string };
 
         setError(axiosErr.response?.data?.error ?? axiosErr.message ?? String(err));
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
     [serviceId],
   );
 
   useEffect(() => {
+    const fileRequests = fileRequestRef;
+    const directoryRequests = directoryRequestRef;
+
+    setSelectedFile(null);
+    setLoadedContent(null);
+    setEditContent("");
+    editContentRef.current = "";
+    setFileError(null);
+    setFileLoading(false);
+    setSaving(false);
+    setSaved(false);
     loadPath("/");
-  }, [loadPath]);
+
+    return () => {
+      fileRequests.current++;
+      directoryRequests.current++;
+      activeSaveRef.current = null;
+      clearSavedTimer();
+    };
+  }, [loadPath, clearSavedTimer]);
 
   const openFile = useCallback(
     async (filePath: string) => {
+      const request = ++fileRequestRef.current;
+      const isCurrent = () => request === fileRequestRef.current;
+
+      activeSaveRef.current = null;
+      clearSavedTimer();
+      setSaving(false);
       setSelectedFile(filePath);
       setLoadedContent(null);
       setEditContent("");
+      editContentRef.current = "";
       setFileError(null);
       setFileLoading(true);
       setSaved(false);
       try {
         const res = await serviceApi.readFileContent(serviceId, filePath);
 
+        if (!isCurrent()) return;
+
         setLoadedContent(res.data.content);
         setEditContent(res.data.content);
+        editContentRef.current = res.data.content;
       } catch (err: unknown) {
+        if (!isCurrent()) return;
+
         const axiosErr = err as { response?: { data?: { error?: string } }; message?: string };
 
         setFileError(axiosErr.response?.data?.error ?? axiosErr.message ?? String(err));
       } finally {
-        setFileLoading(false);
+        if (isCurrent()) setFileLoading(false);
       }
     },
-    [serviceId],
+    [serviceId, clearSavedTimer],
   );
 
   const saveFile = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || loadedContent === null || fileLoading || activeSaveRef.current) return;
+
+    const request = fileRequestRef.current;
+    const save = Symbol();
+    const content = editContent;
+    const isCurrent = () => request === fileRequestRef.current && activeSaveRef.current === save;
+
+    activeSaveRef.current = save;
+    clearSavedTimer();
 
     setSaving(true);
     setSaved(false);
     try {
-      await serviceApi.writeFileContent(serviceId, selectedFile, editContent);
-      setLoadedContent(editContent);
-      setSaved(true);
+      await serviceApi.writeFileContent(serviceId, selectedFile, content);
 
-      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      if (!isCurrent()) return;
 
-      savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
+      setLoadedContent(content);
+      setSaved(editContentRef.current === content);
+
+      savedTimerRef.current = setTimeout(() => {
+        if (request === fileRequestRef.current) setSaved(false);
+      }, 2000);
     } catch (err: unknown) {
+      if (!isCurrent()) return;
+
       const axiosErr = err as { response?: { data?: { error?: string } }; message?: string };
 
       setFileError(axiosErr.response?.data?.error ?? axiosErr.message ?? String(err));
     } finally {
-      setSaving(false);
+      if (isCurrent()) {
+        activeSaveRef.current = null;
+        setSaving(false);
+      }
     }
   };
 
   const closeFile = () => {
+    fileRequestRef.current++;
+    activeSaveRef.current = null;
+    clearSavedTimer();
+    setSaving(false);
+    setFileLoading(false);
     setSelectedFile(null);
     setLoadedContent(null);
     setEditContent("");
@@ -312,7 +380,11 @@ export function FileExplorer({ serviceId }: FileExplorerProps) {
               <textarea
                 className="flex-1 min-h-0 w-full font-mono text-xs bg-background border border-border rounded-md px-3 py-2.5 resize-none text-secondary-foreground focus:outline-none focus:border-primary"
                 value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
+                onChange={(e) => {
+                  editContentRef.current = e.target.value;
+                  setEditContent(e.target.value);
+                  setSaved(false);
+                }}
                 spellCheck={false}
               />
               <div className="flex items-center justify-end gap-2 shrink-0 pb-4">
