@@ -85,6 +85,7 @@ export function Terminal({ serviceId }: TerminalProps) {
     const es = new EventSource(
       `/api/services/${serviceId}/terminal/stream?cols=${cols}&rows=${rows}`,
     );
+    let disposed = false;
 
     es.addEventListener(SSE_EVENT.TERMINAL_SESSION, (e) => {
       const { sessionId } = JSON.parse((e as MessageEvent).data) as { sessionId: string };
@@ -123,10 +124,18 @@ export function Terminal({ serviceId }: TerminalProps) {
 
       if (!sid) return;
 
-      serviceApi.writeTerminalInput(serviceId, { sessionId: sid, data }).catch(() => {});
+      serviceApi.writeTerminalInput(serviceId, { sessionId: sid, data }).catch((error: unknown) => {
+        if (disposed || sessionIdRef.current !== sid) return;
+
+        sessionIdRef.current = null;
+        setErrorMsg(error instanceof Error ? error.message : String(error));
+        setStatus("disconnected");
+        es.close();
+      });
     });
 
     return () => {
+      disposed = true;
       es.close();
       onData.dispose();
       term.dispose();

@@ -13,6 +13,12 @@ import { terminalService } from "../services/terminalService.js";
 
 const router = Router();
 
+declare module "express-session" {
+  interface SessionData {
+    terminalInitialized?: boolean;
+  }
+}
+
 router.get("/services/:id/terminal/stream", async (req, res) => {
   if (!config.terminalEnabled) {
     return res.status(403).json({ error: "Terminal is disabled" });
@@ -20,11 +26,6 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
 
   const cols = parseInt(req.query.cols as string, 10) || 80;
   const rows = parseInt(req.query.rows as string, 10) || 24;
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
 
   let closed = false;
 
@@ -34,6 +35,22 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
 
   try {
     const service = serviceRepository.requireService(req.params.id);
+
+    // Initialize and persist ownership before SSE headers send the session cookie.
+    if (!req.session.terminalInitialized) {
+      req.session.terminalInitialized = true;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((error) => (error ? reject(error) : resolve()));
+      });
+    }
+
+    if (closed) return;
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
     const { sessionId, stream } = await containerRuntimeService
       .getRuntime(service)
       .openTerminal(req.sessionID, service, cols, rows, {
@@ -105,6 +122,12 @@ router.get("/services/:id/terminal/stream", async (req, res) => {
     });
   } catch (err) {
     if (!closed) {
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Unable to initialize terminal session" });
+
+        return;
+      }
+
       res.write(
         `event: ${SSE_EVENT.TERMINAL_ERROR}\ndata: ${JSON.stringify({ message: err instanceof Error ? err.message : String(err) })}\n\n`,
       );

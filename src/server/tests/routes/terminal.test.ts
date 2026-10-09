@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import express, { type RequestHandler } from "express";
+import session from "express-session";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -33,6 +34,9 @@ const app = express();
 app.use(express.json());
 app.use(((req, _res, next) => {
   Object.defineProperty(req, "sessionID", { value: "owner" });
+  Object.defineProperty(req, "session", {
+    value: { terminalInitialized: true, save: vi.fn((callback) => callback()) },
+  });
   next();
 }) as RequestHandler);
 app.use("/api", terminalRouter);
@@ -65,6 +69,66 @@ describe("terminal routes", () => {
       .send({ sessionId: "id", data: "ls\n" });
 
     expect([stream.status, input.status]).toEqual([403, 403]);
+  });
+
+  it("persists anonymous ownership before streaming and rejects another browser", async () => {
+    const anonymousApp = express();
+
+    anonymousApp.use(express.json());
+    anonymousApp.use(
+      session({ secret: "terminal-test-secret", resave: false, saveUninitialized: false }),
+    );
+    anonymousApp.use("/api", terminalRouter);
+    const browser = request.agent(anonymousApp);
+    const write = vi.fn();
+    let owner: string;
+
+    mockTerminalService.openSession.mockImplementation(async (ownerId) => {
+      owner = ownerId;
+      const stream = new EventEmitter();
+
+      setTimeout(() => stream.emit("end"), 10);
+
+      return { sessionId: "id", stream };
+    });
+    mockTerminalService.getSession.mockImplementation((ownerId) =>
+      ownerId === owner ? { stream: { write } } : undefined,
+    );
+
+    const opened = await browser.get("/api/services/svc/terminal/stream");
+
+    expect(opened.headers["set-cookie"]).toBeDefined();
+    expect(opened.text).toContain("event: terminal-session");
+    const input = await browser
+      .post("/api/services/svc/terminal/input")
+      .send({ sessionId: "id", data: "ls\n" });
+    const stranger = await request(anonymousApp)
+      .post("/api/services/svc/terminal/input")
+      .send({ sessionId: "id", data: "bad" });
+
+    expect(input.status).toBe(200);
+    expect(stranger.status).toBe(404);
+    expect(write).toHaveBeenCalledExactlyOnceWith("ls\n");
+  });
+
+  it("does not open a terminal when the browser session cannot be saved", async () => {
+    const store = new session.MemoryStore();
+
+    vi.spyOn(store, "set").mockImplementation((_id, _data, callback) =>
+      callback?.(new Error("store unavailable")),
+    );
+    const failingApp = express();
+
+    failingApp.use(
+      session({ store, secret: "terminal-test-secret", resave: false, saveUninitialized: false }),
+    );
+    failingApp.use("/api", terminalRouter);
+
+    const response = await request(failingApp).get("/api/services/svc/terminal/stream");
+
+    expect(response.status).toBe(500);
+    expect(response.body.error).toBe("Unable to initialize terminal session");
+    expect(mockTerminalService.openSession).not.toHaveBeenCalled();
   });
 
   it("writes input only to an owned live session", async () => {
@@ -138,7 +202,12 @@ describe("terminal routes", () => {
 
   it("pauses terminal output until drain and cleans up on response disconnect", async () => {
     const stream = Object.assign(new EventEmitter(), { pause: vi.fn(), resume: vi.fn() });
-    const req = { params: { id: "svc" }, query: {}, sessionID: "owner" };
+    const req = {
+      params: { id: "svc" },
+      query: {},
+      sessionID: "owner",
+      session: { terminalInitialized: true },
+    };
     const res = Object.assign(new EventEmitter(), {
       setHeader: vi.fn(),
       flushHeaders: vi.fn(),
@@ -170,7 +239,12 @@ describe("terminal routes", () => {
         resolveSession = resolve;
       }),
     );
-    const req = { params: { id: "svc" }, query: {}, sessionID: "owner" };
+    const req = {
+      params: { id: "svc" },
+      query: {},
+      sessionID: "owner",
+      session: { terminalInitialized: true },
+    };
     const res = Object.assign(new EventEmitter(), {
       setHeader: vi.fn(),
       flushHeaders: vi.fn(),
