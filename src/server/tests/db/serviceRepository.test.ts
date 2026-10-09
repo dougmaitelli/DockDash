@@ -241,6 +241,64 @@ describe("deleteService", () => {
 });
 
 describe("dashboard membership", () => {
+  function hierarchy() {
+    return ["parent", "child", "grandchild", "other"].map(
+      (name) => svcRepo.saveService({ name, host: name, source: ServiceSource.NETWORK }).id!,
+    );
+  }
+
+  it("removes the complete dashboard subtree while retaining services and unrelated positions", () => {
+    const [parent, child, grandchild, other] = hierarchy();
+
+    svcRepo.saveServicePositions([
+      { serviceId: grandchild, parentId: child },
+      { serviceId: child, parentId: parent },
+      { serviceId: parent },
+      { serviceId: other },
+    ]);
+    svcRepo.removeServiceFromDashboard(parent);
+    expect(svcRepo.getServicePositions().map((p) => p.serviceId)).toEqual([other]);
+    expect(svcRepo.getServices()).toHaveLength(4);
+    expect(
+      svcRepo
+        .getServices()
+        .filter((s) => s.onDashboard)
+        .map((s) => s.id),
+    ).toEqual([other]);
+    svcRepo.addServiceToDashboard(child);
+    expect(
+      svcRepo.getServicePositions().find((p) => p.serviceId === child)?.parentId,
+    ).toBeUndefined();
+  });
+
+  it("rejects self-parenting, cycles, and parents without positions without partial writes", () => {
+    const [parent, child, missing] = hierarchy();
+
+    svcRepo.saveServicePositions([{ serviceId: parent }, { serviceId: child, parentId: parent }]);
+    const original = svcRepo.getServicePositions();
+
+    for (const parentId of [parent, child, missing]) {
+      expect(() =>
+        svcRepo.saveServicePositions([
+          { serviceId: child, x: 100 },
+          { serviceId: parent, parentId },
+        ]),
+      ).toThrow();
+      expect(svcRepo.getServicePositions()).toEqual(original);
+    }
+  });
+
+  it("validates the final batch hierarchy rather than update order", () => {
+    const [parent, child] = hierarchy();
+
+    svcRepo.saveServicePositions([{ serviceId: parent }, { serviceId: child, parentId: parent }]);
+    svcRepo.saveServicePositions([
+      { serviceId: parent, parentId: child },
+      { serviceId: child, parentId: null },
+    ]);
+    expect(svcRepo.getServicePositions().find((p) => p.serviceId === parent)?.parentId).toBe(child);
+  });
+
   it("saveServicePosition applies defaults and updates an existing position", () => {
     const svc = svcRepo.saveService({
       name: "s",

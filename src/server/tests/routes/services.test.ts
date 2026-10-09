@@ -14,7 +14,7 @@ const mockSvcRepo = vi.hoisted(() => ({
   deleteService: vi.fn(),
   addServiceToDashboard: vi.fn(),
   removeServiceFromDashboard: vi.fn(),
-  saveServicePosition: vi.fn(),
+  saveServicePositions: vi.fn(),
   getServicePositions: vi.fn(),
 }));
 
@@ -464,7 +464,7 @@ describe("POST /api/positions", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns 200 with valid positions array", async () => {
-    mockSvcRepo.saveServicePosition.mockReturnValue(undefined);
+    mockSvcRepo.saveServicePositions.mockReturnValue(undefined);
     mockSvcRepo.getServicePositions.mockReturnValue([{ serviceId: "svc-1", x: 10, y: 20 }]);
 
     const res = await request(app)

@@ -144,9 +144,7 @@ router.delete("/services/:id/dashboard", (req, res) => {
 router.post("/positions", validateBody(savePositionsRequestSchema), (req, res) => {
   const { positions } = req.body as SavePositionsRequest;
 
-  for (const p of positions) {
-    serviceRepository.saveServicePosition(p);
-  }
+  serviceRepository.saveServicePositions(positions);
 
   const response: SavePositionsResponse = { positions: serviceRepository.getServicePositions() };
 

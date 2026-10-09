@@ -36,9 +36,16 @@ export function getAbsoluteNodePosition(
   service: ServiceWithPosition,
   allServices: ServiceWithPosition[],
   dragOffsets: Record<string, { dx: number; dy: number }>,
+  visited = new Set<string>(),
 ): { x: number; y: number } {
   const pos = service.position;
   const offset = dragOffsets[service.id!] || { dx: 0, dy: 0 };
+
+  if (visited.has(service.id!)) {
+    return { x: (pos?.x ?? 0) + offset.dx, y: (pos?.y ?? 0) + offset.dy };
+  }
+
+  visited.add(service.id!);
 
   if (!pos?.parentId) {
     if (pos) {
@@ -63,7 +70,7 @@ export function getAbsoluteNodePosition(
     return { x: pos.x + offset.dx, y: pos.y + offset.dy };
   }
 
-  const parentAbs = getAbsoluteNodePosition(parent, allServices, dragOffsets);
+  const parentAbs = getAbsoluteNodePosition(parent, allServices, dragOffsets, visited);
   const headerH = getInfoSectionHeight(pos.parentId);
 
   return {

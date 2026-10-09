@@ -1,4 +1,4 @@
-import { asc, desc, eq, getTableColumns, or } from "drizzle-orm";
+import { asc, desc, eq, getTableColumns, inArray, or } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { v4 as uuidv4 } from "uuid";
 
@@ -141,6 +141,49 @@ export class ServiceRepository {
   }
 
   saveServicePosition(position: PositionUpdate): void {
+    this.saveServicePositions([position]);
+  }
+
+  saveServicePositions(positions: PositionUpdate[]): void {
+    sqlite.transaction(() => {
+      const parents = new Map(
+        this.getServicePositions().map((p) => [p.serviceId, p.parentId ?? null]),
+      );
+
+      for (const position of positions) {
+        parents.set(
+          position.serviceId,
+          position.parentId === undefined
+            ? (parents.get(position.serviceId) ?? null)
+            : position.parentId,
+        );
+      }
+
+      for (const id of parents.keys()) {
+        const visited = new Set<string>([id]);
+        let parent = parents.get(id);
+
+        while (parent) {
+          if (!parents.has(parent)) {
+            throw Object.assign(new Error("Parent must be on the dashboard"), { status: 400 });
+          }
+
+          if (visited.has(parent)) {
+            throw Object.assign(new Error("Dashboard hierarchy cannot contain cycles"), {
+              status: 400,
+            });
+          }
+
+          visited.add(parent);
+          parent = parents.get(parent);
+        }
+      }
+
+      for (const position of positions) this.upsertServicePosition(position);
+    })();
+  }
+
+  private upsertServicePosition(position: PositionUpdate): void {
     const updates: {
       x?: number;
       y?: number;
@@ -193,7 +236,35 @@ export class ServiceRepository {
   }
 
   removeServiceFromDashboard(serviceId: string): void {
-    orm.delete(servicePositions).where(eq(servicePositions.serviceId, serviceId)).run();
+    sqlite.transaction(() => {
+      const children = new Map<string, string[]>();
+
+      for (const position of this.getServicePositions()) {
+        if (!position.parentId) continue;
+
+        const siblings = children.get(position.parentId) ?? [];
+
+        siblings.push(position.serviceId);
+        children.set(position.parentId, siblings);
+      }
+
+      const removed = new Set<string>();
+      const pending = [serviceId];
+
+      while (pending.length) {
+        const id = pending.pop()!;
+
+        if (removed.has(id)) continue;
+
+        removed.add(id);
+        pending.push(...(children.get(id) ?? []));
+      }
+
+      orm
+        .delete(servicePositions)
+        .where(inArray(servicePositions.serviceId, [...removed]))
+        .run();
+    })();
   }
 
   getServicePositions(): ServicePosition[] {
