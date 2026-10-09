@@ -1,5 +1,6 @@
 import type Docker from "dockerode";
 import { Readable } from "stream";
+import tar, { type Headers } from "tar-stream";
 
 import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 
@@ -64,14 +65,37 @@ class FileService {
       const lastSlash = filePath.lastIndexOf("/");
       const filename = filePath.slice(lastSlash + 1);
       const dir = lastSlash > 0 ? filePath.slice(0, lastSlash) : "/";
-      const tarBuffer = this.createTarBuffer(filename, contentBuffer);
+      const metadata = await this.getFileMetadata(container, filePath);
+      const archive = tar.pack();
 
-      await new Promise<void>((resolve, reject) => {
-        container.putArchive(Readable.from(tarBuffer), { path: dir }, (err: Error | null) => {
-          if (err) reject(err);
-          else resolve();
+      archive.entry(
+        {
+          name: filename,
+          type: "file",
+          mode: metadata.mode,
+          uid: metadata.uid,
+          gid: metadata.gid,
+          mtime: new Date(),
+        },
+        contentBuffer,
+      );
+      archive.finalize();
+
+      try {
+        await new Promise<void>((resolve, reject) => {
+          archive.once("error", reject);
+          container.putArchive(
+            archive,
+            { path: dir, copyUIDGID: true, noOverwriteDirNonDir: true },
+            (err: Error | null) => {
+              if (err) reject(err);
+              else resolve();
+            },
+          );
         });
-      });
+      } finally {
+        archive.destroy();
+      }
     } catch (err) {
       throw new Error(sanitizeDockerError(err));
     }
@@ -123,37 +147,30 @@ class FileService {
     });
   }
 
-  private createTarBuffer(filename: string, content: Buffer): Buffer {
-    const header = Buffer.alloc(512, 0);
+  private async getFileMetadata(container: Docker.Container, filePath: string): Promise<Headers> {
+    const source = await container.getArchive({ path: filePath });
+    const extract = tar.extract();
 
-    Buffer.from(filename).copy(header, 0);
-    Buffer.from("0000644\0").copy(header, 100); // mode
-    Buffer.from("0000000\0").copy(header, 108); // uid
-    Buffer.from("0000000\0").copy(header, 116); // gid
-    Buffer.from(content.length.toString(8).padStart(11, "0") + "\0").copy(header, 124); // size
-    Buffer.from(
-      Math.floor(Date.now() / 1000)
-        .toString(8)
-        .padStart(11, "0") + "\0",
-    ).copy(header, 136); // mtime
-    header[156] = 0x30; // type: regular file
-    Buffer.from("ustar\0").copy(header, 257); // magic
-    Buffer.from("00").copy(header, 263); // version
+    try {
+      return await new Promise<Headers>((resolve, reject) => {
+        source.once("error", reject);
+        extract.once("error", reject);
+        extract.once("finish", () => reject(new Error("File metadata missing from archive")));
+        extract.once("entry", (header) => {
+          if (header.type !== "file") {
+            reject(new Error("Only regular files can be edited"));
 
-    // Checksum: sum of all bytes with checksum field treated as spaces
-    Buffer.from("        ").copy(header, 148);
-    let sum = 0;
+            return;
+          }
 
-    for (let i = 0; i < 512; i++) sum += header[i];
-
-    Buffer.from(sum.toString(8).padStart(6, "0") + "\0 ").copy(header, 148);
-
-    const paddedSize = Math.ceil(content.length / 512) * 512;
-    const contentPadded = Buffer.alloc(paddedSize, 0);
-
-    content.copy(contentPadded);
-
-    return Buffer.concat([header, contentPadded, Buffer.alloc(1024, 0)]);
+          resolve(header);
+        });
+        source.pipe(extract);
+      });
+    } finally {
+      (source as Readable).destroy();
+      extract.destroy();
+    }
   }
 
   private parseLsOutput(output: string): FileEntry[] {

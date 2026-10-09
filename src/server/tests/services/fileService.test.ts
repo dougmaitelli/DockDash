@@ -1,6 +1,7 @@
 import { DOCKER_STREAM_HEADER_SIZE } from "@server/services/containerRuntime/dockerRuntime.js";
 import { fileService } from "@server/services/fileService.js";
 import { PassThrough, Readable } from "stream";
+import tar, { type Headers } from "tar-stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 function dockerFrame(type: 1 | 2, text: string): Buffer {
@@ -29,8 +30,45 @@ function mockContainer(stream?: PassThrough) {
   const exec = vi.fn().mockResolvedValue({ start });
   const inspect = vi.fn().mockResolvedValue({ State: { Running: true } });
   const putArchive = vi.fn();
+  const getArchive = vi.fn().mockImplementation(async () => {
+    const archive = tar.pack();
 
-  return { container: { inspect, exec, putArchive } as never, inspect, exec, start, putArchive };
+    archive.entry({ name: "file", mode: 0o640, uid: 1001, gid: 1002 }, "old content");
+    archive.finalize();
+
+    return archive;
+  });
+
+  return {
+    container: { inspect, exec, putArchive, getArchive } as never,
+    inspect,
+    exec,
+    start,
+    putArchive,
+    getArchive,
+  };
+}
+
+async function extractFile(archive: Buffer): Promise<{ header: Headers; content: string }> {
+  const extract = tar.extract();
+  let result!: { header: Headers; content: string };
+
+  await new Promise<void>((resolve, reject) => {
+    extract.on("entry", (header, stream, next) => {
+      const chunks: Buffer[] = [];
+
+      stream.on("data", (chunk) => chunks.push(chunk));
+      stream.on("end", () => {
+        result = { header, content: Buffer.concat(chunks).toString("utf8") };
+        next();
+      });
+    });
+    extract.on("finish", resolve);
+    extract.on("error", reject);
+    Readable.from(archive).pipe(extract);
+  });
+
+  return result;
 }
 
 describe("FileService", () => {
@@ -104,7 +142,7 @@ describe("FileService", () => {
 
     putArchive.mockImplementation(
       (input: Readable, options: { path: string }, callback: (error: Error | null) => void) => {
-        expect(options).toEqual({ path: "/etc/app" });
+        expect(options).toEqual({ path: "/etc/app", copyUIDGID: true, noOverwriteDirNonDir: true });
         input.on("data", (chunk) => {
           archive = Buffer.concat([archive, chunk]);
         });
@@ -118,6 +156,11 @@ describe("FileService", () => {
     expect(archive.subarray(257, 263).toString("utf8")).toBe("ustar\0");
     expect(archive.length % 512).toBe(0);
     expect(archive.toString("utf8")).toContain("enabled: true");
+    expect((await extractFile(archive)).header).toMatchObject({
+      mode: 0o640,
+      uid: 1001,
+      gid: 1002,
+    });
   });
 
   it("sanitizes archive upload errors", async () => {
@@ -129,5 +172,63 @@ describe("FileService", () => {
     );
 
     await expect(fileService.writeFile(container, "/config", "x")).rejects.toThrow();
+  });
+
+  it.each(["x".repeat(114), "é".repeat(80)])(
+    "preserves long filenames and existing metadata: %s",
+    async (filename) => {
+      const { container, putArchive, getArchive } = mockContainer();
+      let archive = Buffer.alloc(0);
+
+      getArchive.mockImplementationOnce(async () => {
+        const source = tar.pack();
+
+        source.entry({ name: filename, mode: 0o750, uid: 1234, gid: 2345 }, "old");
+        source.finalize();
+
+        return source;
+      });
+      putArchive.mockImplementation(
+        (input: Readable, _options: unknown, callback: (error: Error | null) => void) => {
+          input.on("data", (chunk) => {
+            archive = Buffer.concat([archive, chunk]);
+          });
+          input.on("end", () => callback(null));
+        },
+      );
+
+      await fileService.writeFile(container, `/app/${filename}`, "updated ✓");
+      const extracted = await extractFile(archive);
+
+      expect(extracted.header).toMatchObject({ name: filename, mode: 0o750, uid: 1234, gid: 2345 });
+      expect(extracted.content).toBe("updated ✓");
+    },
+  );
+
+  it("does not upload when existing metadata cannot be read", async () => {
+    const { container, getArchive, putArchive } = mockContainer();
+
+    getArchive.mockRejectedValue(new Error("permission denied"));
+    await expect(fileService.writeFile(container, "/private", "x")).rejects.toThrow(
+      "permission denied",
+    );
+    expect(putArchive).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-regular files instead of replacing them", async () => {
+    const { container, getArchive, putArchive } = mockContainer();
+
+    getArchive.mockImplementationOnce(async () => {
+      const archive = tar.pack();
+
+      archive.entry({ name: "link", type: "symlink", linkname: "target" });
+      archive.finalize();
+
+      return archive;
+    });
+    await expect(fileService.writeFile(container, "/link", "x")).rejects.toThrow(
+      "Only regular files can be edited",
+    );
+    expect(putArchive).not.toHaveBeenCalled();
   });
 });
