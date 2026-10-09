@@ -1,3 +1,4 @@
+import express from "express";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CONFIG_SCHEMA } from "@shared/configSchema.js";
@@ -49,6 +50,7 @@ describe("config", () => {
     expect(config.networkCidrs).toEqual(["192.168.0.0/24"]);
     expect(config.dockerHosts).toEqual([]);
     expect(config.containerControlsEnabled).toBe(true);
+    expect(config.trustProxySetting).toBe("loopback, uniquelocal");
   });
 
   it("parses numbers, strings, and trimmed comma-separated arrays", async () => {
@@ -204,10 +206,51 @@ describe("config", () => {
     expect(mockFs.readFileSync).toHaveBeenCalledWith("/run/secrets/certvault", "utf8");
   });
 
-  it("exposes NaN for invalid numeric input instead of silently using a default", async () => {
-    vi.stubEnv("PORT", "not-a-number");
+  it.each([
+    ["true", true],
+    ["false", false],
+    [" false ", false],
+    ["loopback, uniquelocal", "loopback, uniquelocal"],
+    ["127.0.0.1", "127.0.0.1"],
+    ["10.0.0.0/8", "10.0.0.0/8"],
+  ])("passes TRUST_PROXY=%s to Express correctly", async (raw, expected) => {
+    vi.stubEnv("TRUST_PROXY", raw as string);
+    const config = await freshConfig();
+    const app = express();
+
+    app.set("trust proxy", config.trustProxySetting);
+    expect(app.get("trust proxy")).toBe(expected);
+  });
+
+  it.each([
+    ["PORT", "not-a-number"],
+    ["PORT", "3001suffix"],
+    ["PORT", "1.5"],
+    ["PORT", ""],
+    ["PORT", "0"],
+    ["PORT", "65536"],
+    ["HEALTH_CHECK_INTERVAL", "0"],
+    ["RESOURCE_MONITOR_INTERVAL", "-1"],
+    ["UPDATE_CHECK_INTERVAL", "Infinity"],
+    ["CERTIFICATE_CHECK_INTERVAL", "2147483648"],
+    ["HEALTH_HISTORY_TTL_DAYS", "-30"],
+    ["SESSION_MAX_AGE", "0"],
+    ["CPU_SPIKE_THRESHOLD", "-1"],
+    ["MEMORY_SPIKE_THRESHOLD", "1.5"],
+    ["SPIKE_DURATION_THRESHOLD", "9007199254740992"],
+  ])("rejects invalid %s=%s during configuration initialization", async (env, raw) => {
+    vi.stubEnv(env, raw);
+    await expect(freshConfig()).rejects.toThrow(`Invalid ${env}`);
+  });
+
+  it("allows zero thresholds and an immediate spike duration", async () => {
+    vi.stubEnv("CPU_SPIKE_THRESHOLD", "0");
+    vi.stubEnv("MEMORY_SPIKE_THRESHOLD", "0");
+    vi.stubEnv("SPIKE_DURATION_THRESHOLD", "0");
     const config = await freshConfig();
 
-    expect(config.port).toBeNaN();
+    expect(config.cpuSpikeThreshold).toBe(0);
+    expect(config.memorySpikeThreshold).toBe(0);
+    expect(config.spikeDurationThreshold).toBe(0);
   });
 });

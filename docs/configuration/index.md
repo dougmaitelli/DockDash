@@ -142,7 +142,7 @@ browser.
 
 - Values in the process environment are loaded by `dotenv`, so a local `.env` file is convenient for development.
 - Comma-separated arrays are trimmed and empty values are ignored.
-- Numeric values are integers in the units documented above.
+- Numeric values must be positive safe integers in the units documented above. Resource-alert thresholds and spike duration also accept `0`. Invalid values stop startup with an error naming the setting. `PORT` must be between `1` and `65535`, and monitoring intervals cannot exceed `2147483647` milliseconds.
 - Disable flags are active only when their value is exactly `true`.
 
 For security implications and hardened deployment examples, see the [security guide](../security/) and [Docker getting-started instructions](../getting-started/#docker).

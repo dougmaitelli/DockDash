@@ -41,6 +41,13 @@ export function parseDockerHostEntry(entry: string): ConfiguredDockerHost {
 class Config {
   private _sessionSecret: string | undefined;
 
+  constructor() {
+    // Reject invalid numeric settings before integrations or background jobs start.
+    for (const key of Object.keys(CONFIG_SCHEMA) as ConfigKey[]) {
+      if (CONFIG_SCHEMA[key].type === "number") this.read(key);
+    }
+  }
+
   read<K extends ConfigKey>(key: K): SchemaConfig[K] {
     const entry = CONFIG_SCHEMA[key];
     const raw = process.env[entry.env];
@@ -62,7 +69,41 @@ class Config {
         : ([...entry.default] as SchemaConfig[K]);
     }
 
-    return (raw !== undefined ? parseInt(raw, 10) : entry.default) as SchemaConfig[K];
+    const value = raw === undefined ? entry.default : Number(raw);
+    const allowsZero =
+      key === "cpuSpikeThreshold" ||
+      key === "memorySpikeThreshold" ||
+      key === "spikeDurationThreshold";
+    const minimum = allowsZero ? 0 : 1;
+    const maximum =
+      key === "port"
+        ? 65535
+        : entry.env.endsWith("_INTERVAL")
+          ? 2_147_483_647
+          : Number.MAX_SAFE_INTEGER;
+
+    if (
+      (raw !== undefined && !/^\d+$/.test(raw.trim())) ||
+      !Number.isSafeInteger(value) ||
+      value < minimum ||
+      value > maximum
+    ) {
+      throw new Error(
+        `Invalid ${entry.env}: expected an integer between ${minimum} and ${maximum}`,
+      );
+    }
+
+    return value as SchemaConfig[K];
+  }
+
+  get trustProxySetting(): boolean | string {
+    const value = this.trustProxy.trim();
+
+    if (value === "true") return true;
+
+    if (value === "false") return false;
+
+    return value;
   }
 
   get dockerHosts(): string[] {

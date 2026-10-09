@@ -56,9 +56,7 @@ const startupTasks: Promise<unknown>[] = [];
 let shuttingDown = false;
 
 // Trust reverse-proxy headers so req.protocol reflects X-Forwarded-Proto
-const trustProxy = config.trustProxy;
-
-app.set("trust proxy", trustProxy === "true" ? true : trustProxy);
+app.set("trust proxy", config.trustProxySetting);
 
 // Middleware
 app.use(express.json({ limit: "100kb" }));
