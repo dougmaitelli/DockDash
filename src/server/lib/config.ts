@@ -42,6 +42,9 @@ class Config {
   private _sessionSecret: string | undefined;
 
   constructor() {
+    // Partial provider configuration must never silently bypass authentication.
+    void this.oidcEnabled;
+
     // Reject invalid numeric settings before integrations or background jobs start.
     for (const key of Object.keys(CONFIG_SCHEMA) as ConfigKey[]) {
       if (CONFIG_SCHEMA[key].type === "number") this.read(key);
@@ -146,7 +149,20 @@ class Config {
   }
 
   get oidcEnabled(): boolean {
-    return !!(this.oidcIssuer && this.oidcClientId && this.oidcClientSecret);
+    const required = ["oidcIssuer", "oidcClientId", "oidcClientSecret"] as const;
+    const settings = [...required, "oidcRedirectUri", "oidcScopes"] as const;
+
+    if (settings.every((key) => process.env[CONFIG_SCHEMA[key].env] === undefined)) return false;
+
+    const missing = required.filter((key) => !this.read(key)?.trim());
+
+    if (missing.length) {
+      throw new Error(
+        `Incomplete OIDC configuration: set ${missing.map((key) => CONFIG_SCHEMA[key].env).join(", ")}, or unset all OIDC settings to disable built-in authentication`,
+      );
+    }
+
+    return true;
   }
 
   get sessionSecret(): string {

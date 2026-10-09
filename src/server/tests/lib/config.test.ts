@@ -133,16 +133,72 @@ describe("config", () => {
     expect(config.dockerHostConfigs[0].name).toBe("Machine");
   });
 
-  it("enables OIDC only when issuer, client ID, and client secret are present", async () => {
+  it("disables OIDC only when no OIDC settings are supplied", async () => {
+    expect((await freshConfig()).oidcEnabled).toBe(false);
+  });
+
+  it("enables OIDC when all required settings are present", async () => {
     vi.stubEnv("OIDC_ISSUER", "https://idp.example");
     vi.stubEnv("OIDC_CLIENT_ID", "dockdash");
-    let config = await freshConfig();
-
-    expect(config.oidcEnabled).toBe(false);
-
     vi.stubEnv("OIDC_CLIENT_SECRET", "secret");
-    config = await freshConfig();
+    const config = await freshConfig();
+
     expect(config.oidcEnabled).toBe(true);
+  });
+
+  it.each([1, 2, 3, 4, 5, 6])(
+    "rejects incomplete OIDC settings during startup (mask %s)",
+    async (mask) => {
+      ["OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET"].forEach((env, index) => {
+        if (mask & (1 << index)) vi.stubEnv(env, "configured-value");
+      });
+
+      await expect(freshConfig()).rejects.toThrow("Incomplete OIDC configuration");
+    },
+  );
+
+  it.each(["OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET"])(
+    "rejects empty and whitespace-only %s",
+    async (env) => {
+      for (const value of ["", " \t "]) {
+        vi.stubEnv("OIDC_ISSUER", "https://idp.example");
+        vi.stubEnv("OIDC_CLIENT_ID", "dockdash");
+        vi.stubEnv("OIDC_CLIENT_SECRET", "private-secret-value");
+        vi.stubEnv(env, value);
+
+        await expect(freshConfig()).rejects.toThrow(`set ${env}`);
+      }
+    },
+  );
+
+  it.each(["OIDC_REDIRECT_URI", "OIDC_SCOPES", "OIDC_CLIENT_SECRET"])(
+    "rejects %s supplied alone, even if empty",
+    async (env) => {
+      vi.stubEnv(env, "");
+      await expect(freshConfig()).rejects.toThrow("Incomplete OIDC configuration");
+    },
+  );
+
+  it("does not expose configured secrets in configuration errors", async () => {
+    vi.stubEnv("OIDC_CLIENT_SECRET", "private-secret-value");
+
+    try {
+      await freshConfig();
+      expect.fail("Configuration should reject partial OIDC settings");
+    } catch (error) {
+      expect(String(error)).toContain("OIDC_ISSUER, OIDC_CLIENT_ID");
+      expect(String(error)).not.toContain("private-secret-value");
+    }
+  });
+
+  it("keeps the authentication check fail-closed if configuration becomes incomplete", async () => {
+    vi.stubEnv("OIDC_ISSUER", "https://idp.example");
+    vi.stubEnv("OIDC_CLIENT_ID", "dockdash");
+    vi.stubEnv("OIDC_CLIENT_SECRET", "secret");
+    const config = await freshConfig();
+
+    delete process.env.OIDC_CLIENT_SECRET;
+    expect(() => config.oidcEnabled).toThrow("Incomplete OIDC configuration");
   });
 
   it("uses an explicit session secret without generating a replacement", async () => {

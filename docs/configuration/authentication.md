@@ -11,6 +11,8 @@ DockDash does not enforce authentication by default. Configure authentication be
 
 OIDC is enabled when all three required provider settings are present:
 
+Startup fails if any OIDC setting is supplied without all three required provider settings containing non-blank values. The error names the missing settings without exposing their values. To disable built-in authentication for an authenticated reverse proxy, leave all OIDC environment variables unset; empty values also count as supplied settings.
+
 | Variable             | Default                | Description                                                            |
 | -------------------- | ---------------------- | ---------------------------------------------------------------------- |
 | `OIDC_ISSUER`        | unset                  | Provider issuer or discovery URL                                       |
