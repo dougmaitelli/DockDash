@@ -91,7 +91,8 @@ export class UpdateCheckerService extends ConcurrentService {
           }
         }
 
-        if (highestTag) {
+        // A more specific spelling of the same version is not an update.
+        if (highestTag && TagParser.compareSemVer(highest, parsed) > 0) {
           hasUpdate = true;
           currentVersion = imageTag;
           latestVersion = highestTag;

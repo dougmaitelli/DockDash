@@ -185,6 +185,48 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
       );
     });
 
+    it.each([
+      ["0.12.0-slim", "v0.12.0-slim"],
+      ["v0.12.0-slim", "0.12.0-slim"],
+      ["0.12-slim", "v0.12.0-slim"],
+      ["0.12.0-slim", "v0.12.0.0-slim"],
+    ])("does not report equivalent tags %s → %s as updates", async (imageTag, registryTag) => {
+      const svc = makeDockerService({
+        metadata: { image: "nginx", imageTag, hasUpdate: true, latestVersion: registryTag },
+      });
+
+      mockDb.getServices.mockReturnValue([svc]);
+      mockRegistryClient.getRepositoryTags.mockResolvedValue([registryTag]);
+
+      await updateCheckerService.checkAllServicesForUpdates();
+
+      expect(mockDb.updateServiceMetadata).toHaveBeenCalledWith(
+        "svc-1",
+        expect.objectContaining({ hasUpdate: false }),
+      );
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
+    });
+
+    it("detects a newer version across a v prefix change", async () => {
+      const svc = makeDockerService({
+        metadata: { image: "nginx", imageTag: "0.12.0-slim", hasUpdate: false },
+      });
+
+      mockDb.getServices.mockReturnValue([svc]);
+      mockRegistryClient.getRepositoryTags.mockResolvedValue([
+        "v0.12.0-slim",
+        "v0.13.0-slim",
+        "v0.14.0-alpine",
+      ]);
+
+      await updateCheckerService.checkAllServicesForUpdates();
+
+      expect(mockDb.updateServiceMetadata).toHaveBeenCalledWith(
+        "svc-1",
+        expect.objectContaining({ hasUpdate: true, latestVersion: "v0.13.0-slim" }),
+      );
+    });
+
     it("does not set hasUpdate when already at the latest tag", async () => {
       const svc = makeDockerService();
 
