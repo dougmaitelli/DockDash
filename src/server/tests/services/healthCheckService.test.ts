@@ -452,6 +452,129 @@ describe("HealthCheckService.checkAllServices", () => {
   });
 });
 
+describe("HealthCheckService — grouped status notifications", () => {
+  function setupCycle(entries: { name: string; previous: ServiceStatus; state: string }[]) {
+    const services = entries.map(({ name, previous }) => ({
+      ...makeDockerSvc(""),
+      id: name,
+      name,
+      status: previous,
+      metadata: { dockerHostId: "testhostid", containerName: name },
+    }));
+
+    mockDb.getServices.mockReturnValue(services);
+    mockDockerService.resolveHost.mockReturnValue("tcp://host:2375");
+    mockDockerService.createDockerClientForHost.mockReturnValue({});
+    mockDockerService.getContainersStateMap.mockResolvedValue(
+      new Map(entries.map(({ name, state }) => [name, { state }])),
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockNotificationService.configured = true;
+    mockNotificationService.notify.mockResolvedValue(undefined);
+    mockConfig.healthHistoryEnabled = true;
+  });
+
+  it("sends one failure notification listing all down and recovered services", async () => {
+    setupCycle([
+      { name: "api", previous: ServiceStatus.UP, state: "exited" },
+      { name: "db", previous: ServiceStatus.UNKNOWN, state: "exited" },
+      { name: "web", previous: ServiceStatus.DOWN, state: "running" },
+      { name: "unchanged", previous: ServiceStatus.UP, state: "running" },
+      { name: "initial", previous: ServiceStatus.UNKNOWN, state: "running" },
+      { name: "unknown", previous: ServiceStatus.DOWN, state: "restarting" },
+    ]);
+
+    await healthCheckService.checkAllServices();
+
+    expect(mockNotificationService.notify).toHaveBeenCalledExactlyOnceWith(
+      "notifications.serviceStatusChanges",
+      "notifications.servicesDown\n- api\n- db\n\nnotifications.servicesRecovered\n- web",
+      "failure",
+    );
+    expect(mockDb.updateServiceStatus).toHaveBeenCalledTimes(6);
+    expect(mockDb.addHealthHistory).toHaveBeenCalledTimes(6);
+  });
+
+  it("sends one success notification when multiple services recover", async () => {
+    setupCycle([
+      { name: "api", previous: ServiceStatus.DOWN, state: "running" },
+      { name: "db", previous: ServiceStatus.DOWN, state: "running" },
+    ]);
+
+    await healthCheckService.checkAllServices();
+
+    expect(mockNotificationService.notify).toHaveBeenCalledExactlyOnceWith(
+      "notifications.serviceStatusChanges",
+      "notifications.servicesRecovered\n- api\n- db",
+      "success",
+    );
+  });
+
+  it("sends one failure notification when multiple services go down", async () => {
+    setupCycle([
+      { name: "api", previous: ServiceStatus.UP, state: "exited" },
+      { name: "db", previous: ServiceStatus.UP, state: "exited" },
+    ]);
+
+    await healthCheckService.checkAllServices();
+
+    expect(mockNotificationService.notify).toHaveBeenCalledExactlyOnceWith(
+      "notifications.serviceStatusChanges",
+      "notifications.servicesDown\n- api\n- db",
+      "failure",
+    );
+  });
+
+  it("does not notify for unchanged statuses, initial UP, or UNKNOWN", async () => {
+    setupCycle([
+      { name: "up", previous: ServiceStatus.UP, state: "running" },
+      { name: "down", previous: ServiceStatus.DOWN, state: "exited" },
+      { name: "initial", previous: ServiceStatus.UNKNOWN, state: "running" },
+      { name: "unknown", previous: ServiceStatus.DOWN, state: "restarting" },
+    ]);
+
+    await healthCheckService.checkAllServices();
+
+    expect(mockNotificationService.notify).not.toHaveBeenCalled();
+  });
+
+  it("does not send when notifications are disabled", async () => {
+    setupCycle([
+      { name: "api", previous: ServiceStatus.UP, state: "exited" },
+      { name: "db", previous: ServiceStatus.DOWN, state: "running" },
+    ]);
+    mockNotificationService.configured = false;
+
+    await healthCheckService.checkAllServices();
+
+    expect(mockNotificationService.notify).not.toHaveBeenCalled();
+    expect(mockDb.updateServiceStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps persistence and cycle results intact when delivery fails, without leaking into the next cycle", async () => {
+    setupCycle([
+      { name: "api", previous: ServiceStatus.UP, state: "exited" },
+      { name: "db", previous: ServiceStatus.UP, state: "exited" },
+    ]);
+    mockNotificationService.notify.mockRejectedValueOnce(new Error("Apprise unavailable"));
+
+    await expect(healthCheckService.checkAllServices()).resolves.toEqual({ updated: 2, errors: 0 });
+    expect(mockDb.updateServiceStatus).toHaveBeenCalledTimes(2);
+    expect(mockDb.addHealthHistory).toHaveBeenCalledTimes(2);
+
+    setupCycle([
+      { name: "api", previous: ServiceStatus.DOWN, state: "exited" },
+      { name: "db", previous: ServiceStatus.DOWN, state: "exited" },
+    ]);
+    await healthCheckService.checkAllServices();
+
+    expect(mockNotificationService.notify).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("HealthCheckService — flag interaction scenarios", () => {
   // Docker service that is currently DOWN so DOWN→UP triggers a status notification.
   function makeDownDockerSvc(id: string) {

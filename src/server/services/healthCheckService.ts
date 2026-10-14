@@ -24,6 +24,12 @@ import { notificationService } from "./notificationService.js";
 const HTTP_TIMEOUT = 1000;
 const TCP_TIMEOUT = 1000;
 
+interface StatusChange {
+  name: string;
+  previousStatus: ServiceStatus;
+  status: ServiceStatus | null;
+}
+
 export class HealthCheckService extends ConcurrentService {
   protected readonly concurrencyLimit = 20;
   private readonly dockerHostConcurrencyLimit = 5;
@@ -115,7 +121,12 @@ export class HealthCheckService extends ConcurrentService {
           ? await kubernetesRuntime.status(service).catch(() => ServiceStatus.UNKNOWN)
           : await this.checkSingleNetworkService(service);
 
-    if (status !== null) this.commitStatus(service, status);
+    if (status !== null) {
+      this.commitStatus(service, status);
+      await this.notifyStatusChanges([
+        { name: service.name, previousStatus: service.status, status },
+      ]);
+    }
 
     return status;
   }
@@ -177,13 +188,15 @@ export class HealthCheckService extends ConcurrentService {
 
       if (status !== null) this.commitStatus(service, status);
 
-      return { previousStatus: service.status, status };
+      return { name: service.name, previousStatus: service.status, status };
     });
 
     for (const { previousStatus, status } of statuses) {
       if (status === null) errors++;
       else if (status !== previousStatus) updated++;
     }
+
+    await this.notifyStatusChanges(statuses);
 
     return { updated, errors };
   }
@@ -253,7 +266,6 @@ export class HealthCheckService extends ConcurrentService {
 
   private commitStatus(service: Service, status: ServiceStatus): void {
     this.logStatusChange(service.name, service.status, status);
-    this.notifyStatusChange(service.name, service.status, status);
     serviceRepository.updateServiceStatus(service.id!, status);
 
     if (config.healthHistoryEnabled) {
@@ -267,37 +279,60 @@ export class HealthCheckService extends ConcurrentService {
     }
   }
 
-  private notifyStatusChange(
-    name: string,
-    oldStatus: ServiceStatus,
-    newStatus: ServiceStatus,
-  ): void {
-    if (oldStatus === newStatus) return;
-
+  private async notifyStatusChanges(statuses: StatusChange[]): Promise<void> {
     if (!notificationService.configured) return;
 
-    if (newStatus === ServiceStatus.DOWN) {
-      void notificationService
-        .notify(
-          t("notifications.serviceDown", { name }),
-          t("notifications.serviceDownBody", { name }),
-          "failure",
-        )
-        .catch(() => {
-          // notify() already logs the error before rethrowing; swallow here to
-          // avoid an unhandled rejection blocking the health-check cycle
-        });
-    } else if (newStatus === ServiceStatus.UP && oldStatus === ServiceStatus.DOWN) {
-      void notificationService
-        .notify(
-          t("notifications.serviceRecovered", { name }),
-          t("notifications.serviceRecoveredBody", { name }),
-          "success",
-        )
-        .catch(() => {
-          // notify() already logs the error before rethrowing; swallow here to
-          // avoid an unhandled rejection blocking the health-check cycle
-        });
+    const down = statuses.filter(
+      ({ previousStatus, status }) => status === ServiceStatus.DOWN && previousStatus !== status,
+    );
+    const recovered = statuses.filter(
+      ({ previousStatus, status }) =>
+        status === ServiceStatus.UP && previousStatus === ServiceStatus.DOWN,
+    );
+
+    if (down.length + recovered.length === 0) return;
+
+    let title: string;
+    let body: string;
+
+    if (down.length + recovered.length === 1) {
+      const { name } = down[0] ?? recovered[0];
+
+      title = down.length
+        ? t("notifications.serviceDown", { name })
+        : t("notifications.serviceRecovered", { name });
+      body = down.length
+        ? t("notifications.serviceDownBody", { name })
+        : t("notifications.serviceRecoveredBody", { name });
+    } else {
+      title = t("notifications.serviceStatusChanges");
+      const sections: string[] = [];
+
+      if (down.length) {
+        sections.push(
+          [
+            t("notifications.servicesDown", { total: String(down.length) }),
+            ...down.map(({ name }) => `- ${name}`),
+          ].join("\n"),
+        );
+      }
+
+      if (recovered.length) {
+        sections.push(
+          [
+            t("notifications.servicesRecovered", { total: String(recovered.length) }),
+            ...recovered.map(({ name }) => `- ${name}`),
+          ].join("\n"),
+        );
+      }
+
+      body = sections.join("\n\n");
+    }
+
+    try {
+      await notificationService.notify(title, body, down.length ? "failure" : "success");
+    } catch {
+      // notify() logs delivery failures; health checks and persistence still succeed.
     }
   }
 }
