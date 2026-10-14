@@ -11,6 +11,7 @@ const mockSvcRepo = vi.hoisted(() => ({
   getServiceStatuses: vi.fn(),
   saveService: vi.fn(),
   updateService: vi.fn(),
+  assignLabels: vi.fn(),
   deleteService: vi.fn(),
   addServiceToDashboard: vi.fn(),
   removeServiceFromDashboard: vi.fn(),
@@ -53,7 +54,18 @@ const mockLogger = vi.hoisted(() => ({
 }));
 
 vi.mock("@server/lib/config.js", () => ({ config: mockConfig }));
-vi.mock("@server/db/serviceRepository.js", () => ({ serviceRepository: mockSvcRepo }));
+vi.mock("@server/db/serviceRepository.js", () => ({
+  serviceRepository: mockSvcRepo,
+  BatchLabelError: class extends Error {
+    constructor(
+      message: string,
+      public status: number,
+      public serviceIds: string[],
+    ) {
+      super(message);
+    }
+  },
+}));
 vi.mock("@server/db/labelRepository.js", () => ({ labelRepository: mockLabelRepo }));
 vi.mock("@server/db/historyRepository.js", () => ({ historyRepository: mockHistRepo }));
 vi.mock("@server/services/healthCheckService.js", () => ({
@@ -68,6 +80,7 @@ vi.mock("@server/services/changelogService.js", () => ({
 vi.mock("@server/lib/logService.js", () => ({ logger: mockLogger }));
 
 const routerModule = await import("@server/routes/services.js");
+const { BatchLabelError } = await import("@server/db/serviceRepository.js");
 
 const app = express();
 
@@ -88,6 +101,54 @@ const makeService = (overrides = {}) => ({
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,
+});
+
+describe("POST /api/services/labels", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("assigns labels in a single repository operation and returns updated services", async () => {
+    mockSvcRepo.assignLabels.mockReturnValue([makeService({ labels: ["Production"] })]);
+    const response = await request(app)
+      .post("/api/services/labels")
+      .send({ serviceIds: ["svc-1", "svc-1"], labels: [" Production "] });
+
+    expect(response.status).toBe(200);
+    expect(response.body[0].labels).toEqual(["Production"]);
+    expect(mockSvcRepo.assignLabels).toHaveBeenCalledExactlyOnceWith(["svc-1"], ["Production"]);
+    expect(mockHealthCheckService.checkSingleService).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {},
+    { serviceIds: [], labels: ["A"] },
+    { serviceIds: [""], labels: ["A"] },
+    { serviceIds: ["svc-1"], labels: [] },
+    { serviceIds: ["svc-1"], labels: [" "] },
+    { serviceIds: ["svc-1"], labels: ["A", "a"] },
+    { serviceIds: ["svc-1"], labels: ["x".repeat(51)] },
+    { serviceIds: ["svc-1"], labels: Array.from({ length: 21 }, (_, i) => `Label ${i}`) },
+    { serviceIds: ["svc-1"], labels: ["A"], extra: true },
+  ])("rejects invalid request %j before writing", async (body) => {
+    const response = await request(app).post("/api/services/labels").send(body);
+
+    expect(response.status).toBe(400);
+    expect(mockSvcRepo.assignLabels).not.toHaveBeenCalled();
+  });
+
+  it.each([400, 404])(
+    "returns repository validation status %i and affected IDs",
+    async (status) => {
+      mockSvcRepo.assignLabels.mockImplementationOnce(() => {
+        throw new BatchLabelError("Invalid batch", status, ["svc-1"]);
+      });
+      const response = await request(app)
+        .post("/api/services/labels")
+        .send({ serviceIds: ["svc-1"], labels: ["A"] });
+
+      expect(response.status).toBe(status);
+      expect(response.body).toEqual({ error: "Invalid batch", serviceIds: ["svc-1"] });
+    },
+  );
 });
 
 describe("GET /api/labels", () => {

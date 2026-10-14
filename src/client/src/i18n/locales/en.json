@@ -38,7 +38,15 @@
     "emptyTitle": "No services",
     "emptyMessage": "Add a service manually or go to Discovery to find services on your network.",
     "noResults": "No services match the current filters.",
-    "updateBadge": "Update"
+    "updateBadge": "Update",
+    "selectedCount": "{{count}} selected",
+    "selectAllVisible": "Select all visible services",
+    "selectService": "Select {{name}}",
+    "assignLabels": "Assign labels",
+    "assigningLabels": "Assigning labels…",
+    "clearSelection": "Clear selection",
+    "batchLabelsHint": "Add labels to selected services, keeping existing labels.",
+    "batchLabelError": "No labels were assigned. Your selection has been kept so you can retry."
   },
   "certificates": {
     "protectingService": "Certificate",

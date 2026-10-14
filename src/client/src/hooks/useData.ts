@@ -178,6 +178,19 @@ export function useServices() {
     setServices((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
+  const assignLabels = useCallback(async (serviceIds: string[], labels: string[]) => {
+    const res = await serviceApi.assignLabels({ serviceIds, labels });
+    const updates = new Map(res.data.map((service) => [service.id, service]));
+
+    setServices((previous) =>
+      previous.map((service) => {
+        const updated = updates.get(service.id);
+
+        return updated ? { ...service, ...updated } : service;
+      }),
+    );
+  }, []);
+
   const addToDashboard = useCallback(async (id: string) => {
     await serviceApi.addToDashboard(id);
     setServices((prev) => prev.map((s) => (s.id === id ? { ...s, onDashboard: true } : s)));
@@ -195,6 +208,7 @@ export function useServices() {
     refresh,
     addService,
     updateService,
+    assignLabels,
     removeService,
     addToDashboard,
     removeFromDashboard,

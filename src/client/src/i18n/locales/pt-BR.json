@@ -38,7 +38,15 @@
     "emptyTitle": "Nenhum serviço",
     "emptyMessage": "Adicione um serviço manualmente ou vá em Descoberta para encontrar serviços na sua rede.",
     "noResults": "Nenhum serviço corresponde aos filtros atuais.",
-    "updateBadge": "Atualização"
+    "updateBadge": "Atualização",
+    "selectedCount": "{{count}} selecionados",
+    "selectAllVisible": "Selecionar todos os serviços visíveis",
+    "selectService": "Selecionar {{name}}",
+    "assignLabels": "Atribuir rótulos",
+    "assigningLabels": "Atribuindo rótulos…",
+    "clearSelection": "Limpar seleção",
+    "batchLabelsHint": "Adicionar rótulos aos serviços selecionados, mantendo os existentes.",
+    "batchLabelError": "Nenhum rótulo foi atribuído. Sua seleção foi mantida para tentar novamente."
   },
   "certificates": {
     "protectingService": "Certificado",

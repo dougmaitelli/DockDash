@@ -2,6 +2,8 @@ import { Router } from "express";
 
 import { ServiceSource } from "@shared";
 import {
+  type AssignServiceLabelsRequest,
+  assignServiceLabelsRequestSchema,
   type CreateServiceRequest,
   createServiceRequestSchema,
   type SavePositionsRequest,
@@ -13,7 +15,7 @@ import type { ApiSuccess, SavePositionsResponse } from "@shared/responseSchemas.
 
 import { historyRepository } from "../db/historyRepository.js";
 import { labelRepository } from "../db/labelRepository.js";
-import { serviceRepository } from "../db/serviceRepository.js";
+import { BatchLabelError, serviceRepository } from "../db/serviceRepository.js";
 import { config } from "../lib/config.js";
 import { logger } from "../lib/logService.js";
 import { validateBody } from "../middleware/validateRequest.js";
@@ -85,6 +87,20 @@ router.post("/services", validateBody(createServiceRequestSchema), (req, res) =>
     );
 
   res.status(201).json(containerRuntimeService.withSourceName(service));
+});
+
+router.post("/services/labels", validateBody(assignServiceLabelsRequestSchema), (req, res) => {
+  const { serviceIds, labels } = req.body as AssignServiceLabelsRequest;
+
+  try {
+    const updated = serviceRepository.assignLabels(serviceIds, labels);
+
+    res.json(updated.map((service) => containerRuntimeService.withSourceName(service)));
+  } catch (error) {
+    if (!(error instanceof BatchLabelError)) throw error;
+
+    res.status(error.status).json({ error: error.message, serviceIds: error.serviceIds });
+  }
 });
 
 router.put("/services/:id", validateBody(updateServiceRequestSchema), (req, res) => {

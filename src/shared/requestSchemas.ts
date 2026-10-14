@@ -77,6 +77,16 @@ export const updateServiceRequestSchema = z
   })
   .strict();
 
+export const assignServiceLabelsRequestSchema = z
+  .object({
+    serviceIds: z
+      .array(nonEmptyString)
+      .min(1)
+      .transform((ids) => [...new Set(ids)]),
+    labels: serviceLabels.refine((labels) => labels.length > 0, "At least one label is required"),
+  })
+  .strict();
+
 export const createLinkRequestSchema = z
   .object({
     sourceId: nonEmptyString,
@@ -128,6 +138,7 @@ export const terminalInputRequestSchema = z
 
 export type CreateServiceRequest = z.infer<typeof createServiceRequestSchema>;
 export type UpdateServiceRequest = z.infer<typeof updateServiceRequestSchema>;
+export type AssignServiceLabelsRequest = z.infer<typeof assignServiceLabelsRequestSchema>;
 export type CreateLinkRequest = z.infer<typeof createLinkRequestSchema>;
 export type UpdateLinkRequest = z.infer<typeof updateLinkRequestSchema>;
 export type SavePositionsRequest = z.infer<typeof savePositionsRequestSchema>;

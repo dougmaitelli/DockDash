@@ -113,6 +113,70 @@ describe("updateService", () => {
 });
 
 describe("service labels", () => {
+  const createLabeled = (name: string, labels: string[]) =>
+    svcRepo.saveService({ name, host: "localhost", labels });
+
+  it("batch merges current labels, deduplicates normalized labels and service IDs, and is idempotent", () => {
+    const first = createLabeled("first", ["Production"]);
+    const second = createLabeled("second", ["Backend"]);
+
+    svcRepo.updateService(first.id!, { labels: ["Production", "Recently added"] });
+    const result = svcRepo.assignLabels([first.id!, second.id!, first.id!], ["production", "New"]);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].labels).toEqual(["New", "Production", "Recently added"]);
+    expect(result[1].labels).toEqual(["Backend", "New", "Production"]);
+    expect(
+      svcRepo.assignLabels([first.id!, second.id!], ["NEW"]).map((service) => service.labels),
+    ).toEqual(result.map((service) => service.labels));
+  });
+
+  it("rejects missing services without changing any labels", () => {
+    const first = createLabeled("first", ["Existing"]);
+
+    expect(() => svcRepo.assignLabels([first.id!, "missing"], ["New"])).toThrow(
+      "Services not found: missing",
+    );
+    expect(svcRepo.getService(first.id!)?.labels).toEqual(["Existing"]);
+    expect(labelRepo.getAll()).toEqual(["Existing"]);
+  });
+
+  it("identifies services exceeding the merged limit and leaves the entire batch unchanged", () => {
+    const first = createLabeled("first", []);
+    const full = createLabeled(
+      "full",
+      Array.from({ length: 20 }, (_, index) => `Label ${index}`),
+    );
+
+    expect(() => svcRepo.assignLabels([first.id!, full.id!], ["New"])).toThrow(
+      "Label limit (20) exceeded for: full",
+    );
+    expect(svcRepo.getService(first.id!)?.labels).toEqual([]);
+    expect(svcRepo.getService(full.id!)?.labels).toHaveLength(20);
+    expect(labelRepo.getAll()).not.toContain("New");
+    expect(svcRepo.assignLabels([full.id!], ["LABEL 0"])[0].labels).toHaveLength(20);
+  });
+
+  it("rolls back earlier service changes if a later write fails", () => {
+    const first = createLabeled("first", ["Existing"]);
+    const second = createLabeled("second", []);
+    const replace = labelRepo.replaceForService.bind(labelRepo);
+    const spy = vi.spyOn(labelRepo, "replaceForService").mockImplementation((id, labels) => {
+      if (id === second.id) throw new Error("Write failed");
+
+      replace(id, labels);
+    });
+
+    try {
+      expect(() => svcRepo.assignLabels([first.id!, second.id!], ["New"])).toThrow("Write failed");
+      expect(svcRepo.getService(first.id!)).toEqual(first);
+      expect(svcRepo.getService(second.id!)).toEqual(second);
+      expect(labelRepo.getAll()).toEqual(["Existing"]);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("saves labels and hydrates them on individual and list reads", () => {
     const service = svcRepo.saveService({
       name: "labeled",

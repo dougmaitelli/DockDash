@@ -3,6 +3,7 @@ import type { ZodType } from "zod";
 
 import type { ContainerAction } from "@shared";
 import type {
+  AssignServiceLabelsRequest,
   CreateLinkRequest,
   CreateServiceRequest,
   PositionUpdate,
@@ -96,6 +97,8 @@ export const authApi = {
 export const serviceApi = {
   getAll: () => validated(api.get("/services"), serviceResponseSchema.array()),
   getLabels: () => validated(api.get("/labels"), serviceLabelsResponseSchema),
+  assignLabels: (data: AssignServiceLabelsRequest) =>
+    validated(api.post("/services/labels", data), serviceResponseSchema.array()),
   getById: (id: string) => validated(api.get(`/services/${id}`), serviceResponseSchema),
   importService: (data: CreateServiceRequest) =>
     validated(api.post("/services", data), serviceResponseSchema),

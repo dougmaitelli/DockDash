@@ -10,7 +10,13 @@ import type {
   ServicePosition,
   ServiceStatusItem,
 } from "@shared";
-import { ServiceLinkType, ServiceSource, ServiceStatus } from "@shared";
+import {
+  normalizeServiceLabel,
+  SERVICE_LABEL_MAX_COUNT,
+  ServiceLinkType,
+  ServiceSource,
+  ServiceStatus,
+} from "@shared";
 import type {
   CreateLinkRequest,
   CreateServiceRequest,
@@ -23,7 +29,55 @@ import { orm, sqlite } from "./connection.js";
 import { labelRepository } from "./labelRepository.js";
 import { serviceLinks, servicePositions, services } from "./schema/index.js";
 
+export class BatchLabelError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public serviceIds: string[],
+  ) {
+    super(message);
+  }
+}
+
 export class ServiceRepository {
+  assignLabels(serviceIds: string[], additions: string[]): Service[] {
+    return sqlite.transaction(() => {
+      const ids = [...new Set(serviceIds)];
+      const current = ids.map((id) => this.getService(id));
+      const missing = ids.filter((_id, index) => !current[index]);
+
+      if (missing.length)
+        throw new BatchLabelError(`Services not found: ${missing.join(", ")}`, 404, missing);
+
+      const updates = current.map((service) => {
+        const labels = [...(service!.labels ?? [])];
+        const existing = new Set(labels.map(normalizeServiceLabel));
+
+        for (const label of additions) {
+          const normalized = normalizeServiceLabel(label);
+
+          if (!existing.has(normalized)) {
+            labels.push(label.trim());
+            existing.add(normalized);
+          }
+        }
+
+        return { service: service!, labels };
+      });
+      const overLimit = updates.filter(({ labels }) => labels.length > SERVICE_LABEL_MAX_COUNT);
+
+      if (overLimit.length) {
+        throw new BatchLabelError(
+          `Label limit (${SERVICE_LABEL_MAX_COUNT}) exceeded for: ${overLimit.map(({ service }) => service.name).join(", ")}`,
+          400,
+          overLimit.map(({ service }) => service.id!),
+        );
+      }
+
+      return updates.map(({ service, labels }) => this.updateService(service.id!, { labels }));
+    })();
+  }
+
   saveService(data: CreateServiceRequest): Service {
     const now = new Date().toISOString();
 

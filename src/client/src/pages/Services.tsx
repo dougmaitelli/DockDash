@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { isAxiosError } from "axios";
 
 import type { Service } from "@shared";
 import { isContainerService, ServiceSource, ServiceStatus } from "@shared";
@@ -10,6 +11,7 @@ import { Icons } from "@/components/Icons";
 import { PageContainer } from "@/components/PageContainer";
 import { PortTag } from "@/components/PortTag";
 import { ServiceIcon } from "@/components/ServiceIcon";
+import { ServiceLabelInput } from "@/components/ServiceLabelInput";
 import type { SortState } from "@/components/Table";
 import { FilterHeader, SortHeader } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
@@ -127,6 +129,7 @@ export default function Services() {
     refresh,
     addService,
     updateService,
+    assignLabels: assignServiceLabels,
     removeService,
     addToDashboard,
   } = useServices();
@@ -138,6 +141,44 @@ export default function Services() {
   const [sort, setSort] = useState<SortState<SortColumn>>({ column: "name", direction: "asc" });
   const [drawerService, setDrawerService] = useState<Service | null>(null);
   const [addingService, setAddingService] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchLabels, setBatchLabels] = useState<string[]>([]);
+  const [assigningLabels, setAssigningLabels] = useState(false);
+  const [batchError, setBatchError] = useState("");
+  const selectedServices = services.filter((service) => service.id && selectedIds.has(service.id));
+  const labelSuggestions = [...new Set(services.flatMap((service) => service.labels ?? []))].sort();
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+
+      return next;
+    });
+  };
+
+  const assignLabels = async () => {
+    setAssigningLabels(true);
+    setBatchError("");
+    try {
+      await assignServiceLabels(
+        selectedServices.map((service) => service.id!),
+        batchLabels,
+      );
+      setSelectedIds(new Set());
+      setBatchLabels([]);
+    } catch (error) {
+      const detail = isAxiosError<{ error?: string }>(error)
+        ? error.response?.data?.error
+        : undefined;
+
+      setBatchError([t("services.batchLabelError"), detail].filter(Boolean).join(" "));
+    } finally {
+      setAssigningLabels(false);
+    }
+  };
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -210,6 +251,45 @@ export default function Services() {
         />
       </div>
 
+      {selectedServices.length > 0 && (
+        <div className="flex flex-wrap items-start gap-3 rounded-lg border border-border bg-muted/40 p-3">
+          <span className="py-2 text-sm">
+            {t("services.selectedCount", { count: selectedServices.length })}
+          </span>
+          <fieldset disabled={assigningLabels} className="min-w-64 flex-1">
+            <legend className="mb-1 text-xs text-muted-foreground">
+              {t("services.batchLabelsHint")}
+            </legend>
+            <ServiceLabelInput
+              values={batchLabels}
+              suggestions={labelSuggestions}
+              onChange={setBatchLabels}
+            />
+          </fieldset>
+          <Button
+            disabled={assigningLabels || batchLabels.length === 0}
+            onClick={() => void assignLabels()}
+          >
+            {t(assigningLabels ? "services.assigningLabels" : "services.assignLabels")}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={assigningLabels}
+            onClick={() => {
+              setSelectedIds(new Set());
+              setBatchError("");
+            }}
+          >
+            {t("services.clearSelection")}
+          </Button>
+        </div>
+      )}
+      {batchError && (
+        <p role="alert" className="text-sm text-destructive">
+          {batchError}
+        </p>
+      )}
+
       {error && !loading && <p className="text-sm text-destructive">{error}</p>}
 
       <Card className="w-full min-w-0 overflow-hidden p-0">
@@ -217,6 +297,39 @@ export default function Services() {
           <table className="w-full table-fixed text-sm min-w-[1100px]">
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <th className="w-12 px-4 py-2.5">
+                  <input
+                    type="checkbox"
+                    className="accent-primary"
+                    aria-label={t("services.selectAllVisible")}
+                    disabled={assigningLabels || visible.length === 0}
+                    checked={
+                      visible.length > 0 &&
+                      visible.every((service) => service.id && selectedIds.has(service.id))
+                    }
+                    ref={(node) => {
+                      if (node)
+                        node.indeterminate =
+                          visible.some((service) => service.id && selectedIds.has(service.id)) &&
+                          !visible.every((service) => service.id && selectedIds.has(service.id));
+                    }}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+
+                      setSelectedIds((previous) => {
+                        const next = new Set(previous);
+
+                        for (const service of visible)
+                          if (service.id) {
+                            if (checked) next.add(service.id);
+                            else next.delete(service.id);
+                          }
+
+                        return next;
+                      });
+                    }}
+                  />
+                </th>
                 <FilterHeader
                   label={t("services.colSource")}
                   width="w-48"
@@ -323,8 +436,19 @@ export default function Services() {
                     className={cn(
                       "border-b border-border last:border-b-0 cursor-pointer transition-colors",
                       "hover:bg-primary/5",
+                      service.id && selectedIds.has(service.id) && "bg-primary/5",
                     )}
                   >
+                    <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="accent-primary"
+                        aria-label={t("services.selectService", { name: service.name })}
+                        disabled={assigningLabels || !service.id}
+                        checked={!!service.id && selectedIds.has(service.id)}
+                        onChange={() => service.id && toggleSelection(service.id)}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         title={sourcePresentation.label}
