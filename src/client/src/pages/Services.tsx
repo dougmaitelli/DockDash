@@ -17,6 +17,7 @@ import { FilterHeader, SortHeader } from "@/components/Table";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 
@@ -242,39 +243,38 @@ export default function Services() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap">
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("services.searchPlaceholder")}
-          className="w-64"
+          className="w-64 max-w-full"
         />
-      </div>
-
-      {selectedServices.length > 0 && (
-        <div className="flex flex-wrap items-start gap-3 rounded-lg border border-border bg-muted/40 p-3">
-          <span className="py-2 text-sm">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <span
+            className="w-20 shrink-0 whitespace-nowrap text-right text-sm text-muted-foreground tabular-nums"
+            aria-live="polite"
+          >
             {t("services.selectedCount", { count: selectedServices.length })}
           </span>
-          <fieldset disabled={assigningLabels} className="min-w-64 flex-1">
-            <legend className="mb-1 text-xs text-muted-foreground">
-              {t("services.batchLabelsHint")}
-            </legend>
+          <fieldset disabled={assigningLabels} className="w-72 min-w-0 max-w-full">
+            <legend className="sr-only">{t("services.batchLabelsHint")}</legend>
             <ServiceLabelInput
               values={batchLabels}
               suggestions={labelSuggestions}
               onChange={setBatchLabels}
+              compact
             />
           </fieldset>
           <Button
-            disabled={assigningLabels || batchLabels.length === 0}
+            disabled={assigningLabels || selectedServices.length === 0 || batchLabels.length === 0}
             onClick={() => void assignLabels()}
           >
             {t(assigningLabels ? "services.assigningLabels" : "services.assignLabels")}
           </Button>
           <Button
             variant="outline"
-            disabled={assigningLabels}
+            disabled={assigningLabels || selectedServices.length === 0}
             onClick={() => {
               setSelectedIds(new Set());
               setBatchError("");
@@ -283,7 +283,7 @@ export default function Services() {
             {t("services.clearSelection")}
           </Button>
         </div>
-      )}
+      </div>
       {batchError && (
         <p role="alert" className="text-sm text-destructive">
           {batchError}
@@ -298,9 +298,7 @@ export default function Services() {
             <thead>
               <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <th className="w-12 px-4 py-2.5">
-                  <input
-                    type="checkbox"
-                    className="accent-primary"
+                  <Checkbox
                     aria-label={t("services.selectAllVisible")}
                     disabled={assigningLabels || visible.length === 0}
                     checked={
@@ -440,9 +438,7 @@ export default function Services() {
                     )}
                   >
                     <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        className="accent-primary"
+                      <Checkbox
                         aria-label={t("services.selectService", { name: service.name })}
                         disabled={assigningLabels || !service.id}
                         checked={!!service.id && selectedIds.has(service.id)}

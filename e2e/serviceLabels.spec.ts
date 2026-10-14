@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures.js";
+import { expect, screenshot, test } from "./fixtures.js";
 
 test("batch assigns labels to filtered services and preserves existing labels", async ({
   page,
@@ -9,11 +9,21 @@ test("batch assigns labels to filtered services and preserves existing labels", 
   await page.goto("/services");
   await page.getByPlaceholder("Search by name, host, label, or port…").fill("Production");
   await expect(page.locator("tbody tr")).toHaveCount(4);
+  const tableTop = (await page.getByRole("table").boundingBox())!.y;
+
+  await page.locator("tbody tr").first().getByRole("checkbox").check();
+  await expect(
+    page.getByRole("checkbox", { name: "Select all visible services" }),
+  ).toHaveJSProperty("indeterminate", true);
+  await screenshot(page, "services-selection-mixed.png");
   await page.getByRole("checkbox", { name: "Select all visible services" }).check();
   await expect(page.getByText("4 selected", { exact: true })).toBeVisible();
+  await screenshot(page, "services-selection-all.png");
+  expect((await page.getByRole("table").boundingBox())!.y).toBe(tableTop);
   await expect(page.locator("[data-drawer]")).toHaveCount(0);
   await page.getByRole("combobox").fill("Batch group");
   await page.getByRole("combobox").press("Enter");
+  expect((await page.getByRole("table").boundingBox())!.y).toBe(tableTop);
   const batchRequests: string[] = [];
 
   page.on("request", (req) => {
@@ -23,7 +33,7 @@ test("batch assigns labels to filtered services and preserves existing labels", 
     expect(req.method() === "PUT" && /\/api\/services\//.test(req.url())).toBeFalsy();
   });
   await page.getByRole("button", { name: "Assign labels", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Clear selection" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Clear selection" })).toBeDisabled();
   expect(batchRequests).toHaveLength(1);
   const after = await (await request.get("/api/services")).json();
 
@@ -73,5 +83,5 @@ test("failed batch label assignment keeps the entire selection for retry", async
   );
   await page.getByRole("button", { name: "Assign labels", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Clear selection" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Clear selection" })).toBeDisabled();
 });

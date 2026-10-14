@@ -12,9 +12,15 @@ interface ServiceLabelInputProps {
   values: string[];
   suggestions: string[];
   onChange: (values: string[]) => void;
+  compact?: boolean;
 }
 
-export function ServiceLabelInput({ values, suggestions, onChange }: ServiceLabelInputProps) {
+export function ServiceLabelInput({
+  values,
+  suggestions,
+  onChange,
+  compact = false,
+}: ServiceLabelInputProps) {
   const { t } = useTranslation();
   const listboxId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -94,18 +100,30 @@ export function ServiceLabelInput({ values, suggestions, onChange }: ServiceLabe
   return (
     <div
       ref={rootRef}
-      className="relative flex flex-col gap-2"
+      className={cn(
+        "relative flex flex-col gap-2",
+        compact &&
+          "h-9 flex-row items-center gap-1 rounded-md border border-input bg-background px-2 focus-within:border-primary",
+      )}
       onBlur={(event) => {
         if (!rootRef.current?.contains(event.relatedTarget)) setOpen(false);
       }}
     >
       {values.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div
+          className={cn(
+            "flex flex-wrap gap-1.5",
+            compact && "max-w-[55%] min-w-0 flex-nowrap items-center gap-1 overflow-x-auto",
+          )}
+        >
           {values.map((value) => (
             <span
               key={normalizeServiceLabel(value)}
               style={getServiceLabelColorStyle(value)}
-              className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.8rem]"
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.8rem]",
+                compact && "shrink-0 whitespace-nowrap rounded px-1.5 py-0.5 text-xs",
+              )}
             >
               {value}
               <button
@@ -151,6 +169,7 @@ export function ServiceLabelInput({ values, suggestions, onChange }: ServiceLabe
         className={cn(
           "min-w-[120px] rounded-md border bg-background px-3 py-2 text-[0.85rem] text-foreground outline-none placeholder:text-muted-foreground focus:border-primary disabled:cursor-not-allowed disabled:opacity-60",
           error ? "border-destructive" : "border-input",
+          compact && "h-full w-0 min-w-20 flex-1 rounded-none border-0 bg-transparent px-1 py-0",
         )}
       />
 
@@ -185,9 +204,25 @@ export function ServiceLabelInput({ values, suggestions, onChange }: ServiceLabe
         </div>
       )}
 
-      {error && <span className="text-xs text-destructive">{error}</span>}
+      {error && (
+        <span
+          className={cn(
+            "text-xs text-destructive",
+            compact &&
+              "absolute bottom-full left-0 mb-1 rounded border border-border bg-popover p-2",
+          )}
+        >
+          {error}
+        </span>
+      )}
       {values.length >= SERVICE_LABEL_MAX_COUNT && (
-        <span className="text-xs text-muted-foreground">
+        <span
+          className={cn(
+            "text-xs text-muted-foreground",
+            compact &&
+              "absolute bottom-full left-0 mb-1 rounded border border-border bg-popover p-2",
+          )}
+        >
           {t("modals.labelLimit", { count: SERVICE_LABEL_MAX_COUNT })}
         </span>
       )}

@@ -13,6 +13,14 @@ import { MOCK_CONTAINER_IDS, MOCK_CONTAINERS } from "./mockDockerRuntime.js";
 
 const MOCK_HOST = "unix:///var/run/docker.sock";
 const MOCK_HOST_ID = DockerRuntime.hostId(MOCK_HOST);
+const MOCK_SERVICE_LABELS: Record<string, string[]> = {
+  traefik: ["Production", "Edge", "Public"],
+  nginx: ["Production", "Frontend", "Public"],
+  postgres: ["Production", "Database", "Internal"],
+  redis: ["Production", "Cache", "Internal"],
+  grafana: ["Monitoring", "Internal"],
+  dockdash: ["Management", "Internal"],
+};
 
 function vary(base: number, variance: number, timeMs: number, phase: number): number {
   const trend = Math.sin(timeMs / (4 * 60 * 60_000) + phase) * (variance * 0.3);
@@ -39,6 +47,7 @@ function seedMockDatabase(): void {
       ports: c.ports,
       checkPort: c.ports[0],
       source: ServiceSource.DOCKER,
+      labels: MOCK_SERVICE_LABELS[c.name] ?? [],
       metadata: {
         dockerHostId: MOCK_HOST_ID,
         containerId: MOCK_CONTAINER_IDS.get(c.name)!,
