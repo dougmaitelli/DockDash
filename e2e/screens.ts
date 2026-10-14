@@ -58,7 +58,7 @@ export async function expectServicesLayout(page: Page) {
   await expect(page.locator("tbody tr")).toHaveCount(6);
   const layout = await page.locator("tbody tr").evaluateAll((rows) =>
     rows.map((row) => {
-      const sourceCell = row.children[0];
+      const sourceCell = row.children[1];
       const source = sourceCell.querySelector("span")!;
       const dashboard = row.lastElementChild!.querySelector("span")!;
       const text = document.createRange();
