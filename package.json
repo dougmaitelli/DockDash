@@ -70,7 +70,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.64.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/better-sqlite3": "^9.6.0",
     "@types/dockerode": "^4.0.1",
@@ -96,7 +96,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-simple-import-sort": "^14.0.0",
-    "playwright": "1.63.0",
+    "playwright": "1.64.0",
     "prettier": "^3.9.9",
     "supertest": "^7.3.1",
     "tailwindcss": "^4.3.3",
