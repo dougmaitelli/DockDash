@@ -37,7 +37,7 @@
     "@kubernetes/client-node": "^2.0.0",
     "@radix-ui/react-label": "^2.1.15",
     "@radix-ui/react-select": "^2.3.8",
-    "@radix-ui/react-separator": "^1.1.15",
+    "@radix-ui/react-separator": "^1.1.16",
     "@radix-ui/react-slot": "^1.4.0",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
