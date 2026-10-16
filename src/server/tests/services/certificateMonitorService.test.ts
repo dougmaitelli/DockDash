@@ -112,7 +112,7 @@ describe("CertificateMonitorService", () => {
     );
   });
 
-  it("keeps different domains and certificates separate", async () => {
+  it("groups mismatches across domains while keeping different certificates separate", async () => {
     mocks.getAll.mockResolvedValue([
       certificate("service-1"),
       certificate("service-2", { fingerprintSha256: "ccdd" }),
@@ -128,8 +128,31 @@ describe("CertificateMonitorService", () => {
 
     await new CertificateMonitorService().checkAll();
 
-    expect(mocks.notify).toHaveBeenCalledTimes(3);
+    expect(mocks.notify).toHaveBeenCalledTimes(2);
+    expect(mocks.notify.mock.calls[0][0]).toContain("service-1, service-3");
+    expect(mocks.notify.mock.calls[0][1]).toContain("example.com:443, other.example.com:443");
     expect(mocks.save).toHaveBeenCalledTimes(3);
+  });
+
+  it("groups mismatch resolution across domains", async () => {
+    mocks.getAll.mockResolvedValue([
+      certificate("service-1"),
+      certificate("service-2", { hostname: "other.example.com", fingerprintSha256: "AA:BB" }),
+    ]);
+    mocks.get.mockReturnValue({ certVaultStatus: "different" });
+    mocks.getDeploymentStatuses.mockResolvedValue(
+      new Map([
+        ["service-1", "in-use"],
+        ["service-2", "in-use"],
+      ]),
+    );
+
+    await new CertificateMonitorService().checkAll();
+
+    expect(mocks.notify).toHaveBeenCalledOnce();
+    expect(mocks.notify.mock.calls[0][0]).toContain("certificateMismatchResolved");
+    expect(mocks.notify.mock.calls[0][0]).toContain("service-1, service-2");
+    expect(mocks.save).toHaveBeenCalledTimes(2);
   });
 
   it("retries failed shared delivery on the next check without advancing states", async () => {
