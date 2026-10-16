@@ -49,6 +49,12 @@ APPRISE_URLS=discord://webhook_id/webhook_token
 
 All three settings can be combined.
 
+Failed deliveries are retried twice, after delays of 1 and 3 seconds, for connection
+errors, HTTP 408, 424, 429, and server errors (5xx). Each attempt has a 5-second
+timeout. Other HTTP errors fail immediately. After the final failure, DockDash logs
+the error; pending retries do not survive a DockDash restart. Apprise can deliver to
+some recipients before reporting a failure, so retries may produce duplicate alerts.
+
 :::caution
 Notification URLs commonly contain credentials. Store them in deployment secrets and never include them in issues, screenshots, logs, or commits.
 :::

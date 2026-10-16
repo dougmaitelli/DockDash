@@ -11,11 +11,13 @@ const { notificationService } = await import("@server/services/notificationServi
 
 describe("NotificationService", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    vi.useFakeTimers();
     mockAxios.isAxiosError.mockReturnValue(false);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     delete process.env.APPRISE_URL;
     delete process.env.APPRISE_URLS;
     delete process.env.APPRISE_TAGS;
@@ -92,13 +94,73 @@ describe("NotificationService", () => {
     mockAxios.post.mockRejectedValue(axiosErr);
     mockAxios.isAxiosError.mockReturnValue(true);
 
-    await expect(notificationService.notify("title", "body")).rejects.toThrow();
+    const result = expect(notificationService.notify("title", "body")).rejects.toThrow(
+      'HTTP 502: "bad gateway"',
+    );
+
+    await vi.runAllTimersAsync();
+    await result;
+    expect(mockAxios.post).toHaveBeenCalledTimes(3);
   });
 
   it("rethrows non-axios errors too", async () => {
     process.env.APPRISE_URL = "http://apprise/notify";
     mockAxios.post.mockRejectedValue(new Error("network failure"));
 
-    await expect(notificationService.notify("title", "body")).rejects.toThrow("network failure");
+    const result = expect(notificationService.notify("title", "body")).rejects.toThrow(
+      "network failure",
+    );
+
+    await vi.runAllTimersAsync();
+    await result;
+    expect(mockAxios.post).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([408, 424, 429, 503, undefined])(
+    "retries a transient failure (%s) with backoff and preserves the recovery payload",
+    async (status) => {
+      process.env.APPRISE_URL = "http://apprise/notify";
+      process.env.APPRISE_URLS = "tgram://target/";
+      process.env.APPRISE_TAGS = "health";
+      mockAxios.isAxiosError.mockReturnValue(true);
+      mockAxios.post
+        .mockRejectedValueOnce({ response: status ? { status, data: "unavailable" } : undefined })
+        .mockRejectedValueOnce(new Error("connection reset"))
+        .mockResolvedValue({ status: 200 });
+
+      const delivery = notificationService.notify(
+        "Service Recovered",
+        "web is back online",
+        "success",
+      );
+
+      await vi.advanceTimersByTimeAsync(999);
+      expect(mockAxios.post).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(mockAxios.post).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(2999);
+      expect(mockAxios.post).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(1);
+      await delivery;
+      expect(mockAxios.post).toHaveBeenCalledTimes(3);
+      expect(mockAxios.post.mock.calls[1]).toEqual(mockAxios.post.mock.calls[0]);
+      expect(mockAxios.post.mock.calls[2]).toEqual(mockAxios.post.mock.calls[0]);
+      expect(mockAxios.post.mock.calls[2][1]).toMatchObject({
+        body: "web is back online",
+        type: "success",
+        urls: ["tgram://target/"],
+        tag: ["health"],
+      });
+    },
+  );
+
+  it.each([400, 401, 403, 404])("does not retry permanent HTTP %s errors", async (status) => {
+    process.env.APPRISE_URL = "http://apprise/notify";
+    mockAxios.isAxiosError.mockReturnValue(true);
+    mockAxios.post.mockRejectedValue({ response: { status, data: "invalid request" } });
+
+    await expect(notificationService.notify("title", "body")).rejects.toThrow(`HTTP ${status}`);
+    expect(mockAxios.post).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

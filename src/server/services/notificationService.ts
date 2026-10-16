@@ -6,6 +6,8 @@ import { logger } from "../lib/logService.js";
 
 export type NotificationType = "info" | "success" | "warning" | "failure";
 
+const RETRY_DELAYS_MS = [1000, 3000];
+
 class NotificationService {
   async notify(title: string, body: string, type: NotificationType = "info"): Promise<void> {
     const url = config.appriseUrl;
@@ -22,18 +24,38 @@ class NotificationService {
       ...(tags.length > 0 ? { tag: tags } : {}),
     };
 
-    try {
-      await axios.post(url, payload, { timeout: 5000 });
-    } catch (err) {
-      const message =
-        axios.isAxiosError(err) && err.response
-          ? `HTTP ${err.response.status}: ${JSON.stringify(err.response.data)}`
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await axios.post(url, payload, { timeout: 5000 });
+
+        return;
+      } catch (err) {
+        const response = axios.isAxiosError(err) ? err.response : undefined;
+        const status = response?.status;
+        const message = response
+          ? `HTTP ${response.status}: ${JSON.stringify(response.data)}`
           : err instanceof Error
             ? err.message
             : String(err);
+        // Apprise returns 424 when a downstream notification fails (e.g. Telegram).
+        const retryable =
+          status === undefined ||
+          status === 408 ||
+          status === 424 ||
+          status === 429 ||
+          status >= 500;
+        const delay = RETRY_DELAYS_MS[attempt];
 
-      logger.error(`Apprise notification failed: ${message}`);
-      throw new Error(message);
+        if (!retryable || delay === undefined) {
+          logger.error(`Apprise notification failed: ${message}`);
+          throw new Error(message);
+        }
+
+        logger.warn(
+          `Apprise notification attempt ${attempt + 1} failed; retrying in ${delay}ms: ${message}`,
+        );
+        await new Promise<void>((resolve) => setTimeout(resolve, delay));
+      }
     }
   }
 
