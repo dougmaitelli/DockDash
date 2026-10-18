@@ -152,7 +152,7 @@ export const savePositionsResponseSchema = z
   .strip();
 
 export const checkAllServicesResponseSchema = z
-  .object({ status: z.string(), message: z.string() })
+  .object({ status: z.literal("running"), message: z.string() })
   .strip();
 
 export const containerStatsResponseSchema = z

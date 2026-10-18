@@ -2,13 +2,13 @@ import axios from "axios";
 import net from "net";
 
 import type { ServiceMetadata } from "@shared";
-import { Service, ServiceSource, ServiceStatus } from "@shared";
+import { Service, ServiceProtocol, ServiceSource, ServiceStatus } from "@shared";
 
 import { historyRepository } from "../db/historyRepository.js";
 import { serviceRepository } from "../db/serviceRepository.js";
 import { t } from "../i18n/index.js";
 import { config } from "../lib/config.js";
-import { detectProtocolByPort, HTTP_PROTOCOLS, USER_AGENT } from "../lib/constants.js";
+import { detectProtocolByPort, USER_AGENT } from "../lib/constants.js";
 import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
 import { ConcurrentService } from "./ConcurrentService.js";
@@ -230,7 +230,11 @@ export class HealthCheckService extends ConcurrentService {
     });
   }
 
-  private async checkHttp(host: string, port: number, protocol: string): Promise<boolean> {
+  private async checkHttp(
+    host: string,
+    port: number,
+    protocol: ServiceProtocol.HTTP | ServiceProtocol.HTTPS,
+  ): Promise<boolean> {
     try {
       const url = `${protocol}://${host}:${port}`;
       const resp = await axios.get(url, {
@@ -252,7 +256,7 @@ export class HealthCheckService extends ConcurrentService {
 
     const protocol = service.protocol ?? detectProtocolByPort(port);
 
-    if (HTTP_PROTOCOLS.includes(protocol)) {
+    if (protocol === ServiceProtocol.HTTP || protocol === ServiceProtocol.HTTPS) {
       const httpOk = await this.checkHttp(service.host, port, protocol);
 
       if (httpOk) return ServiceStatus.UP;

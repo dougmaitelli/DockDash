@@ -16,7 +16,7 @@ import { LINK_TYPES } from "../../types";
 import { BaseModal, FormGroup, Label, ModalActions, ModalActionsRight } from "./BaseModal";
 import { ConfirmDialog } from "./ConfirmDialog";
 
-function getLinkColor(type: string): string {
+function getLinkColor(type: ServiceLinkType): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
 
   return linkType?.color || "var(--accent-gray)";

@@ -1,4 +1,4 @@
-import type { ServiceLink } from "@shared";
+import type { ServiceLink, ServiceLinkType } from "@shared";
 
 import { LINK_TYPES } from "../../types";
 import { PortSide } from "./nodeGeometry";
@@ -18,7 +18,7 @@ export interface LinkPath {
 const MIN_SEG = 40; // minimum stub length before first turn
 const CORNER_R = 10; // corner radius
 
-export function getLinkColor(type: string): string {
+export function getLinkColor(type: ServiceLinkType): string {
   const linkType = LINK_TYPES.find((lt) => lt.value === type);
 
   return linkType?.color || "var(--accent-gray)";

@@ -40,7 +40,7 @@ function getBorderColor(
   isNestTarget?: boolean,
   isSelected?: boolean,
   isHovered?: boolean,
-  status?: string,
+  status?: ServiceStatus,
 ): string {
   if (isNestTarget) return "var(--success)";
 

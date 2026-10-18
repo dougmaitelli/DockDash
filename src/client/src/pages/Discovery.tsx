@@ -18,7 +18,7 @@ import { useConfig } from "../context/ConfigContext";
 import { useDiscovery, useDockerHealth, useKubernetesHealth } from "../hooks/useData";
 import { startScanStream } from "../services/scanStream";
 
-function StatusDot({ status }: { status: string }) {
+function StatusDot({ status }: { status: ServiceStatus }) {
   return (
     <span
       className={cn(
