@@ -134,6 +134,77 @@ describe("CertificateMonitorService", () => {
     expect(mocks.save).toHaveBeenCalledTimes(3);
   });
 
+  it("groups renewals across domains and keeps distinct certificates separate", async () => {
+    mocks.getAll.mockResolvedValue([
+      certificate("service-1"),
+      certificate("service-2", { hostname: "other.example.com", fingerprintSha256: "AA:BB" }),
+      certificate("service-3", { fingerprintSha256: "ccdd" }),
+    ]);
+    mocks.get.mockReturnValue({ fingerprintSha256: "old" });
+    mocks.getDeploymentStatuses.mockResolvedValue(new Map());
+
+    await new CertificateMonitorService().checkAll();
+
+    expect(mocks.notify).toHaveBeenCalledTimes(2);
+    expect(mocks.notify.mock.calls[0][0]).toContain("certificateRenewed");
+    expect(mocks.notify.mock.calls[0][0]).toContain("service-1, service-2");
+    expect(mocks.notify.mock.calls[0][1]).toContain("other.example.com:443");
+    expect(mocks.save).toHaveBeenCalledTimes(3);
+  });
+
+  it("bounds shared deployment messages while saving every service state", async () => {
+    const certificates = Array.from({ length: 40 }, (_, index) =>
+      certificate(`service-${index}`, { hostname: `${index}.example.com` }),
+    );
+    mocks.getAll.mockResolvedValue(certificates);
+    mocks.getDeploymentStatuses.mockResolvedValue(
+      new Map(certificates.map(({ serviceId }) => [serviceId, "different"])),
+    );
+
+    await new CertificateMonitorService().checkAll();
+
+    expect(mocks.notify).toHaveBeenCalledOnce();
+    expect(mocks.notify.mock.calls[0][0]).toContain("service-0, service-1, service-2 (+37)");
+    expect(mocks.notify.mock.calls[0][1]).toContain("2.example.com:443 (+37)");
+    expect(mocks.notify.mock.calls[0][1]).not.toContain("3.example.com:443");
+    expect(mocks.save).toHaveBeenCalledTimes(40);
+  });
+
+  it.each([
+    { event: "Expiring", health: "warning", previousHealth: "healthy" },
+    { event: "Error", health: "error", previousHealth: "healthy" },
+    { event: "Recovered", health: "healthy", previousHealth: "error" },
+  ] as const)("groups $event across domains", async ({ event, health, previousHealth }) => {
+    mocks.getAll.mockResolvedValue([
+      certificate("service-1", { health, daysRemaining: 10, error: "TLS error" }),
+      certificate("service-2", {
+        hostname: "other.example.com",
+        health,
+        daysRemaining: 10,
+        error: "TLS error",
+      }),
+      certificate("service-3", {
+        fingerprintSha256: "ccdd",
+        health,
+        daysRemaining: 10,
+        error: "TLS error",
+      }),
+    ]);
+    mocks.get.mockImplementation((id: string) => ({
+      fingerprintSha256: id === "service-3" ? "ccdd" : "aabb",
+      health: previousHealth,
+    }));
+    mocks.getDeploymentStatuses.mockResolvedValue(new Map());
+
+    await new CertificateMonitorService().checkAll();
+
+    expect(mocks.notify).toHaveBeenCalledTimes(2);
+    expect(mocks.notify.mock.calls[0][0]).toContain(`certificate${event}`);
+    expect(mocks.notify.mock.calls[0][0]).toContain("service-1, service-2");
+    expect(mocks.notify.mock.calls[0][1]).toContain("other.example.com:443");
+    expect(mocks.save).toHaveBeenCalledTimes(3);
+  });
+
   it("groups mismatch resolution across domains", async () => {
     mocks.getAll.mockResolvedValue([
       certificate("service-1"),

@@ -8,11 +8,22 @@ import { certVaultService } from "./certVaultService.js";
 import { notificationService, type NotificationType } from "./notificationService.js";
 import { tlsCertificateService } from "./tlsCertificateService.js";
 
-type Notice = { event: string; title: string; body: string; type: NotificationType };
+type CertificateEvent =
+  "Renewed" | "Recovered" | "Error" | "Expiring" | "Mismatch" | "MismatchResolved";
+type Notice = { event: CertificateEvent; title: string; body: string; type: NotificationType };
 
-function certificateIdentity(certificate: TlsCertificate, deploymentEvent = false): string {
+function summarize(values: Set<string> | undefined): string {
+  const entries = [...(values ?? [])];
+  const preview = entries
+    .slice(0, 3)
+    .map((value) => (value.length > 80 ? `${value.slice(0, 77)}...` : value));
+
+  return preview.join(", ") + (entries.length > 3 ? ` (+${entries.length - 3})` : "");
+}
+
+function certificateIdentity(certificate: TlsCertificate): string {
   return JSON.stringify([
-    deploymentEvent && certificate.fingerprintSha256
+    certificate.fingerprintSha256
       ? null
       : certificate.hostname.trim().toLowerCase().replace(/\.$/, ""),
     certificate.fingerprintSha256?.replaceAll(":", "").trim().toLowerCase() ?? null,
@@ -60,19 +71,15 @@ export class CertificateMonitorService {
 
       if (!service) continue;
 
-      for (const identity of new Set([
-        certificateIdentity(certificate),
-        certificateIdentity(certificate, true),
-      ])) {
-        const group = names.get(identity) ?? new Set<string>();
+      const identity = certificateIdentity(certificate);
+      const group = names.get(identity) ?? new Set<string>();
 
-        group.add(service.name);
-        names.set(identity, group);
-        const endpoints = targets.get(identity) ?? new Set<string>();
+      group.add(service.name);
+      names.set(identity, group);
+      const endpoints = targets.get(identity) ?? new Set<string>();
 
-        endpoints.add(`${certificate.hostname}:${certificate.port}`);
-        targets.set(identity, endpoints);
-      }
+      endpoints.add(`${certificate.hostname}:${certificate.port}`);
+      targets.set(identity, endpoints);
     }
 
     for (const certificate of certificates) {
@@ -81,22 +88,13 @@ export class CertificateMonitorService {
       await this.process(
         certificate,
         certVaultStatusObservation(certificate.serviceId, certVaultStatuses),
-        (event) => {
-          const eventIdentity = certificateIdentity(
-            certificate,
-            event === "Mismatch" || event === "MismatchResolved",
-          );
-
-          return {
-            name: [...(names.get(eventIdentity) ?? [])].join(", "),
-            target: [...(targets.get(eventIdentity) ?? [])].join(", "),
-          };
+        {
+          name: summarize(names.get(identity)),
+          target: summarize(targets.get(identity)),
         },
         (notice, threshold) => {
           const key = JSON.stringify([
-            notice.event === "Mismatch" || notice.event === "MismatchResolved"
-              ? certificateIdentity(certificate, true)
-              : identity,
+            identity,
             notice.event,
             notice.event === "Expiring" ? threshold : null,
             notice.event === "Error" ? certificate.error : null,
@@ -120,7 +118,7 @@ export class CertificateMonitorService {
   private async process(
     certificate: TlsCertificate,
     certVaultStatus: CertVaultStatus | null | undefined,
-    context: (event: string) => { name: string; target: string },
+    context: { name: string; target: string },
     deliver: (notice: Notice, threshold: number | null) => Promise<void>,
   ): Promise<void> {
     // Connection and transport failures are covered by service health notifications. Without a
@@ -137,7 +135,7 @@ export class CertificateMonitorService {
         ? expiryThreshold(certificate.daysRemaining, config.certificateExpiryThresholds)
         : null;
     const notices: Notice[] = [];
-    const { name, target } = context("Certificate");
+    const { name, target } = context;
     const fingerprintChanged =
       previous?.fingerprintSha256 != null &&
       certificate.fingerprintSha256 != null &&
@@ -191,8 +189,6 @@ export class CertificateMonitorService {
     }
 
     if (certVaultStatus === "different" && previous?.certVaultStatus !== "different") {
-      const { name, target } = context("Mismatch");
-
       notices.push({
         event: "Mismatch",
         title: t("notifications.certificateMismatch", { name }),
@@ -200,8 +196,6 @@ export class CertificateMonitorService {
         type: "warning",
       });
     } else if (certVaultStatus === "in-use" && previous?.certVaultStatus === "different") {
-      const { name, target } = context("MismatchResolved");
-
       notices.push({
         event: "MismatchResolved",
         title: t("notifications.certificateMismatchResolved", { name }),
