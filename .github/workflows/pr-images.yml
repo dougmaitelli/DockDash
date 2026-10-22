@@ -3,7 +3,7 @@ name: PR Images
 on:
   pull_request:
     branches: [master]
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened, labeled, unlabeled, closed]
 
 concurrency:
   group: pr-image-${{ github.event.pull_request.number }}
@@ -22,7 +22,10 @@ jobs:
   publish:
     name: Publish PR image
     if: >-
-      github.event.action != 'closed' &&
+      github.event.action != 'closed' && github.event.action != 'unlabeled' &&
+      (github.event.action != 'labeled' || github.event.label.name == 'preview-image') &&
+      contains(github.event.pull_request.labels.*.name, 'preview-image') &&
+      github.actor != 'dependabot[bot]' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
@@ -114,7 +117,8 @@ jobs:
   cleanup:
     name: Delete PR image
     if: >-
-      github.event.action == 'closed' &&
+      (github.event.action == 'closed' ||
+       (github.event.action == 'unlabeled' && github.event.label.name == 'preview-image')) &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
