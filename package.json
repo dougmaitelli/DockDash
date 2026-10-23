@@ -73,7 +73,7 @@
     "@playwright/test": "1.64.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/dockerode": "^4.0.1",
+    "@types/dockerode": "^4.0.2",
     "@types/express": "^5.0.6",
     "@types/express-session": "^1.19.0",
     "@types/node": "^26.6.4",
