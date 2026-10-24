@@ -63,7 +63,7 @@
     "rehype-raw": "^7.0.0",
     "rehype-sanitize": "^6.0.0",
     "remark-emoji": "^5.0.2",
-    "sanitize-html": "^2.18.0",
+    "sanitize-html": "^2.18.1",
     "tailwind-merge": "^3.7.0",
     "tar-stream": "^3.2.0",
     "uuid": "^14.0.2",
