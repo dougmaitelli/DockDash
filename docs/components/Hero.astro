@@ -28,28 +28,24 @@ if (image) {
 ---
 
 <div class="hero">
-  {
-    darkImage && (
-      <img
-        src={darkImage.src}
-        width={darkImage.width}
-        height={darkImage.height}
-        {...imageAttrs}
-        class:list={{ "light:sl-hidden": Boolean(lightImage) }}
-      />
-    )
-  }
-  {
-    lightImage && (
-      <img
-        src={lightImage.src}
-        width={lightImage.width}
-        height={lightImage.height}
-        {...imageAttrs}
-        class="dark:sl-hidden"
-      />
-    )
-  }
+  {darkImage && (
+    <img
+      src={darkImage.src}
+      width={darkImage.width}
+      height={darkImage.height}
+      {...imageAttrs}
+      class:list={{ "light:sl-hidden": Boolean(lightImage) }}
+    />
+  )}
+  {lightImage && (
+    <img
+      src={lightImage.src}
+      width={lightImage.width}
+      height={lightImage.height}
+      {...imageAttrs}
+      class="dark:sl-hidden"
+    />
+  )}
   {rawHtml && <div class="hero-html sl-flex" set:html={rawHtml} />}
   <div class="sl-flex stack">
     <div class="sl-flex copy">
@@ -57,32 +53,18 @@ if (image) {
       {data.draft && <DraftContentNotice />}
       {tagline && <div class="tagline" set:html={tagline} />}
     </div>
-    {
-      actions.length > 0 && (
-        <div class="sl-flex actions">
-          {actions.map(
-            ({
-              attrs: { class: className, ...attrs } = {},
-              icon,
-              link: href,
-              text,
-              variant,
-            }) => (
-              <LinkButton
-                {href}
-                {variant}
-                icon={icon?.name}
-                class:list={[className]}
-                {...attrs}
-              >
-                {text}
-                {icon?.html && <Fragment set:html={icon.html} />}
-              </LinkButton>
-            ),
-          )}
-        </div>
-      )
-    }
+    {actions.length > 0 && (
+      <div class="sl-flex actions">
+        {actions.map(
+          ({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => (
+            <LinkButton {href} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
+              {text}
+              {icon?.html && <Fragment set:html={icon.html} />}
+            </LinkButton>
+          ),
+        )}
+      </div>
+    )}
   </div>
 </div>
 

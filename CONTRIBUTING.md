@@ -29,7 +29,7 @@ pnpm dev:mock
 
 `dev:mock` starts the client and a mock server with seeded services, so most UI development does not require Docker. Use `pnpm dev` when testing against a real Docker daemon.
 
-Environment variables may be placed in a local `.env` file. Start from `.env.example` and see [Configuration](docs/CONFIGURATION.md). Never commit `.env`.
+Environment variables may be placed in a local `.env` file. Start from `.env.example` and see [Configuration](docs/configuration/index.md). Never commit `.env`.
 
 ## Database changes
 
@@ -49,13 +49,16 @@ Run these commands before opening a pull request:
 ```bash
 pnpm typecheck
 pnpm lint
+pnpm format:check
 pnpm test
 pnpm build
 pnpm typecheck:e2e
 pnpm test:e2e:docker
 ```
 
-Use `pnpm lint:fix` to apply supported ESLint and Prettier fixes. New behavior should include tests at the closest applicable layer.
+Use `pnpm format` for formatting or `pnpm lint:fix` for ESLint and formatting fixes.
+For documentation changes, also run `pnpm docs:check` and `pnpm docs:build` after
+`pnpm docs:install`. New behavior should include tests at the closest applicable layer.
 
 For expected UI changes, review the visual differences and commit updated screenshot
 baselines in the same PR. Generate them with `pnpm test:e2e:docker --update-snapshots`

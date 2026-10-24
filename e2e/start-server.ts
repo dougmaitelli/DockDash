@@ -4,7 +4,10 @@ import { cp, mkdir } from "node:fs/promises";
 
 import { CONFIG_SCHEMA } from "../src/shared/configSchema.js";
 
+process.chdir(new URL("..", import.meta.url).pathname);
+
 await build({
+  absWorkingDir: process.cwd(),
   entryPoints: ["e2e/entry.ts"],
   bundle: true,
   platform: "node",

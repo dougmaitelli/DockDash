@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 PLAYWRIGHT_VERSION=$(node --input-type=commonjs -e '
-  const { devDependencies } = require("./package.json");
+  const { devDependencies } = require("./e2e/package.json");
   const version = devDependencies["@playwright/test"];
   if (!/^\d+\.\d+\.\d+$/.test(version) || version !== devDependencies.playwright) {
     throw new Error("Pin playwright and @playwright/test to the same exact version");
@@ -14,4 +14,5 @@ docker build --build-arg "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" -f e2e/Dockerf
 docker run --rm --ipc=host \
   -v "$PWD:/work" \
   -v /work/node_modules \
+  -v /work/e2e/node_modules \
   dockdash-e2e sh -c 'pnpm install --frozen-lockfile && pnpm typecheck:e2e && pnpm test:e2e "$@"' sh "$@"

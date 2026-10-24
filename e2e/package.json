@@ -1,0 +1,13 @@
+{
+  "name": "@dockdash/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "playwright": "1.64.1"
+  }
+}

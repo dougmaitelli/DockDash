@@ -4,3 +4,5 @@ allowBuilds:
   esbuild: true
   protobufjs: true
   ssh2: true
+packages:
+  - e2e

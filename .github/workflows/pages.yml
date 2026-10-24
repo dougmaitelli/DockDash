@@ -2,7 +2,16 @@ name: Documentation
 
 on:
   workflow_call:
+    inputs:
+      deploy:
+        type: boolean
+        default: false
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy documentation from master after validation
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -36,16 +45,16 @@ jobs:
       - run: pnpm build
         working-directory: docs
 
-      - if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
+      - if: inputs.deploy && github.ref == 'refs/heads/master'
         uses: actions/configure-pages@v6
 
-      - if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
+      - if: inputs.deploy && github.ref == 'refs/heads/master'
         uses: actions/upload-pages-artifact@v5
         with:
           path: docs/dist
 
   deploy:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/master') || github.event_name == 'workflow_dispatch'
+    if: inputs.deploy && github.ref == 'refs/heads/master'
     needs: build
     runs-on: ubuntu-latest
     environment:

@@ -4,6 +4,7 @@ updates:
     directories:
       - /
       - /docs
+      - /e2e
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
@@ -21,10 +22,23 @@ updates:
       typescript-eslint:
         patterns:
           - "@typescript-eslint/*"
+          - "eslint*"
+      vite:
+        patterns:
+          - vite
+          - "@vitejs/*"
+      astro:
+        patterns:
+          - astro
+          - "@astrojs/*"
       playwright:
         patterns:
           - playwright
           - "@playwright/test"
+      prettier:
+        patterns:
+          - prettier
+          - prettier-plugin-astro
     labels: [dependencies]
 
   - package-ecosystem: github-actions
@@ -34,7 +48,9 @@ updates:
     labels: [dependencies, github-actions]
 
   - package-ecosystem: docker
-    directory: /
+    directories:
+      - /
+      - /e2e
     schedule:
       interval: weekly
     labels: [dependencies, docker]

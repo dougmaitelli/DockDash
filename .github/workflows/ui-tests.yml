@@ -19,13 +19,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Run in the canonical browser environment
-        run: sh scripts/e2e-docker.sh
+        run: sh e2e/run-docker.sh
       - name: Upload report, traces, and screenshot differences
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: ui-test-report
           path: |
-            playwright-report/
-            test-results/
+            e2e/playwright-report/
+            e2e/test-results/
           retention-days: 14

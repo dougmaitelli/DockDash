@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.server.json",
+  "include": [
+    "./**/*.ts",
+    "../scripts/fixtures/**/*.ts",
+    "../src/types/**/*.d.ts",
+    "../src/server/types/**/*.d.ts"
+  ],
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  }
+}

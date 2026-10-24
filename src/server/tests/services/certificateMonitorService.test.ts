@@ -156,6 +156,7 @@ describe("CertificateMonitorService", () => {
     const certificates = Array.from({ length: 40 }, (_, index) =>
       certificate(`service-${index}`, { hostname: `${index}.example.com` }),
     );
+
     mocks.getAll.mockResolvedValue(certificates);
     mocks.getDeploymentStatuses.mockResolvedValue(
       new Map(certificates.map(({ serviceId }) => [serviceId, "different"])),

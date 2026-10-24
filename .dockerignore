@@ -6,3 +6,10 @@ screenshots/
 *.db
 *.db-shm
 *.db-wal
+.env
+.env.*
+**/node_modules
+**/.astro
+**/playwright-report
+**/test-results
+coverage

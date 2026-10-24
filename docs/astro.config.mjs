@@ -5,7 +5,6 @@ export default defineConfig({
   site: "https://dougmaitelli.github.io",
   base: "/DockDash",
   srcDir: ".",
-  publicDir: "../src/client/public",
   outDir: "./dist",
   integrations: [
     starlight({
@@ -16,7 +15,7 @@ export default defineConfig({
         src: "../src/client/public/logo.svg",
         alt: "DockDash",
       },
-      favicon: "/logo.svg",
+      favicon: "/favicon.svg",
       customCss: ["./styles/docs.css"],
       markdown: {
         processedDirs: ["."],
@@ -90,7 +89,7 @@ export default defineConfig({
           ],
         },
         {
-          label: "Limitations and roadmap",
+          label: "Limitations",
           slug: "limitations-and-roadmap",
         },
       ],

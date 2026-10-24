@@ -16,12 +16,12 @@ pnpm test:e2e:docker
 pnpm test:e2e:docker --project=desktop-dark --grep 'service details'
 
 # Fast local debugging (requires Node 26 and installed Playwright Chromium)
-pnpm exec playwright install chromium
+pnpm --dir e2e exec playwright install chromium
 pnpm test:e2e
 pnpm test:e2e:ui
 
 # Open the report from either runner
-pnpm exec playwright show-report
+pnpm --dir e2e exec playwright show-report
 ```
 
 The Docker command installs dependencies in a disposable container volume, so it
@@ -44,7 +44,7 @@ repository's required checks if merges must be blocked on visual regressions.
    pnpm test:e2e:docker --update-snapshots --grep 'service details'
    ```
 
-3. Review and commit the changed PNGs under `e2e/snapshots/` in the same PR as the
+3. Review and commit the changed PNGs under root `screenshots/` in the same PR as the
    UI code. Run `pnpm test:e2e:docker` again without the update flag.
 4. Reviewers should inspect the baseline changes. Do not accept all differences
    merely to make CI green.
@@ -86,14 +86,7 @@ in the individual test; the default fixture should continue exercising real APIs
 
 ## Documentation screenshots
 
-Run `pnpm screenshots:docker` in the canonical environment, or `pnpm screenshots`
-locally with installed Chromium. This explicitly exports the seven dark-theme
-images used by the README and docs into `screenshots/1.png` through `7.png`.
-Review those images before committing them.
-
-The docs config shares the controlled server, browser settings, database reset,
-screen helpers in `screens.ts`, and rendering preparation with the regression
-suite. Both workflows use locally stored service icons under `assets/icons/`.
-Documentation export never compares or
-updates test baselines, and baseline updates never export documentation images.
-The commands use the same server port, so run them sequentially.
+The README and docs import the same images checked by the browser specs under
+root `screenshots/desktop-dark/`. Update them with the canonical command above;
+there is no separate documentation export. Light-theme baselines live beside
+them under `screenshots/desktop-light/`.
