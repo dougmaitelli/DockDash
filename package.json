@@ -34,7 +34,7 @@
     "typecheck:e2e": "pnpm --dir e2e typecheck"
   },
   "dependencies": {
-    "@kubernetes/client-node": "^2.0.0",
+    "@kubernetes/client-node": "^2.0.1",
     "@radix-ui/react-label": "^2.1.15",
     "@radix-ui/react-select": "^2.3.8",
     "@radix-ui/react-separator": "^1.1.16",
