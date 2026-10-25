@@ -166,10 +166,12 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
             arch: arm64
-    needs: [changes, ci-result]
+    needs: [changes, format, lint, test, ui]
     if: >-
       always() && github.event_name == 'push' &&
-      needs.ci-result.result == 'success' && needs.changes.outputs.runtime == 'true'
+      needs.changes.result == 'success' &&
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') &&
+      needs.changes.outputs.runtime == 'true'
     permissions:
       contents: read
       packages: write
