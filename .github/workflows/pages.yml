@@ -39,6 +39,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: docs
 
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm format:check:docs
+
+      - run: pnpm lint:docs
+
       - run: pnpm check
         working-directory: docs
 

@@ -44,7 +44,7 @@ jobs:
             browser:
               - '{src/**,drizzle/**,scripts/**,e2e/**,screenshots/**,Dockerfile,.dockerignore,package.json,pnpm-lock.yaml,pnpm-workspace.yaml,*config*,.github/workflows/**}'
             docs:
-              - '{docs/**,screenshots/**,.github/workflows/**,src/client/public/logo.svg,package.json,pnpm-workspace.yaml}'
+              - '{docs/**,*.md,screenshots/**,.github/workflows/**,src/client/public/logo.svg,package.json,pnpm-lock.yaml,pnpm-workspace.yaml,.prettier*,eslint.config.js}'
       - name: Validate release tag
         id: version
         if: github.ref_type == 'tag'
@@ -80,7 +80,7 @@ jobs:
 
       - run: pnpm typecheck
 
-      - run: pnpm lint
+      - run: pnpm lint:app
 
   format:
     name: Formatting
@@ -93,7 +93,7 @@ jobs:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
+      - run: pnpm format:check:app
 
   test:
     needs: changes
