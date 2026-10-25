@@ -1,6 +1,6 @@
 import type Docker from "dockerode";
 import { Readable } from "stream";
-import tar, { type Headers } from "tar-stream";
+import tar, { type Header } from "tar-stream";
 
 import type { FileContentResponse, FileEntry } from "@shared/responseSchemas.js";
 
@@ -77,7 +77,13 @@ class FileService {
               }
 
               stream.on("error", reject);
-              stream.on("data", (chunk: Buffer) => {
+              stream.on("data", (chunk) => {
+                if (!Buffer.isBuffer(chunk)) {
+                  reject(new Error("Invalid archive data"));
+
+                  return;
+                }
+
                 bytes += chunk.length;
 
                 if (bytes > options.maxBytes) {
@@ -136,7 +142,7 @@ class FileService {
         await new Promise<void>((resolve, reject) => {
           archive.once("error", reject);
           container.putArchive(
-            archive,
+            Readable.from(archive, { objectMode: false }),
             { path: dir, copyUIDGID: true, noOverwriteDirNonDir: true },
             (err: Error | null) => {
               if (err) reject(err);
@@ -198,12 +204,12 @@ class FileService {
     });
   }
 
-  private async getFileMetadata(container: Docker.Container, filePath: string): Promise<Headers> {
+  private async getFileMetadata(container: Docker.Container, filePath: string): Promise<Header> {
     const source = await container.getArchive({ path: filePath });
     const extract = tar.extract();
 
     try {
-      return await new Promise<Headers>((resolve, reject) => {
+      return await new Promise<Header>((resolve, reject) => {
         source.once("error", reject);
         extract.once("error", reject);
         extract.once("finish", () => reject(new Error("File metadata missing from archive")));

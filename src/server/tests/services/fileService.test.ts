@@ -1,7 +1,7 @@
 import { DOCKER_STREAM_HEADER_SIZE } from "@server/services/containerRuntime/dockerRuntime.js";
 import { fileService } from "@server/services/fileService.js";
 import { PassThrough, Readable } from "stream";
-import tar, { type Headers } from "tar-stream";
+import tar, { type Header } from "tar-stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const readOptions = { maxBytes: 1024, timeoutMs: 1000 };
@@ -51,15 +51,19 @@ function mockContainer(stream?: PassThrough) {
   };
 }
 
-async function extractFile(archive: Buffer): Promise<{ header: Headers; content: string }> {
+async function extractFile(archive: Buffer): Promise<{ header: Header; content: string }> {
   const extract = tar.extract();
-  let result!: { header: Headers; content: string };
+  let result!: { header: Header; content: string };
 
   await new Promise<void>((resolve, reject) => {
     extract.on("entry", (header, stream, next) => {
       const chunks: Buffer[] = [];
 
-      stream.on("data", (chunk) => chunks.push(chunk));
+      stream.on("data", (chunk) => {
+        if (!Buffer.isBuffer(chunk)) throw new Error("Invalid archive data");
+
+        chunks.push(chunk);
+      });
       stream.on("end", () => {
         result = { header, content: Buffer.concat(chunks).toString("utf8") };
         next();
