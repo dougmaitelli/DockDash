@@ -65,7 +65,7 @@
     "remark-emoji": "^5.0.2",
     "sanitize-html": "^2.18.1",
     "tailwind-merge": "^3.7.0",
-    "tar-stream": "^3.2.0",
+    "tar-stream": "^3.2.2",
     "uuid": "^14.0.3",
     "zod": "^4.6.7"
   },
