@@ -15,7 +15,7 @@ COPY . .
 RUN pnpm run build
 
 # Prune devDependencies before copying to runner
-RUN pnpm install --prod --ignore-scripts --frozen-lockfile
+RUN CI=true pnpm install --prod --ignore-scripts --frozen-lockfile
 
 # Stage 2: Production
 FROM node:26-alpine AS runner
