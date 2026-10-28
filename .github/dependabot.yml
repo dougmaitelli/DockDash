@@ -52,6 +52,14 @@ updates:
           - prettier-plugin-*
         update-types:
           - major
+      playwright-major:
+        applies-to: version-updates
+        patterns:
+          - playwright
+          - playwright-core
+          - "@playwright/*"
+        update-types:
+          - major
       application-security:
         applies-to: security-updates
         patterns:
@@ -85,33 +93,6 @@ updates:
     labels:
       - dependencies
     directory: /docs
-  - package-ecosystem: npm
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-    groups:
-      browser-minor-patch:
-        applies-to: version-updates
-        patterns:
-          - "*"
-        update-types:
-          - minor
-          - patch
-      playwright-major:
-        applies-to: version-updates
-        patterns:
-          - playwright
-          - playwright-core
-          - "@playwright/*"
-        update-types:
-          - major
-      browser-security:
-        applies-to: security-updates
-        patterns:
-          - "*"
-    labels:
-      - dependencies
-    directory: /e2e
   - package-ecosystem: github-actions
     directory: /
     schedule:
