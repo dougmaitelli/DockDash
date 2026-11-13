@@ -61,7 +61,7 @@
     "openid-client": "^6.8.9",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-i18next": "^17.1.10",
+    "react-i18next": "^17.1.13",
     "react-markdown": "^10.1.0",
     "react-router": "^8.5.1",
     "rehype-raw": "^7.0.0",
