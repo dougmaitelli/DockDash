@@ -32,7 +32,15 @@ test("batch assigns labels to filtered services and preserves existing labels", 
 
     expect(req.method() === "PUT" && /\/api\/services\//.test(req.url())).toBeFalsy();
   });
+  const batchResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" && response.url().endsWith("/api/services/labels"),
+  );
+
   await page.getByRole("button", { name: "Assign labels", exact: true }).click();
+  expect((await batchResponse).ok()).toBeTruthy();
+  // Clear selection is also disabled while saving; wait for the selection to actually clear.
+  await expect(page.getByText("4 selected", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Clear selection" })).toBeDisabled();
   expect(batchRequests).toHaveLength(1);
   const after = await (await request.get("/api/services")).json();
@@ -83,5 +91,6 @@ test("failed batch label assignment keeps the entire selection for retry", async
   );
   await page.getByRole("button", { name: "Assign labels", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByText("2 selected", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Clear selection" })).toBeDisabled();
 });
