@@ -11,8 +11,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
-    "@astrojs/starlight": "^0.42.10",
-    "astro": "^7.4.8",
+    "@astrojs/starlight": "^0.43.1",
+    "astro": "^7.4.12",
     "cookie": "^2.0.2",
     "sharp": "^0.35.5"
   }
