@@ -19,7 +19,20 @@ export class GhcrProvider extends GenericRegistryProvider {
     if (config.githubToken) {
       logger.debug(`Registry [ghcr]: using GitHub Packages API for ${ref.repository}`);
 
-      return this.getTagsViaGitHubApi(ref.repository);
+      try {
+        const tags = await this.getTagsViaGitHubApi(ref.repository);
+
+        if (tags !== null) return tags;
+      } catch (err) {
+        logger.warn(`GitHub Packages API: failed to fetch tags for ${ref.repository} —`, err);
+      }
+
+      // Both endpoints failed (or the request threw) — fall back to Registry API v2.
+      logger.warn(
+        `GitHub Packages API: could not resolve ${ref.repository}, falling back to registry API`,
+      );
+
+      return super.getRepositoryTags(ref, prefix);
     }
 
     logger.debug(
@@ -29,7 +42,7 @@ export class GhcrProvider extends GenericRegistryProvider {
     return super.getRepositoryTags(ref, prefix);
   }
 
-  private async getTagsViaGitHubApi(repository: string): Promise<string[]> {
+  private async getTagsViaGitHubApi(repository: string): Promise<string[] | null> {
     const [owner, ...rest] = repository.split("/");
     // Slashes in the package name must be percent-encoded for the GitHub API.
     const packageName = encodeURIComponent(rest.join("/"));
@@ -91,11 +104,6 @@ export class GhcrProvider extends GenericRegistryProvider {
 
     if (userTags !== null) return userTags;
 
-    // Both endpoints failed — fall back to Registry API v2
-    logger.warn(
-      `GitHub Packages API: could not resolve ${repository}, falling back to registry API`,
-    );
-
-    return [];
+    return null;
   }
 }

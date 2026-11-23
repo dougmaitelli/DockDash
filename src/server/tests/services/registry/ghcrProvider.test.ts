@@ -76,11 +76,43 @@ describe("GhcrProvider.getRepositoryTags", () => {
     );
   });
 
-  it("returns [] when both orgs and users endpoints return 404", async () => {
+  it.each([401, 403, 404, 429])(
+    "falls back to the registry when both Packages endpoints return HTTP %s",
+    async (status) => {
+      mockConfig.githubToken = "ghp_token";
+      mockAxios.get
+        .mockResolvedValueOnce({ status, data: [] })
+        .mockResolvedValueOnce({ status, data: [] })
+        .mockResolvedValueOnce({ status: 200, headers: {}, data: { tags: ["v1.1.0"] } });
+
+      expect(await provider.getRepositoryTags(ref, "v")).toEqual(["v1.1.0"]);
+      expect(mockAxios.get).toHaveBeenNthCalledWith(
+        3,
+        "https://ghcr.io/v2/owner/my-app/tags/list?n=1000",
+        expect.any(Object),
+      );
+    },
+  );
+
+  it("falls back to the registry when the Packages request throws", async () => {
     mockConfig.githubToken = "ghp_token";
-    mockAxios.get.mockResolvedValue({ status: 404, data: [] });
+    mockAxios.get
+      .mockRejectedValueOnce(new Error("Request timed out"))
+      .mockResolvedValueOnce({ status: 200, headers: {}, data: { tags: ["v1.1.0"] } });
+
+    expect(await provider.getRepositoryTags(ref, "")).toEqual(["v1.1.0"]);
+    expect(mockAxios.get).toHaveBeenLastCalledWith(
+      "https://ghcr.io/v2/owner/my-app/tags/list?n=1000",
+      expect.any(Object),
+    );
+  });
+
+  it("does not fall back for a successful empty Packages response", async () => {
+    mockConfig.githubToken = "ghp_token";
+    mockAxios.get.mockResolvedValueOnce({ status: 200, data: [] });
 
     expect(await provider.getRepositoryTags(ref, "")).toEqual([]);
+    expect(mockAxios.get).toHaveBeenCalledTimes(1);
   });
 
   it("paginates until the last page (data.length < 100)", async () => {
