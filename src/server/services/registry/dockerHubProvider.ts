@@ -11,7 +11,11 @@ export class DockerHubProvider implements RegistryProvider {
    * Update time is not semantic-version order: rebuilds move existing tags too.
    * Check successive pages until finding an available update (not necessarily the highest ever published).
    */
-  async scanRepositoryTags(ref: ImageRef, prefix: string): Promise<TagScanResult> {
+  async scanRepositoryTags(
+    ref: ImageRef,
+    prefix: string,
+    signal?: AbortSignal,
+  ): Promise<TagScanResult> {
     // "v" and the empty prefix are equivalent for version matching. Filtering by
     // "v" would hide valid unprefixed releases when publishers change spelling.
     const nameParam = prefix && prefix !== "v" ? `&name=${encodeURIComponent(prefix)}` : "";
@@ -44,6 +48,7 @@ export class DockerHubProvider implements RegistryProvider {
         };
       },
       ref.tag,
+      signal,
     );
   }
 }

@@ -45,6 +45,30 @@ describe("UpdateCheckJob", () => {
     expect(mockUpdateCheckerService.checkAllServicesForUpdates).toHaveBeenCalledOnce();
   });
 
+  it.each(["deadline", "shutdown"])("aborts an active update check on %s", async (cause) => {
+    vi.useFakeTimers();
+    const job = new UpdateCheckJob();
+
+    try {
+      mockUpdateCheckerService.checkAllServicesForUpdates.mockImplementationOnce(
+        (signal: AbortSignal) =>
+          new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true })),
+      );
+      job.start();
+      const [signal] = mockUpdateCheckerService.checkAllServicesForUpdates.mock.calls[0];
+
+      expect(signal.aborted).toBe(false);
+
+      if (cause === "deadline") await vi.advanceTimersToNextTimerAsync();
+      else await job.stop();
+
+      expect(signal.aborted).toBe(true);
+    } finally {
+      await job.stop();
+      vi.useRealTimers();
+    }
+  });
+
   it("logs start and done messages", async () => {
     mockUpdateCheckerService.checkAllServicesForUpdates.mockResolvedValue(undefined);
     const job = new UpdateCheckJob();

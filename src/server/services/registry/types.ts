@@ -22,5 +22,5 @@ export interface TagScanResult {
 }
 
 export interface RegistryProvider {
-  scanRepositoryTags(ref: ImageRef, prefix: string): Promise<TagScanResult>;
+  scanRepositoryTags(ref: ImageRef, prefix: string, signal?: AbortSignal): Promise<TagScanResult>;
 }

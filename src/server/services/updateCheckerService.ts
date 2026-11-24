@@ -28,15 +28,18 @@ type CollectedCheck = {
 export class UpdateCheckerService extends ConcurrentService {
   protected readonly concurrencyLimit = 5;
 
-  async checkAllServicesForUpdates(): Promise<void> {
+  async checkAllServicesForUpdates(signal?: AbortSignal): Promise<void> {
     const services = serviceRepository.getServices();
     const containerServices = services.filter((service) =>
       containerRuntimeService.isContainer(service),
     );
 
     const results = await this.mapWithConcurrency(containerServices, (service) =>
-      this.checkServiceForUpdate(service),
+      signal?.aborted ? Promise.resolve(null) : this.checkServiceForUpdate(service, signal),
     );
+
+    if (signal?.aborted) return;
+
     // All registry and release-link requests have settled. Compare and publish
     // synchronously, so no worker writes status while another is still scanning.
     const newUpdates: UpdateNotice[] = [];
@@ -85,7 +88,10 @@ export class UpdateCheckerService extends ConcurrentService {
     notificationService.notify(title, body, "warning").catch(() => {});
   }
 
-  private async checkServiceForUpdate(service: Service): Promise<CollectedCheck | null> {
+  private async checkServiceForUpdate(
+    service: Service,
+    signal?: AbortSignal,
+  ): Promise<CollectedCheck | null> {
     const image = service.metadata?.image;
     const imageTag = service.metadata?.imageTag;
 
@@ -103,7 +109,7 @@ export class UpdateCheckerService extends ConcurrentService {
       const parsed = imageTag === DOCKER_LATEST_TAG ? null : TagParser.extractSemVer(imageTag);
 
       if (parsed) {
-        const allTags = await registryClient.getRepositoryTags(ref, parsed.prefix);
+        const allTags = await registryClient.getRepositoryTags(ref, parsed.prefix, signal);
 
         if (!allTags?.length) return null; // Can't determine — preserve existing status
 
@@ -134,7 +140,7 @@ export class UpdateCheckerService extends ConcurrentService {
       } else {
         // Digest comparison for "latest" and non-semver floating tags (e.g. "dev", "stable")
         const localDigest = service.metadata?.imageDigest;
-        const registryDigest = await registryClient.getManifestDigest(ref);
+        const registryDigest = await registryClient.getManifestDigest(ref, signal);
 
         if (!localDigest || !registryDigest) return null;
 
@@ -157,13 +163,14 @@ export class UpdateCheckerService extends ConcurrentService {
 
     // Digest-only updates have no release tag to resolve.
     if (
+      !signal?.aborted &&
       latestVersion &&
       !service.metadata?.hasUpdate &&
       notificationService.configured &&
       TagParser.extractSemVer(imageTag)
     ) {
       try {
-        releaseUrl = await changelogService.fetchReleaseUrl(service, latestVersion);
+        releaseUrl = await changelogService.fetchReleaseUrl(service, latestVersion, signal);
       } catch {
         logger.warn(`Update notification: release lookup failed for "${service.name}"`);
       }

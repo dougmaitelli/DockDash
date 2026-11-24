@@ -391,8 +391,8 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
 
       await updateCheckerService.checkAllServicesForUpdates();
 
-      expect(fetchReleaseUrl).toHaveBeenCalledWith(first, "1.26");
-      expect(fetchReleaseUrl).toHaveBeenCalledWith(second, "1.26");
+      expect(fetchReleaseUrl).toHaveBeenCalledWith(first, "1.26", undefined);
+      expect(fetchReleaseUrl).toHaveBeenCalledWith(second, "1.26", undefined);
       expect(mockNotificationService.notify).toHaveBeenCalledWith(
         "notifications.updatesAvailable",
         "• notifications.updateEntry\n  https://github.com/owner/my-app/releases/tag/v1.26\n• notifications.updateEntry\n  https://github.com/owner/second-app/releases/tag/v1.26",
@@ -563,6 +563,29 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
       "second",
       expect.objectContaining({ hasUpdate: false }),
     );
+    expect(mockNotificationService.notify).not.toHaveBeenCalled();
+  });
+
+  it("does not publish a cancelled batch or start queued lookups", async () => {
+    const controller = new AbortController();
+
+    mockDb.getServices.mockReturnValue(
+      Array.from({ length: 6 }, (_, i) => makeDockerService({ id: String(i) })),
+    );
+    mockRegistryClient.getRepositoryTags.mockImplementation(
+      async (_ref, _prefix, signal: AbortSignal) => {
+        await new Promise((resolve) => signal.addEventListener("abort", resolve, { once: true }));
+
+        return ["1.26"];
+      },
+    );
+    const check = updateCheckerService.checkAllServicesForUpdates(controller.signal);
+
+    await expect.poll(() => mockRegistryClient.getRepositoryTags.mock.calls.length).toBe(5);
+    controller.abort();
+    await check;
+    expect(mockRegistryClient.getRepositoryTags).toHaveBeenCalledTimes(5);
+    expect(mockDb.updateServiceMetadata).not.toHaveBeenCalled();
     expect(mockNotificationService.notify).not.toHaveBeenCalled();
   });
 

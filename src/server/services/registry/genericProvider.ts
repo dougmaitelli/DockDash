@@ -7,8 +7,12 @@ import type { ImageRef, RegistryProvider, TagScanResult } from "./types.js";
 const TAGS_PER_PAGE = 1_000;
 
 export class GenericRegistryProvider implements RegistryProvider {
-  async scanRepositoryTags(ref: ImageRef, _prefix: string): Promise<TagScanResult> {
-    const token = await fetchRegistryToken(ref.registry, ref.repository);
+  async scanRepositoryTags(
+    ref: ImageRef,
+    _prefix: string,
+    signal?: AbortSignal,
+  ): Promise<TagScanResult> {
+    const token = await fetchRegistryToken(ref.registry, ref.repository, undefined, signal);
     const headers: Record<string, string> = {};
 
     if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -29,6 +33,8 @@ export class GenericRegistryProvider implements RegistryProvider {
 
         return { tags: tags ?? [], next: nextLink(responseHeaders.link) };
       },
+      undefined,
+      signal,
     );
   }
 }

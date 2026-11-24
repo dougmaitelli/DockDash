@@ -1,5 +1,6 @@
 import axios from "axios";
 import Docker from "dockerode";
+import { aborted } from "node:util";
 
 import type { Service } from "@shared";
 import type { ChangelogRelease, ChangelogResponse } from "@shared";
@@ -24,7 +25,7 @@ export class ChangelogService {
     return config.githubToken ? { Authorization: `Bearer ${config.githubToken}` } : {};
   }
 
-  private async resolveGithubRepo(service: Service): Promise<string | null> {
+  private async resolveGithubRepo(service: Service, signal?: AbortSignal): Promise<string | null> {
     // 1. Try OCI label from running container
     const dockerHostId = service.metadata?.dockerHostId;
     const resolvedHost = dockerHostId ? dockerRuntime.resolveHost(dockerHostId) : undefined;
@@ -33,8 +34,20 @@ export class ChangelogService {
     if (resolvedHost && containerId) {
       try {
         const docker: Docker = dockerRuntime.createDockerClientForHost(resolvedHost);
-        const info = await docker.getContainer(containerId).inspect();
-        const imageInfo = await docker.getImage(info.Image).inspect();
+        const info = await docker
+          .getContainer(containerId)
+          .inspect(signal ? { abortSignal: signal } : {});
+
+        signal?.throwIfAborted();
+        // Dockerode image inspect has no abort option. The Docker client timeout
+        // bounds the request; stop waiting immediately if the scan is cancelled.
+        const inspection = docker.getImage(info.Image).inspect();
+        const imageInfo = signal
+          ? await Promise.race([inspection, aborted(signal, inspection)])
+          : await inspection;
+
+        if (!imageInfo) return null;
+
         const labels: Record<string, string> = imageInfo.Config?.Labels ?? {};
         const source = labels[OCI_SOURCE_LABEL];
 
@@ -108,14 +121,21 @@ export class ChangelogService {
     return seen;
   }
 
-  private async fetchRelease(repo: string, tag: string): Promise<ChangelogRelease | null> {
+  private async fetchRelease(
+    repo: string,
+    tag: string,
+    signal?: AbortSignal,
+  ): Promise<ChangelogRelease | null> {
     const headers = this.authHeaders();
     const candidates = this.releaseTagCandidates(tag);
 
     for (const candidate of candidates) {
+      if (signal?.aborted) return null;
+
       try {
         const { data } = await axios.get(`${GITHUB_API}/repos/${repo}/releases/tags/${candidate}`, {
           headers,
+          signal,
           timeout: REQUEST_TIMEOUT,
         });
 
@@ -234,12 +254,16 @@ export class ChangelogService {
     };
   }
 
-  async fetchReleaseUrl(service: Service, tag: string): Promise<string | undefined> {
-    const repo = await this.resolveGithubRepo(service);
+  async fetchReleaseUrl(
+    service: Service,
+    tag: string,
+    signal?: AbortSignal,
+  ): Promise<string | undefined> {
+    const repo = await this.resolveGithubRepo(service, signal);
 
     if (!repo) return undefined;
 
-    return (await this.fetchRelease(repo, tag))?.htmlUrl;
+    return (await this.fetchRelease(repo, tag, signal))?.htmlUrl;
   }
 
   async fetchChangelog(service: Service): Promise<ChangelogResponse> {

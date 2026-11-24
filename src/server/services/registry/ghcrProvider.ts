@@ -13,8 +13,12 @@ export class GhcrProvider extends GenericRegistryProvider {
    * This is not semantic-version ordering: older release branches can be rebuilt.
    * Fall back to Registry v2 when no token is configured or Packages fails.
    */
-  override async scanRepositoryTags(ref: ImageRef, prefix: string): Promise<TagScanResult> {
-    if (!config.githubToken) return super.scanRepositoryTags(ref, prefix);
+  override async scanRepositoryTags(
+    ref: ImageRef,
+    prefix: string,
+    signal?: AbortSignal,
+  ): Promise<TagScanResult> {
+    if (!config.githubToken) return super.scanRepositoryTags(ref, prefix, signal);
 
     const [owner, ...rest] = ref.repository.split("/");
     // Slashes in the package name must be percent-encoded for the GitHub API.
@@ -58,15 +62,16 @@ export class GhcrProvider extends GenericRegistryProvider {
           };
         },
         ref.tag,
+        signal,
       );
 
-      if (!result.failed) return result;
+      if (signal?.aborted || !result.failed) return result;
     }
 
     logger.warn(
       `GitHub Packages API: could not resolve ${ref.repository}, falling back to registry API`,
     );
 
-    return super.scanRepositoryTags(ref, prefix);
+    return super.scanRepositoryTags(ref, prefix, signal);
   }
 }

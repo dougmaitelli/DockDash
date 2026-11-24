@@ -38,6 +38,7 @@ export async function scanTagPages(
   headers: Record<string, string>,
   parsePage: (data: unknown, headers: Record<string, unknown>, url: URL) => Page,
   runningTag?: string,
+  signal?: AbortSignal,
 ): Promise<TagScanResult> {
   const first = new URL(firstUrl);
   const validUrl = (value: string, base: string, code: HttpFailureCode) => {
@@ -75,12 +76,15 @@ export async function scanTagPages(
       // Follow only explicitly validated redirects; Axios must not automatically
       // forward credentials before we inspect Location.
       for (let redirects = 0; ; redirects++) {
+        signal?.throwIfAborted();
+
         if (visited.has(cursor)) throw new HttpOperationError(HttpFailureCode.PAGINATION_LOOP);
 
         visited.add(cursor);
         response = await axios.get(cursor, {
           headers,
           maxRedirects: 0,
+          signal,
           timeout: REQUEST_TIMEOUT,
           validateStatus: (status) => status < 500,
         });

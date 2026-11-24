@@ -58,9 +58,9 @@ export class RegistryClient {
    * Returns the manifest digest (e.g. "sha256:abc123") for the given image
    * ref, or null if it cannot be determined.
    */
-  async getManifestDigest(ref: ImageRef): Promise<string | null> {
+  async getManifestDigest(ref: ImageRef, signal?: AbortSignal): Promise<string | null> {
     try {
-      const token = await fetchRegistryToken(ref.registry, ref.repository);
+      const token = await fetchRegistryToken(ref.registry, ref.repository, undefined, signal);
       const url = `https://${ref.registry}/v2/${ref.repository}/manifests/${ref.tag}`;
       const headers: Record<string, string> = { Accept: MANIFEST_ACCEPT };
 
@@ -69,6 +69,7 @@ export class RegistryClient {
       // Prefer HEAD to avoid downloading the manifest body
       try {
         const resp = await axios.head(url, {
+          signal,
           headers,
           timeout: REQUEST_TIMEOUT,
           validateStatus: (s) => s < 500,
@@ -82,6 +83,7 @@ export class RegistryClient {
       }
 
       const resp = await axios.get(url, {
+        signal,
         headers,
         timeout: REQUEST_TIMEOUT,
         validateStatus: (s) => s < 500,
@@ -103,9 +105,13 @@ export class RegistryClient {
    * A complete lookup may be empty. A capped lookup is usable only when it
    * proves an update exists; null means unknown (failure or inconclusive cap).
    */
-  async getRepositoryTags(ref: ImageRef, prefix = ""): Promise<string[] | null> {
+  async getRepositoryTags(
+    ref: ImageRef,
+    prefix = "",
+    signal?: AbortSignal,
+  ): Promise<string[] | null> {
     try {
-      const result = await getProvider(ref.registry).scanRepositoryTags(ref, prefix);
+      const result = await getProvider(ref.registry).scanRepositoryTags(ref, prefix, signal);
 
       if (result.failed || (!result.complete && !containsUpdate(result.tags, ref.tag))) return null;
 

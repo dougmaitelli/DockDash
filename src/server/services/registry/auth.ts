@@ -31,10 +31,12 @@ export async function fetchRegistryToken(
   registry: string,
   repository: string,
   basicAuth?: { username: string; password: string },
+  signal?: AbortSignal,
 ): Promise<string | null> {
   try {
     // Ping /v2/ to get a WWW-Authenticate challenge
     const ping = await axios.get(`https://${registry}/v2/`, {
+      signal,
       timeout: REQUEST_TIMEOUT,
       validateStatus: (s) => s === 200 || s === 401,
     });
@@ -50,6 +52,7 @@ export async function fetchRegistryToken(
     if (!parsed) return null;
 
     const tokenResp = await axios.get(parsed.realm, {
+      signal,
       params: { ...parsed.params, scope: `repository:${repository}:pull` },
       ...(basicAuth ? { auth: basicAuth } : {}),
       timeout: REQUEST_TIMEOUT,
