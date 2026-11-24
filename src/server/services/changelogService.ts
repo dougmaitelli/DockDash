@@ -5,6 +5,7 @@ import type { Service } from "@shared";
 import type { ChangelogRelease, ChangelogResponse } from "@shared";
 
 import { config } from "../lib/config.js";
+import { httpErrorSummary } from "../lib/httpRequest.js";
 import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
 import { dockerRuntime } from "./containerRuntime/dockerRuntime.js";
@@ -50,7 +51,7 @@ export class ChangelogService {
       } catch (err) {
         logger.warn(
           `Changelog: failed to inspect image for "${service.name}" — falling back to image name resolution:`,
-          err,
+          httpErrorSummary(err),
         );
       }
     }
@@ -132,11 +133,13 @@ export class ChangelogService {
           if (status !== 404) {
             logger.warn(
               `Changelog: unexpected HTTP ${status} fetching release tag "${candidate}" for ${repo} —`,
-              err.message,
+              httpErrorSummary(err),
             );
           }
         } else {
-          logger.warn(`Changelog: error fetching release tag "${candidate}" for ${repo} —`, err);
+          logger.warn(
+            `Changelog: error fetching release tag "${candidate}" for ${repo} — ${httpErrorSummary(err)}`,
+          );
         }
         // try next candidate
       }
@@ -201,7 +204,7 @@ export class ChangelogService {
 
         if (pageReleases.length < 100) break;
       } catch (err) {
-        logger.warn(`Changelog: failed to list releases for ${repo} —`, err);
+        logger.warn(`Changelog: failed to list releases for ${repo} — ${httpErrorSummary(err)}`);
         break;
       }
     }

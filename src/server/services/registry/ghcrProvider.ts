@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { config } from "../../lib/config.js";
+import { httpErrorSummary } from "../../lib/httpRequest.js";
 import { logger } from "../../lib/logService.js";
 import { GenericRegistryProvider } from "./genericProvider.js";
 import type { ImageRef } from "./types.js";
@@ -24,7 +25,9 @@ export class GhcrProvider extends GenericRegistryProvider {
 
         if (tags !== null) return tags;
       } catch (err) {
-        logger.warn(`GitHub Packages API: failed to fetch tags for ${ref.repository} —`, err);
+        logger.warn(
+          `GitHub Packages API: failed to fetch tags for ${ref.repository} — ${httpErrorSummary(err)}`,
+        );
       }
 
       // Both endpoints failed (or the request threw) — fall back to Registry API v2.

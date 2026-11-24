@@ -1,5 +1,6 @@
 import axios from "axios";
 
+import { httpErrorSummary } from "../../lib/httpRequest.js";
 import { logger } from "../../lib/logService.js";
 import { REQUEST_TIMEOUT } from "./types.js";
 
@@ -57,7 +58,7 @@ export async function fetchRegistryToken(
     return (tokenResp.data?.token ?? tokenResp.data?.access_token ?? null) as string | null;
   } catch (err) {
     logger.warn(
-      `Registry: failed to fetch auth token for ${registry}/${repository} — ${err instanceof Error ? err.message : String(err)}`,
+      `Registry: failed to fetch auth token for ${registry}/${repository} — ${httpErrorSummary(err)}`,
     );
 
     return null;

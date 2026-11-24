@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { DOCKER_LATEST_TAG } from "../lib/constants.js";
+import { httpErrorSummary } from "../lib/httpRequest.js";
 import { logger } from "../lib/logService.js";
 import { fetchRegistryToken } from "./registry/auth.js";
 import { getProvider, Registry } from "./registry/providers.js";
@@ -90,7 +91,7 @@ export class RegistryClient {
       return (resp.headers["docker-content-digest"] as string) ?? null;
     } catch (err) {
       logger.warn(
-        `Registry: failed to fetch manifest digest for ${ref.registry}/${ref.repository}:${ref.tag} — ${err instanceof Error ? err.message : String(err)}`,
+        `Registry: failed to fetch manifest digest for ${ref.registry}/${ref.repository}:${ref.tag} — ${httpErrorSummary(err)}`,
       );
 
       return null;
@@ -106,7 +107,7 @@ export class RegistryClient {
       return await getProvider(ref.registry).getRepositoryTags(ref, prefix);
     } catch (err) {
       logger.warn(
-        `Registry: failed to fetch tags for ${ref.registry}/${ref.repository} — ${err instanceof Error ? err.message : String(err)}`,
+        `Registry: failed to fetch tags for ${ref.registry}/${ref.repository} — ${httpErrorSummary(err)}`,
       );
 
       return [];
