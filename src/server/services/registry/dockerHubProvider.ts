@@ -1,62 +1,43 @@
-import axios from "axios";
-
-import { logger } from "../../lib/logService.js";
+import { HttpFailureCode, HttpOperationError } from "../../lib/httpRequest.js";
+import { scanTagPages } from "./tagScan.js";
 import type { ImageRef, RegistryProvider, TagScanResult } from "./types.js";
-import { REQUEST_TIMEOUT } from "./types.js";
 
 const DOCKER_HUB_API_BASE = "https://hub.docker.com/v2/repositories";
 
 export class DockerHubProvider implements RegistryProvider {
-  async scanRepositoryTags(ref: ImageRef, prefix: string): Promise<TagScanResult> {
-    return this.getDockerHubTags(ref.repository, prefix);
-  }
-
   /**
-   * Fetches tags from the Docker Hub API, optionally filtered by name prefix.
-   *
-   * The Hub API returns tags in ascending `last_updated` order (oldest first), so
-   * for repos with more than 100 matching tags we fetch both the first page (for
-   * the total count) and the last page (newest pushes) and combine them.
+   * Hub returns most recently updated tags first with ordering=last_updated.
+   * Update time is not semantic-version order: rebuilds move existing tags too.
+   * Fetch consecutive pages rather than skipping updates in the middle.
    */
-  private async getDockerHubTags(repository: string, prefix: string): Promise<TagScanResult> {
-    const nameParam = prefix ? `&name=${encodeURIComponent(prefix)}` : "";
-    const baseUrl = `${DOCKER_HUB_API_BASE}/${repository}/tags?page_size=100${nameParam}`;
+  async scanRepositoryTags(ref: ImageRef, prefix: string): Promise<TagScanResult> {
+    // "v" and the empty prefix are equivalent for version matching. Filtering by
+    // "v" would hide valid unprefixed releases when publishers change spelling.
+    const nameParam = prefix && prefix !== "v" ? `&name=${encodeURIComponent(prefix)}` : "";
+    const first = `${DOCKER_HUB_API_BASE}/${ref.repository}/tags?page_size=100&ordering=last_updated${nameParam}`;
 
-    const firstResp = await axios.get(baseUrl, {
-      timeout: REQUEST_TIMEOUT,
-      validateStatus: (s) => s < 500,
+    return scanTagPages(first, {}, (data, _headers, url) => {
+      const page = data as { count: number; results: { name: string }[] };
+
+      if (
+        !page ||
+        !Number.isSafeInteger(page.count) ||
+        page.count < 0 ||
+        !Array.isArray(page.results) ||
+        !page.results.every((tag) => typeof tag?.name === "string")
+      ) {
+        throw new HttpOperationError(HttpFailureCode.INVALID_RESPONSE);
+      }
+
+      const pageNumber = Number(url.searchParams.get("page") ?? 1);
+      const next = new URL(url);
+
+      next.searchParams.set("page", String(pageNumber + 1));
+
+      return {
+        tags: page.results.map((tag) => tag.name),
+        next: pageNumber * 100 < page.count ? next.toString() : undefined,
+      };
     });
-
-    if (firstResp.status !== 200) return { tags: [], complete: false, failed: true };
-
-    const count: number = (firstResp.data?.count as number) ?? 0;
-    const firstTags =
-      (firstResp.data?.results as Array<{ name: string }>)?.map((r) => r.name) ?? [];
-
-    logger.debug(`Registry [dockerhub]: ${count} total tags for ${repository}, prefix="${prefix}"`);
-
-    // If everything fits in one page we're done.
-    if (count <= 100) return { tags: firstTags, complete: true };
-
-    // Fetch the last page: the Hub API returns ascending by last_updated, so the
-    // last page holds the most-recently-pushed tags — the ones most likely to
-    // be the newest semantic versions.
-    const lastPage = Math.ceil(count / 100);
-
-    logger.debug(
-      `Registry [dockerhub]: fetching last page ${lastPage} (${count} total tags) for ${repository}`,
-    );
-
-    const lastResp = await axios.get(`${baseUrl}&page=${lastPage}`, {
-      timeout: REQUEST_TIMEOUT,
-      validateStatus: (s) => s < 500,
-    });
-
-    if (lastResp.status !== 200) return { tags: firstTags, complete: false, failed: true };
-
-    const lastTags = (lastResp.data?.results as Array<{ name: string }>)?.map((r) => r.name) ?? [];
-
-    // Combine both ends so we see both the historical range and the newest pushes.
-    return { tags: [...new Set([...firstTags, ...lastTags])], complete: lastPage === 2 };
   }
 }

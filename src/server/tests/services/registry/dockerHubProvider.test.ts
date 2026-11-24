@@ -15,7 +15,7 @@ describe("DockerHubProvider.scanRepositoryTags", () => {
   let provider: InstanceType<typeof DockerHubProvider>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockAxios.get.mockReset();
     provider = new DockerHubProvider();
   });
 
@@ -32,7 +32,7 @@ describe("DockerHubProvider.scanRepositoryTags", () => {
     expect(mockAxios.get).toHaveBeenCalledOnce();
   });
 
-  it("fetches first and last page when count > 100 and deduplicates overlaps", async () => {
+  it("fetches successive pages when count > 100 and deduplicates overlaps", async () => {
     const firstPage = Array.from({ length: 100 }, (_, i) => ({ name: `1.${i}` }));
 
     mockAxios.get
@@ -42,8 +42,9 @@ describe("DockerHubProvider.scanRepositoryTags", () => {
         data: { count: 105, results: [{ name: "1.99" }, { name: "1.103" }, { name: "1.104" }] },
       });
 
-    const { tags } = await provider.scanRepositoryTags(ref, "");
+    const { tags, complete } = await provider.scanRepositoryTags({ ...ref, tag: "1.99" }, "");
 
+    expect(complete).toBe(true);
     expect(mockAxios.get).toHaveBeenCalledTimes(2);
     expect(tags).toContain("1.104");
     // "1.99" appears in both pages — should only appear once
@@ -59,7 +60,7 @@ describe("DockerHubProvider.scanRepositoryTags", () => {
     });
   });
 
-  it("returns first-page tags when the last-page request fails", async () => {
+  it("returns first-page tags when a later page request fails", async () => {
     mockAxios.get
       .mockResolvedValueOnce({
         status: 200,
@@ -67,8 +68,53 @@ describe("DockerHubProvider.scanRepositoryTags", () => {
       })
       .mockResolvedValueOnce({ status: 500, data: {} });
 
-    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
-      tags: ["1.0", "1.1"],
+    const result = await provider.scanRepositoryTags(ref, "");
+
+    expect(result).toEqual({ tags: ["1.0", "1.1"], complete: false, failed: true });
+  });
+
+  it("includes a higher version from the middle page and requests explicit ordering", async () => {
+    mockAxios.get
+      .mockResolvedValueOnce({
+        status: 200,
+        data: { count: 201, results: [{ name: "9.0-cuda" }, { name: "1.25.0" }] },
+      })
+      .mockResolvedValueOnce({ status: 200, data: { count: 201, results: [{ name: "3.0" }] } })
+      .mockResolvedValueOnce({ status: 200, data: { count: 201, results: [{ name: "2.0" }] } });
+
+    const result = await provider.scanRepositoryTags(ref, "");
+
+    expect(result).toEqual({ tags: ["9.0-cuda", "1.25.0", "3.0", "2.0"], complete: true });
+    expect(mockAxios.get).toHaveBeenCalledTimes(3);
+    expect(mockAxios.get).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining("ordering=last_updated"),
+      expect.any(Object),
+    );
+    expect(mockAxios.get).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("page=2"),
+      expect.any(Object),
+    );
+  });
+
+  it("does not filter out unprefixed versions when the current prefix is v", async () => {
+    mockAxios.get.mockResolvedValueOnce({
+      status: 200,
+      data: { count: 1, results: [{ name: "1.26.0" }] },
+    });
+
+    expect(await provider.scanRepositoryTags(ref, "v")).toEqual({
+      tags: ["1.26.0"],
+      complete: true,
+    });
+    expect(mockAxios.get.mock.calls[0][0]).not.toContain("&name=");
+  });
+
+  it("does not declare a response without a valid total count complete", async () => {
+    mockAxios.get.mockResolvedValueOnce({ status: 200, data: { results: [{ name: "1.26" }] } });
+
+    expect(await provider.scanRepositoryTags(ref, "")).toMatchObject({
       complete: false,
       failed: true,
     });
