@@ -6,7 +6,8 @@ import { TagParser } from "../../lib/tagParser.js";
 import type { TagScanResult } from "./types.js";
 import { REQUEST_TIMEOUT } from "./types.js";
 
-const MAX_PAGES = 50;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
+const MAX_REDIRECTS = 5;
 
 interface Page {
   tags: string[];
@@ -29,6 +30,9 @@ export function containsUpdate(tags: string[], runningTag: string): boolean {
   });
 }
 
+const MAX_PAGES = 50;
+
+/** Only recent-first providers pass a running tag to enable early exit. */
 export async function scanTagPages(
   firstUrl: string,
   headers: Record<string, string>,
@@ -36,23 +40,63 @@ export async function scanTagPages(
   runningTag?: string,
 ): Promise<TagScanResult> {
   const first = new URL(firstUrl);
-  const visited = new Set<string>();
+  const validUrl = (value: string, base: string, code: HttpFailureCode) => {
+    let url: URL;
+
+    try {
+      url = new URL(value, base);
+    } catch {
+      throw new HttpOperationError(code);
+    }
+
+    // Never forward registry credentials outside this endpoint, either through
+    // pagination or redirects. Credentials/fragments in continuation URLs are invalid.
+    if (
+      url.origin !== first.origin ||
+      url.pathname !== first.pathname ||
+      url.username ||
+      url.password ||
+      url.hash
+    ) {
+      throw new HttpOperationError(code);
+    }
+
+    return url.toString();
+  };
   let cursor = first.toString();
   const tags = new Set<string>();
+  const visited = new Set<string>();
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     try {
       logger.debug(`Registry scan: ${first.host}${first.pathname}, page ${page}`);
+      let response;
 
-      if (visited.has(cursor)) throw new HttpOperationError(HttpFailureCode.PAGINATION_LOOP);
+      // Follow only explicitly validated redirects; Axios must not automatically
+      // forward credentials before we inspect Location.
+      for (let redirects = 0; ; redirects++) {
+        if (visited.has(cursor)) throw new HttpOperationError(HttpFailureCode.PAGINATION_LOOP);
 
-      visited.add(cursor);
-      const response = await axios.get(cursor, {
-        headers,
-        maxRedirects: 0,
-        timeout: REQUEST_TIMEOUT,
-        validateStatus: (status) => status < 500,
-      });
+        visited.add(cursor);
+        response = await axios.get(cursor, {
+          headers,
+          maxRedirects: 0,
+          timeout: REQUEST_TIMEOUT,
+          validateStatus: (status) => status < 500,
+        });
+
+        if (!REDIRECT_STATUSES.has(response.status)) break;
+
+        if (redirects >= MAX_REDIRECTS)
+          throw new HttpOperationError(HttpFailureCode.REDIRECT_LIMIT);
+
+        const location: unknown = response.headers?.location;
+
+        if (typeof location !== "string" || !location.trim())
+          throw new HttpOperationError(HttpFailureCode.INVALID_REDIRECT);
+
+        cursor = validUrl(location, cursor, HttpFailureCode.UNSAFE_REDIRECT);
+      }
 
       if (response.status !== 200)
         throw Object.assign(new Error("HTTP request failed"), { status: response.status });
@@ -61,25 +105,16 @@ export async function scanTagPages(
 
       for (const tag of result.tags) tags.add(tag);
 
-      if (!result.next) return { tags: [...tags], complete: true };
+      if (!result.next) {
+        logger.debug(`Registry scan: complete ${first.host}${first.pathname}, ${tags.size} tags`);
 
-      // Only recent-first providers pass the running tag; an unordered listing
-      // must not assume its first newer tag is representative of recent pushes.
+        return { tags: [...tags], complete: true };
+      }
+
       if (runningTag && containsUpdate(result.tags, runningTag))
         return { tags: [...tags], complete: false };
 
-      const next = new URL(result.next, cursor);
-
-      if (
-        next.origin !== first.origin ||
-        next.pathname !== first.pathname ||
-        next.username ||
-        next.password ||
-        next.hash
-      )
-        throw new HttpOperationError(HttpFailureCode.INVALID_PAGINATION_URL);
-
-      cursor = next.toString();
+      cursor = validUrl(result.next, cursor, HttpFailureCode.INVALID_PAGINATION_URL);
     } catch (error) {
       logger.warn(
         `Registry scan: incomplete ${first.host}${first.pathname} — ${httpErrorSummary(error)}`,

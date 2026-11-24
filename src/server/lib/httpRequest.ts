@@ -3,11 +3,16 @@ export enum HttpFailureCode {
   INVALID_PAGINATION_URL = "INVALID_PAGINATION_URL",
   PAGINATION_LOOP = "PAGINATION_LOOP",
   INVALID_RESPONSE = "INVALID_RESPONSE",
+  INVALID_REDIRECT = "INVALID_REDIRECT",
+  UNSAFE_REDIRECT = "UNSAFE_REDIRECT",
+  REDIRECT_LIMIT = "REDIRECT_LIMIT",
 }
 
+/** Local diagnostic codes contain no remote response data or credentials. */
 export class HttpOperationError extends Error {
   constructor(readonly code: HttpFailureCode) {
     super(code);
+    this.name = "HttpOperationError";
   }
 }
 
