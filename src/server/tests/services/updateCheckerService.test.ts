@@ -540,6 +540,32 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
     );
   });
 
+  it("waits for collection before changing status and drops a now-stale result", async () => {
+    const first = makeDockerService();
+    const second = makeDockerService({ id: "second" });
+    let finish!: (tags: string[]) => void;
+
+    mockDb.getServices.mockReturnValue([first, second]);
+    mockRegistryClient.getRepositoryTags.mockResolvedValueOnce(["1.26"]).mockReturnValueOnce(
+      new Promise<string[]>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const check = updateCheckerService.checkAllServicesForUpdates();
+
+    await expect.poll(() => mockRegistryClient.getRepositoryTags.mock.calls.length).toBe(2);
+    expect(mockDb.updateServiceMetadata).not.toHaveBeenCalled();
+    mockDb.getServices.mockReturnValue([second]);
+    finish(["1.25"]);
+    await check;
+    expect(mockDb.updateServiceMetadata).toHaveBeenCalledOnce();
+    expect(mockDb.updateServiceMetadata).toHaveBeenCalledWith(
+      "second",
+      expect.objectContaining({ hasUpdate: false }),
+    );
+    expect(mockNotificationService.notify).not.toHaveBeenCalled();
+  });
+
   it("limits concurrent registry update checks", async () => {
     const services = Array.from({ length: 6 }, (_, i) =>
       makeDockerService({ id: `svc-${i}`, name: `service-${i}` }),

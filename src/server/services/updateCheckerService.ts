@@ -17,6 +17,14 @@ type UpdateNotice = {
   releaseUrl?: string;
 };
 
+type CollectedCheck = {
+  service: Service;
+  hasUpdate: boolean;
+  currentVersion?: string;
+  latestVersion?: string;
+  releaseUrl?: string;
+};
+
 export class UpdateCheckerService extends ConcurrentService {
   protected readonly concurrencyLimit = 5;
 
@@ -29,7 +37,37 @@ export class UpdateCheckerService extends ConcurrentService {
     const results = await this.mapWithConcurrency(containerServices, (service) =>
       this.checkServiceForUpdate(service),
     );
-    const newUpdates = results.filter((update) => update !== null);
+    // All registry and release-link requests have settled. Compare and publish
+    // synchronously, so no worker writes status while another is still scanning.
+    const newUpdates: UpdateNotice[] = [];
+
+    for (const check of results) {
+      if (!check) continue;
+
+      const { service, hasUpdate, currentVersion, latestVersion, releaseUrl } = check;
+      const current = serviceRepository.getService(service.id!);
+
+      if (
+        !current?.metadata ||
+        !service.metadata ||
+        current.metadata.image !== service.metadata.image ||
+        current.metadata.imageTag !== service.metadata.imageTag ||
+        current.metadata.imageDigest !== service.metadata.imageDigest
+      )
+        continue;
+
+      const previousHasUpdate = current.metadata.hasUpdate;
+
+      serviceRepository.updateServiceMetadata(service.id!, {
+        hasUpdate,
+        ...(latestVersion !== undefined ? { latestVersion } : {}),
+        updateCheckedAt: new Date().toISOString(),
+      });
+
+      if (hasUpdate && !previousHasUpdate && currentVersion && latestVersion) {
+        newUpdates.push({ name: current.name, currentVersion, latestVersion, releaseUrl });
+      }
+    }
 
     if (newUpdates.length === 0) return;
 
@@ -47,7 +85,7 @@ export class UpdateCheckerService extends ConcurrentService {
     notificationService.notify(title, body, "warning").catch(() => {});
   }
 
-  private async checkServiceForUpdate(service: Service): Promise<UpdateNotice | null> {
+  private async checkServiceForUpdate(service: Service): Promise<CollectedCheck | null> {
     const image = service.metadata?.image;
     const imageTag = service.metadata?.imageTag;
 
@@ -115,40 +153,23 @@ export class UpdateCheckerService extends ConcurrentService {
       return null;
     }
 
-    const current = serviceRepository.getService(service.id!);
+    let releaseUrl: string | undefined;
 
+    // Digest-only updates have no release tag to resolve.
     if (
-      !current ||
-      current.metadata?.image !== image ||
-      current.metadata.imageTag !== imageTag ||
-      current.metadata.imageDigest !== service.metadata?.imageDigest
-    )
-      return null;
-
-    const previousHasUpdate = current.metadata.hasUpdate;
-
-    serviceRepository.updateServiceMetadata(service.id!, {
-      hasUpdate,
-      ...(latestVersion !== undefined ? { latestVersion } : {}),
-      updateCheckedAt: new Date().toISOString(),
-    });
-
-    if (hasUpdate && !previousHasUpdate && currentVersion && latestVersion) {
-      let releaseUrl: string | undefined;
-
-      // Digest-only updates have no release tag to resolve.
-      if (notificationService.configured && TagParser.extractSemVer(imageTag)) {
-        try {
-          releaseUrl = await changelogService.fetchReleaseUrl(service, latestVersion);
-        } catch (err) {
-          logger.warn(`Update notification: release lookup failed for "${service.name}"`, err);
-        }
+      latestVersion &&
+      !service.metadata?.hasUpdate &&
+      notificationService.configured &&
+      TagParser.extractSemVer(imageTag)
+    ) {
+      try {
+        releaseUrl = await changelogService.fetchReleaseUrl(service, latestVersion);
+      } catch {
+        logger.warn(`Update notification: release lookup failed for "${service.name}"`);
       }
-
-      return { name: current.name, currentVersion, latestVersion, releaseUrl };
     }
 
-    return null;
+    return { service, hasUpdate, currentVersion, latestVersion, releaseUrl };
   }
 }
 
