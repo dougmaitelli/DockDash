@@ -4,6 +4,8 @@ import { nextLink } from "./linkHeader.js";
 import { scanTagPages } from "./tagScan.js";
 import type { ImageRef, RegistryProvider, TagScanResult } from "./types.js";
 
+const TAGS_PER_PAGE = 1_000;
+
 export class GenericRegistryProvider implements RegistryProvider {
   async scanRepositoryTags(ref: ImageRef, _prefix: string): Promise<TagScanResult> {
     const token = await fetchRegistryToken(ref.registry, ref.repository);
@@ -13,7 +15,7 @@ export class GenericRegistryProvider implements RegistryProvider {
 
     // Follow Registry v2 Link cursors rather than assuming any tag ordering.
     return scanTagPages(
-      `https://${ref.registry}/v2/${ref.repository}/tags/list?n=1000`,
+      `https://${ref.registry}/v2/${ref.repository}/tags/list?n=${TAGS_PER_PAGE}`,
       headers,
       (data, responseHeaders) => {
         const tags = (data as { tags?: unknown } | null)?.tags;

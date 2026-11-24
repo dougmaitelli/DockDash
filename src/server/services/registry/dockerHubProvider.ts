@@ -2,6 +2,7 @@ import { HttpFailureCode, HttpOperationError } from "../../lib/httpRequest.js";
 import { scanTagPages } from "./tagScan.js";
 import type { ImageRef, RegistryProvider, TagScanResult } from "./types.js";
 
+const TAGS_PER_PAGE = 100;
 const DOCKER_HUB_API_BASE = "https://hub.docker.com/v2/repositories";
 
 export class DockerHubProvider implements RegistryProvider {
@@ -14,7 +15,7 @@ export class DockerHubProvider implements RegistryProvider {
     // "v" and the empty prefix are equivalent for version matching. Filtering by
     // "v" would hide valid unprefixed releases when publishers change spelling.
     const nameParam = prefix && prefix !== "v" ? `&name=${encodeURIComponent(prefix)}` : "";
-    const first = `${DOCKER_HUB_API_BASE}/${ref.repository}/tags?page_size=100&ordering=last_updated${nameParam}`;
+    const first = `${DOCKER_HUB_API_BASE}/${ref.repository}/tags?page_size=${TAGS_PER_PAGE}&ordering=last_updated${nameParam}`;
 
     return scanTagPages(
       first,
@@ -39,7 +40,7 @@ export class DockerHubProvider implements RegistryProvider {
 
         return {
           tags: page.results.map((tag) => tag.name),
-          next: pageNumber * 100 < page.count ? next.toString() : undefined,
+          next: pageNumber * TAGS_PER_PAGE < page.count ? next.toString() : undefined,
         };
       },
       ref.tag,

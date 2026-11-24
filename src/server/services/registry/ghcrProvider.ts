@@ -5,6 +5,8 @@ import { GenericRegistryProvider } from "./genericProvider.js";
 import { scanTagPages } from "./tagScan.js";
 import type { ImageRef, TagScanResult } from "./types.js";
 
+const VERSIONS_PER_PAGE = 100;
+
 export class GhcrProvider extends GenericRegistryProvider {
   /**
    * GitHub Packages groups tags by manifest and returns recent versions first.
@@ -26,7 +28,7 @@ export class GhcrProvider extends GenericRegistryProvider {
 
     for (const ownerType of ownerTypes) {
       const result = await scanTagPages(
-        `https://api.github.com/${ownerType}/${owner}/packages/container/${packageName}/versions?per_page=100&page=1`,
+        `https://api.github.com/${ownerType}/${owner}/packages/container/${packageName}/versions?per_page=${VERSIONS_PER_PAGE}&page=1`,
         headers,
         (data, _headers, url) => {
           const versions = data as { metadata?: { container?: { tags?: string[] } } }[];
@@ -52,7 +54,7 @@ export class GhcrProvider extends GenericRegistryProvider {
 
           return {
             tags: versions.flatMap((version) => version.metadata?.container?.tags ?? []),
-            next: versions.length === 100 ? next.toString() : undefined,
+            next: versions.length === VERSIONS_PER_PAGE ? next.toString() : undefined,
           };
         },
         ref.tag,
