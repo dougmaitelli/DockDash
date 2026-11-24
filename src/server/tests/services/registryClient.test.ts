@@ -187,7 +187,7 @@ describe("RegistryClient.getRepositoryTags", () => {
       mockAxios.get.mockImplementation(async () => ({
         status: 200,
         data: { tags: [tag] },
-        headers: { link: `</v2/app/tags/list?page=${++page}>; rel="next"` },
+        headers: { link: `</v2/app/tags/list?page=${++page}>; rel=next` },
       }));
       expect(
         await registryClient.getRepositoryTags({

@@ -1,5 +1,6 @@
 import { HttpFailureCode, HttpOperationError } from "../../lib/httpRequest.js";
 import { fetchRegistryToken } from "./auth.js";
+import { nextLink } from "./linkHeader.js";
 import { scanTagPages } from "./tagScan.js";
 import type { ImageRef, RegistryProvider, TagScanResult } from "./types.js";
 
@@ -24,9 +25,7 @@ export class GenericRegistryProvider implements RegistryProvider {
           throw new HttpOperationError(HttpFailureCode.INVALID_RESPONSE);
         }
 
-        const link = responseHeaders.link as string | undefined;
-
-        return { tags: tags ?? [], next: link?.match(/<([^>]+)>;\s*rel="next"/)?.[1] };
+        return { tags: tags ?? [], next: nextLink(responseHeaders.link) };
       },
     );
   }

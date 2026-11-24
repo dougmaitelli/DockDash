@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { httpErrorSummary } from "../../lib/httpRequest.js";
+import { httpErrorSummary, HttpFailureCode, HttpOperationError } from "../../lib/httpRequest.js";
 import { logger } from "../../lib/logService.js";
 import { TagParser } from "../../lib/tagParser.js";
 import type { TagScanResult } from "./types.js";
@@ -34,14 +34,20 @@ export async function scanTagPages(
   maxPages = 50,
 ): Promise<TagScanResult> {
   const first = new URL(firstUrl);
+  const visited = new Set<string>();
   let cursor = first.toString();
   const tags = new Set<string>();
 
   for (let page = 1; page <= maxPages; page++) {
     try {
       logger.debug(`Registry scan: ${first.host}${first.pathname}, page ${page}`);
+
+      if (visited.has(cursor)) throw new HttpOperationError(HttpFailureCode.PAGINATION_LOOP);
+
+      visited.add(cursor);
       const response = await axios.get(cursor, {
         headers,
+        maxRedirects: 0,
         timeout: REQUEST_TIMEOUT,
         validateStatus: (status) => status < 500,
       });
@@ -57,7 +63,14 @@ export async function scanTagPages(
 
       const next = new URL(result.next, cursor);
 
-      if (next.origin !== first.origin) throw new Error("Invalid pagination origin");
+      if (
+        next.origin !== first.origin ||
+        next.pathname !== first.pathname ||
+        next.username ||
+        next.password ||
+        next.hash
+      )
+        throw new HttpOperationError(HttpFailureCode.INVALID_PAGINATION_URL);
 
       cursor = next.toString();
     } catch (error) {
