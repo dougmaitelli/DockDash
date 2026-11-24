@@ -376,6 +376,27 @@ describe("ChangelogService", () => {
   });
 
   describe("caching", () => {
+    it("retries the range after a later page fails", async () => {
+      const svc = makeService({
+        metadata: { image: "owner/app", imageTag: "1.0", latestVersion: "1.2", hasUpdate: true },
+      });
+      const fullPage = Array.from({ length: 100 }, () => mockGithubRelease("1.2"));
+
+      mockAxios.get
+        .mockResolvedValueOnce({ data: fullPage })
+        .mockRejectedValueOnce(new Error("unavailable"))
+        .mockResolvedValueOnce({ data: fullPage })
+        .mockResolvedValueOnce({ data: [mockGithubRelease("1.1")] });
+      expect(await changelogService.fetchChangelog(svc)).toMatchObject({
+        releases: [{ version: "1.2" }],
+      });
+      expect(await changelogService.fetchChangelog(svc)).toMatchObject({
+        releases: [{ version: "1.2" }, { version: "1.1" }],
+      });
+      await changelogService.fetchChangelog(svc);
+      expect(mockAxios.get).toHaveBeenCalledTimes(4);
+    });
+
     it("caches a successful result so the GitHub API is only called once", async () => {
       const svc = makeService({ metadata: { image: "owner/my-app", imageTag: "v1.0.0" } });
 

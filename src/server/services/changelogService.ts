@@ -11,9 +11,11 @@ import { TagParser } from "../lib/tagParser.js";
 import { dockerRuntime } from "./containerRuntime/dockerRuntime.js";
 
 const GITHUB_API = "https://api.github.com";
+const RELEASES_PER_PAGE = 100;
+const MAX_RELEASE_PAGES = 50;
 const OCI_SOURCE_LABEL = "org.opencontainers.image.source";
 
-// In-memory cache: serviceId+tag → result (only successful lookups are cached)
+// In-memory cache scoped to the service, image and requested range.
 const cache = new Map<string, ChangelogResponse>();
 
 export class ChangelogService {
@@ -165,11 +167,13 @@ export class ChangelogService {
     repo: string,
     currentTag: string,
     latestTag: string,
-  ): Promise<ChangelogRelease[]> {
+  ): Promise<{ releases: ChangelogRelease[]; complete: boolean }> {
     const current = TagParser.extractSemVer(currentTag);
     const latest = TagParser.extractSemVer(latestTag);
 
-    if (!current || !latest) return [];
+    if (!current || !latest) return { releases: [], complete: true };
+
+    let complete = false;
 
     const releases: ChangelogRelease[] = [];
     const seenVersions = new Set<string>();
@@ -177,13 +181,16 @@ export class ChangelogService {
 
     // GitHub returns releases newest first. Continue until a page is not full so ranges
     // spanning more than one API page still include every intervening release.
-    for (let page = 1; ; page++) {
+    for (let page = 1; page <= MAX_RELEASE_PAGES; page++) {
       try {
         const { data } = await axios.get(`${GITHUB_API}/repos/${repo}/releases`, {
           headers: this.authHeaders(),
-          params: { per_page: 100, page },
+          params: { per_page: RELEASES_PER_PAGE, page },
         });
-        const pageReleases: Record<string, unknown>[] = Array.isArray(data) ? data : [];
+
+        if (!Array.isArray(data)) break;
+
+        const pageReleases: Record<string, unknown>[] = data;
 
         for (const item of pageReleases) {
           if (item.draft === true) continue;
@@ -209,14 +216,20 @@ export class ChangelogService {
           releases.push(this.toRelease(item));
         }
 
-        if (pageReleases.length < 100) break;
+        if (pageReleases.length < RELEASES_PER_PAGE) {
+          complete = true;
+          break;
+        }
       } catch (err) {
         logger.warn(`Changelog: failed to list releases for ${repo} — ${httpErrorSummary(err)}`);
         break;
       }
     }
 
-    return releases.sort((a, b) => TagParser.compareSemVer(b.version, a.version));
+    return {
+      releases: releases.sort((a, b) => TagParser.compareSemVer(b.version, a.version)),
+      complete,
+    };
   }
 
   async fetchReleaseUrl(service: Service, tag: string): Promise<string | undefined> {
@@ -234,7 +247,12 @@ export class ChangelogService {
 
     if (!tag) return { available: false, reason: "No image tag available" };
 
-    const cacheKey = `${service.id}:${tag}`;
+    const cacheKey = JSON.stringify([
+      service.id,
+      service.metadata?.image,
+      service.metadata?.imageTag,
+      tag,
+    ]);
     const cached = cache.get(cacheKey);
 
     if (cached) return cached;
@@ -250,17 +268,18 @@ export class ChangelogService {
     }
 
     let releases: ChangelogRelease[] = [];
+    let complete = true;
 
     if (
       service.metadata?.hasUpdate &&
       service.metadata.imageTag &&
       service.metadata.latestVersion
     ) {
-      releases = await this.fetchReleasesBetween(
+      ({ releases, complete } = await this.fetchReleasesBetween(
         repo,
         service.metadata.imageTag,
         service.metadata.latestVersion,
-      );
+      ));
     }
 
     // Preserve exact-tag lookup (including its tag variants) as a fallback for repositories
@@ -282,7 +301,7 @@ export class ChangelogService {
     const release = releases.find((entry) => targetTags.has(entry.version));
     const result: ChangelogResponse = { available: true, ...(release && { release }), releases };
 
-    cache.set(cacheKey, result);
+    if (complete) cache.set(cacheKey, result);
 
     return result;
   }
