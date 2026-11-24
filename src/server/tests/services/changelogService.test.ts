@@ -1,3 +1,4 @@
+import { REQUEST_TIMEOUT } from "@server/services/registry/types.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Service } from "@shared";
@@ -91,7 +92,7 @@ describe("ChangelogService", () => {
       );
       expect(mockAxios.get).toHaveBeenLastCalledWith(
         "https://api.github.com/repos/owner/my-app/releases/tags/v2.0.0",
-        expect.objectContaining({ timeout: 5000 }),
+        expect.objectContaining({ timeout: REQUEST_TIMEOUT }),
       );
     });
 
@@ -340,7 +341,7 @@ describe("ChangelogService", () => {
       expect(result.release).toEqual(result.releases[0]);
       expect(mockAxios.get).toHaveBeenCalledWith(
         expect.stringMatching(/\/repos\/owner\/my-app\/releases$/),
-        expect.objectContaining({ params: { per_page: 100, page: 1 } }),
+        expect.objectContaining({ params: { per_page: 100, page: 1 }, timeout: REQUEST_TIMEOUT }),
       );
     });
   });

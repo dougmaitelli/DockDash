@@ -9,6 +9,7 @@ import { httpErrorSummary } from "../lib/httpRequest.js";
 import { logger } from "../lib/logService.js";
 import { TagParser } from "../lib/tagParser.js";
 import { dockerRuntime } from "./containerRuntime/dockerRuntime.js";
+import { REQUEST_TIMEOUT } from "./registry/types.js";
 
 const GITHUB_API = "https://api.github.com";
 const RELEASES_PER_PAGE = 100;
@@ -115,7 +116,7 @@ export class ChangelogService {
       try {
         const { data } = await axios.get(`${GITHUB_API}/repos/${repo}/releases/tags/${candidate}`, {
           headers,
-          timeout: 5000,
+          timeout: REQUEST_TIMEOUT,
         });
 
         return {
@@ -185,6 +186,7 @@ export class ChangelogService {
       try {
         const { data } = await axios.get(`${GITHUB_API}/repos/${repo}/releases`, {
           headers: this.authHeaders(),
+          timeout: REQUEST_TIMEOUT,
           params: { per_page: RELEASES_PER_PAGE, page },
         });
 
