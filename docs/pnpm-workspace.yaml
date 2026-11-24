@@ -1,5 +1,9 @@
 packages:
   - .
 
+# astro2tsx uses emnapi core 1.x; its WASM peer must use the matching runtime.
+overrides:
+  "@napi-rs/wasm-runtime@1.2.4>@emnapi/runtime": "1.11.3"
+
 allowBuilds:
   esbuild: true
