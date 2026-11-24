@@ -115,7 +115,17 @@ export class UpdateCheckerService extends ConcurrentService {
       return null;
     }
 
-    const previousHasUpdate = service.metadata?.hasUpdate;
+    const current = serviceRepository.getService(service.id!);
+
+    if (
+      !current ||
+      current.metadata?.image !== image ||
+      current.metadata.imageTag !== imageTag ||
+      current.metadata.imageDigest !== service.metadata?.imageDigest
+    )
+      return null;
+
+    const previousHasUpdate = current.metadata.hasUpdate;
 
     serviceRepository.updateServiceMetadata(service.id!, {
       hasUpdate,
@@ -135,7 +145,7 @@ export class UpdateCheckerService extends ConcurrentService {
         }
       }
 
-      return { name: service.name, currentVersion, latestVersion, releaseUrl };
+      return { name: current.name, currentVersion, latestVersion, releaseUrl };
     }
 
     return null;

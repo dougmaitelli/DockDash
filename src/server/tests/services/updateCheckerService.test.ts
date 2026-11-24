@@ -4,6 +4,7 @@ import { ServiceSource, ServiceStatus } from "@shared";
 
 const mockDb = vi.hoisted(() => ({
   getServices: vi.fn(),
+  getService: vi.fn(),
   updateServiceMetadata: vi.fn(),
 }));
 
@@ -55,6 +56,9 @@ function makeDockerService(overrides: Record<string, unknown> = {}) {
 describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockDb.getService.mockImplementation((id) =>
+      mockDb.getServices().find((service: { id: string }) => service.id === id),
+    );
     mockNotificationService.notify.mockResolvedValue(undefined);
     mockNotificationService.configured = true;
     fetchReleaseUrl.mockResolvedValue(undefined);
@@ -69,6 +73,27 @@ describe("UpdateCheckerService.checkAllServicesForUpdates", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
+
+  it.each(["image", "imageTag", "imageDigest", "deleted"])(
+    "discards a scan if the service changes: %s",
+    async (field) => {
+      const svc = makeDockerService();
+
+      mockDb.getServices.mockReturnValue([svc]);
+      mockRegistryClient.getRepositoryTags.mockImplementationOnce(async () => {
+        mockDb.getService.mockReturnValue(
+          field === "deleted"
+            ? undefined
+            : { ...svc, metadata: { ...svc.metadata, [field]: "changed" } },
+        );
+
+        return ["1.26"];
+      });
+      await updateCheckerService.checkAllServicesForUpdates();
+      expect(mockDb.updateServiceMetadata).not.toHaveBeenCalled();
+      expect(mockNotificationService.notify).not.toHaveBeenCalled();
+    },
+  );
 
   describe("latest tag", () => {
     it("sets hasUpdate when the registry digest differs from the local digest", async () => {
