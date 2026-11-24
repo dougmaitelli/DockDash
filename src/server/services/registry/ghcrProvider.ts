@@ -55,6 +55,7 @@ export class GhcrProvider extends GenericRegistryProvider {
             next: versions.length === 100 ? next.toString() : undefined,
           };
         },
+        ref.tag,
       );
 
       if (!result.failed) return result;

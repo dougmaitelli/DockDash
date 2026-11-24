@@ -33,6 +33,7 @@ export async function scanTagPages(
   firstUrl: string,
   headers: Record<string, string>,
   parsePage: (data: unknown, headers: Record<string, unknown>, url: URL) => Page,
+  runningTag?: string,
 ): Promise<TagScanResult> {
   const first = new URL(firstUrl);
   const visited = new Set<string>();
@@ -62,6 +63,11 @@ export async function scanTagPages(
 
       if (!result.next) return { tags: [...tags], complete: true };
 
+      // Only recent-first providers pass the running tag; an unordered listing
+      // must not assume its first newer tag is representative of recent pushes.
+      if (runningTag && containsUpdate(result.tags, runningTag))
+        return { tags: [...tags], complete: false };
+
       const next = new URL(result.next, cursor);
 
       if (
@@ -84,5 +90,6 @@ export async function scanTagPages(
   }
 
   logger.debug(`Registry scan: reached ${MAX_PAGES}-page limit for ${first.host}${first.pathname}`);
+
   return { tags: [...tags], complete: false };
 }

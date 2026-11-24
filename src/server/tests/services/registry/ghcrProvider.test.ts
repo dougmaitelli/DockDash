@@ -178,7 +178,7 @@ describe("GhcrProvider.scanRepositoryTags", () => {
     expect(mockAxios.get).toHaveBeenCalledTimes(1);
   });
 
-  it("fetches subsequent full Packages pages until the listing ends", async () => {
+  it("stops after the first page containing a compatible newer version", async () => {
     mockConfig.githubToken = "ghp_token";
     const page1 = Array.from({ length: 100 }, (_, i) => ({
       metadata: { container: { tags: [`v1.${i}`] } },
@@ -192,8 +192,8 @@ describe("GhcrProvider.scanRepositoryTags", () => {
     const result = await provider.scanRepositoryTags(ref, "");
 
     expect(result.tags).toContain("v1.99");
-    expect(result.tags).toContain("v1.100");
-    expect(result.complete).toBe(true);
-    expect(mockAxios.get).toHaveBeenCalledTimes(2);
+    expect(result.tags).not.toContain("v1.100");
+    expect(result.complete).toBe(false);
+    expect(mockAxios.get).toHaveBeenCalledOnce();
   });
 });

@@ -23,6 +23,8 @@ DockDash treats update checks differently depending on the image tag:
 | A version tag such as `1.25`, `v1.25.3`, or `release-1.25.3-alpine` | Finds compatible tags in the registry and compares their numeric version components while preserving the tag's prefix and suffix family |
 | A floating tag such as `latest`, `stable`, or `dev`                 | Falls back to comparing the locally running image digest with the registry digest                                                       |
 
+Docker Hub requests recently updated tags first, and authenticated GHCR checks recent package versions first. Both stop at the first page containing a compatible newer tag and report the highest compatible version seen on that page—an available update, not necessarily the highest version ever published. Generic Registry v2 (including the GHCR fallback) does not assume newest-first ordering. Each traversal starts fresh and is capped at 50 pages. An inconclusive cap or lookup error leaves the previous status unchanged.
+
 When a newer version is found, DockDash:
 
 1. Reports the running and available versions in the dashboard and notifications.

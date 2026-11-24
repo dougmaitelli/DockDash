@@ -84,8 +84,8 @@ describe("DockerHubProvider.scanRepositoryTags", () => {
 
     const result = await provider.scanRepositoryTags(ref, "");
 
-    expect(result).toEqual({ tags: ["9.0-cuda", "1.25.0", "3.0", "2.0"], complete: true });
-    expect(mockAxios.get).toHaveBeenCalledTimes(3);
+    expect(result).toEqual({ tags: ["9.0-cuda", "1.25.0", "3.0"], complete: false });
+    expect(mockAxios.get).toHaveBeenCalledTimes(2);
     expect(mockAxios.get).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("ordering=last_updated"),
