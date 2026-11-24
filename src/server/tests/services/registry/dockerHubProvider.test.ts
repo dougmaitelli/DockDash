@@ -11,7 +11,7 @@ const { DockerHubProvider } = await import("@server/services/registry/dockerHubP
 
 const ref = { registry: "registry-1.docker.io", repository: "library/nginx", tag: "1.25" };
 
-describe("DockerHubProvider.getRepositoryTags", () => {
+describe("DockerHubProvider.scanRepositoryTags", () => {
   let provider: InstanceType<typeof DockerHubProvider>;
 
   beforeEach(() => {
@@ -25,7 +25,10 @@ describe("DockerHubProvider.getRepositoryTags", () => {
       data: { count: 3, results: [{ name: "1.25" }, { name: "1.26" }, { name: "1.27" }] },
     });
 
-    expect(await provider.getRepositoryTags(ref, "")).toEqual(["1.25", "1.26", "1.27"]);
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: ["1.25", "1.26", "1.27"],
+      complete: true,
+    });
     expect(mockAxios.get).toHaveBeenCalledOnce();
   });
 
@@ -39,7 +42,7 @@ describe("DockerHubProvider.getRepositoryTags", () => {
         data: { count: 105, results: [{ name: "1.99" }, { name: "1.103" }, { name: "1.104" }] },
       });
 
-    const tags = await provider.getRepositoryTags(ref, "");
+    const { tags } = await provider.scanRepositoryTags(ref, "");
 
     expect(mockAxios.get).toHaveBeenCalledTimes(2);
     expect(tags).toContain("1.104");
@@ -49,7 +52,11 @@ describe("DockerHubProvider.getRepositoryTags", () => {
 
   it("returns [] when the first request returns a non-200 status", async () => {
     mockAxios.get.mockResolvedValueOnce({ status: 404, data: {} });
-    expect(await provider.getRepositoryTags(ref, "")).toEqual([]);
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: [],
+      complete: false,
+      failed: true,
+    });
   });
 
   it("returns first-page tags when the last-page request fails", async () => {
@@ -60,9 +67,11 @@ describe("DockerHubProvider.getRepositoryTags", () => {
       })
       .mockResolvedValueOnce({ status: 500, data: {} });
 
-    const tags = await provider.getRepositoryTags(ref, "");
-
-    expect(tags).toEqual(["1.0", "1.1"]);
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: ["1.0", "1.1"],
+      complete: false,
+      failed: true,
+    });
   });
 
   it("passes the prefix as a name filter query param", async () => {
@@ -71,7 +80,7 @@ describe("DockerHubProvider.getRepositoryTags", () => {
       data: { count: 1, results: [{ name: "1.25-alpine" }] },
     });
 
-    await provider.getRepositoryTags(ref, "1.25");
+    await provider.scanRepositoryTags(ref, "1.25");
 
     expect(mockAxios.get).toHaveBeenCalledWith(
       expect.stringContaining("name=1.25"),

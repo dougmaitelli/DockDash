@@ -165,11 +165,46 @@ describe("RegistryClient.getRepositoryTags", () => {
     expect(tags).toContain("1.1.0");
   });
 
-  it("returns an empty array and does not throw when the provider throws", async () => {
+  it("returns an empty array for a successful empty listing", async () => {
+    mockAxios.get.mockResolvedValue({ status: 200, headers: {}, data: { tags: [] } });
+    expect(
+      await registryClient.getRepositoryTags({
+        registry: "custom.registry.io",
+        repository: "app",
+        tag: "1.0",
+      }),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ["0.9", null],
+    ["1.1", ["1.1"]],
+  ])(
+    "only publishes a capped listing when it contains a known update: %s",
+    async (tag, expected) => {
+      let page = 0;
+
+      mockAxios.get.mockImplementation(async () => ({
+        status: 200,
+        data: { tags: [tag] },
+        headers: { link: `</v2/app/tags/list?page=${++page}>; rel="next"` },
+      }));
+      expect(
+        await registryClient.getRepositoryTags({
+          registry: "custom.registry.io",
+          repository: "app",
+          tag: "1.0",
+        }),
+      ).toEqual(expected);
+      expect(mockAxios.get).toHaveBeenCalledTimes(50);
+    },
+  );
+
+  it("returns null and does not throw when the provider throws", async () => {
     const ref = { registry: "failing.registry.io", repository: "app", tag: "latest" };
 
     mockAxios.get.mockRejectedValue(new Error("connection refused"));
 
-    await expect(registryClient.getRepositoryTags(ref, "")).resolves.toEqual([]);
+    await expect(registryClient.getRepositoryTags(ref, "")).resolves.toBeNull();
   });
 });

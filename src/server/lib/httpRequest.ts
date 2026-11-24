@@ -1,3 +1,13 @@
+export enum HttpFailureCode {
+  INVALID_RESPONSE = "INVALID_RESPONSE",
+}
+
+export class HttpOperationError extends Error {
+  constructor(readonly code: HttpFailureCode) {
+    super(code);
+  }
+}
+
 /** Never serialize Axios errors: config/request/response can contain credentials. */
 export function httpErrorSummary(error: unknown): string {
   if (!error || typeof error !== "object") return "Request failed";

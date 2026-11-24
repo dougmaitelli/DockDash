@@ -16,7 +16,7 @@ const { GhcrProvider } = await import("@server/services/registry/ghcrProvider.js
 
 const ref = { registry: "ghcr.io", repository: "owner/my-app", tag: "v1.0.0" };
 
-describe("GhcrProvider.getRepositoryTags", () => {
+describe("GhcrProvider.scanRepositoryTags", () => {
   let provider: InstanceType<typeof GhcrProvider>;
 
   beforeEach(() => {
@@ -26,14 +26,14 @@ describe("GhcrProvider.getRepositoryTags", () => {
   });
 
   it("delegates to GenericRegistryProvider when no GitHub token is configured", async () => {
-    // No token → super.getRepositoryTags() is called. Verify delegation by confirming
+    // No token → super.scanRepositoryTags() is called. Verify delegation by confirming
     // the GitHub Packages API is NOT used — internal generic-provider behavior is
     // tested in genericProvider.test.ts.
     mockAxios.get.mockResolvedValueOnce({ status: 200, headers: {}, data: { tags: ["v1.0.0"] } });
 
-    const tags = await provider.getRepositoryTags(ref, "");
+    const result = await provider.scanRepositoryTags(ref, "");
 
-    expect(tags).toContain("v1.0.0");
+    expect(result).toEqual({ tags: ["v1.0.0"], complete: true });
     expect(mockAxios.get).not.toHaveBeenCalledWith(
       expect.stringContaining("api.github.com"),
       expect.any(Object),
@@ -50,10 +50,9 @@ describe("GhcrProvider.getRepositoryTags", () => {
       ],
     });
 
-    const tags = await provider.getRepositoryTags(ref, "");
+    const result = await provider.scanRepositoryTags(ref, "");
 
-    expect(tags).toContain("v1.1.0");
-    expect(tags).toContain("v1.0.0");
+    expect(result).toEqual({ tags: ["v1.1.0", "latest", "v1.0.0"], complete: true });
     expect(mockAxios.get).toHaveBeenCalledWith(
       expect.stringContaining("orgs/owner"),
       expect.any(Object),
@@ -67,9 +66,9 @@ describe("GhcrProvider.getRepositoryTags", () => {
       data: [{ metadata: { container: { tags: ["v2.0.0"] } } }],
     });
 
-    const tags = await provider.getRepositoryTags(ref, "");
+    const result = await provider.scanRepositoryTags(ref, "");
 
-    expect(tags).toContain("v2.0.0");
+    expect(result).toEqual({ tags: ["v2.0.0"], complete: true });
     expect(mockAxios.get).toHaveBeenCalledWith(
       expect.stringContaining("users/owner"),
       expect.any(Object),
@@ -85,7 +84,10 @@ describe("GhcrProvider.getRepositoryTags", () => {
         .mockResolvedValueOnce({ status, data: [] })
         .mockResolvedValueOnce({ status: 200, headers: {}, data: { tags: ["v1.1.0"] } });
 
-      expect(await provider.getRepositoryTags(ref, "v")).toEqual(["v1.1.0"]);
+      expect(await provider.scanRepositoryTags(ref, "v")).toEqual({
+        tags: ["v1.1.0"],
+        complete: true,
+      });
       expect(mockAxios.get).toHaveBeenNthCalledWith(
         3,
         "https://ghcr.io/v2/owner/my-app/tags/list?n=1000",
@@ -98,24 +100,85 @@ describe("GhcrProvider.getRepositoryTags", () => {
     mockConfig.githubToken = "ghp_token";
     mockAxios.get
       .mockRejectedValueOnce(new Error("Request timed out"))
+      .mockRejectedValueOnce(new Error("Request timed out"))
       .mockResolvedValueOnce({ status: 200, headers: {}, data: { tags: ["v1.1.0"] } });
 
-    expect(await provider.getRepositoryTags(ref, "")).toEqual(["v1.1.0"]);
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: ["v1.1.0"],
+      complete: true,
+    });
     expect(mockAxios.get).toHaveBeenLastCalledWith(
       "https://ghcr.io/v2/owner/my-app/tags/list?n=1000",
       expect.any(Object),
     );
   });
 
+  it("reports failure when a later Packages page and the fallback fail", async () => {
+    mockConfig.githubToken = "ghp_token";
+    const page = Array.from({ length: 100 }, () => ({
+      metadata: { container: { tags: ["v2.0.0-cuda"] } },
+    }));
+
+    mockAxios.get
+      .mockResolvedValueOnce({ status: 200, data: page })
+      .mockRejectedValueOnce(new Error("timeout"))
+      .mockResolvedValueOnce({ status: 404 })
+      .mockResolvedValueOnce({ status: 403 });
+
+    const result = await provider.scanRepositoryTags(ref, "");
+
+    expect(result.tags).toEqual([]);
+    expect(result.complete).toBe(false);
+    expect(result.failed).toBe(true);
+  });
+
+  it("retries Packages from the beginning on the next check after a fallback", async () => {
+    mockConfig.githubToken = "ghp_token";
+    mockAxios.get
+      .mockResolvedValueOnce({ status: 403 })
+      .mockResolvedValueOnce({ status: 403 })
+      .mockResolvedValueOnce({ status: 200, headers: {}, data: { tags: ["v2.0.0"] } })
+      .mockResolvedValueOnce({
+        status: 200,
+        data: [{ metadata: { container: { tags: ["v3.0.0"] } } }],
+      });
+
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: ["v2.0.0"],
+      complete: true,
+    });
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: ["v3.0.0"],
+      complete: true,
+    });
+    expect(mockAxios.get).toHaveBeenLastCalledWith(
+      expect.stringContaining("/orgs/owner/packages/container/my-app/versions?per_page=100&page=1"),
+      expect.any(Object),
+    );
+  });
+
+  it("caps Packages traversal at 100 pages without treating the cap as failure or completion", async () => {
+    mockConfig.githubToken = "ghp_token";
+    mockAxios.get.mockResolvedValue({
+      status: 200,
+      data: Array.from({ length: 100 }, () => ({ metadata: { container: { tags: ["nightly"] } } })),
+    });
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: ["nightly"],
+      complete: false,
+    });
+    expect(mockAxios.get).toHaveBeenCalledTimes(100);
+  });
+
   it("does not fall back for a successful empty Packages response", async () => {
     mockConfig.githubToken = "ghp_token";
     mockAxios.get.mockResolvedValueOnce({ status: 200, data: [] });
 
-    expect(await provider.getRepositoryTags(ref, "")).toEqual([]);
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({ tags: [], complete: true });
     expect(mockAxios.get).toHaveBeenCalledTimes(1);
   });
 
-  it("paginates until the last page (data.length < 100)", async () => {
+  it("fetches subsequent full Packages pages until the listing ends", async () => {
     mockConfig.githubToken = "ghp_token";
     const page1 = Array.from({ length: 100 }, (_, i) => ({
       metadata: { container: { tags: [`v1.${i}`] } },
@@ -126,9 +189,11 @@ describe("GhcrProvider.getRepositoryTags", () => {
       data: [{ metadata: { container: { tags: ["v1.100"] } } }],
     });
 
-    const tags = await provider.getRepositoryTags(ref, "");
+    const result = await provider.scanRepositoryTags(ref, "");
 
-    expect(tags).toContain("v1.100");
+    expect(result.tags).toContain("v1.99");
+    expect(result.tags).toContain("v1.100");
+    expect(result.complete).toBe(true);
     expect(mockAxios.get).toHaveBeenCalledTimes(2);
   });
 });

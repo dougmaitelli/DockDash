@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockAxios = vi.hoisted(() => ({ get: vi.fn() }));
+const warn = vi.hoisted(() => vi.fn());
 
 vi.mock("axios", () => ({ default: mockAxios }));
 vi.mock("@server/lib/logService.js", () => ({
-  logger: { debug: vi.fn(), warn: vi.fn(), info: vi.fn(), error: vi.fn() },
+  logger: { debug: vi.fn(), warn, info: vi.fn(), error: vi.fn() },
 }));
 vi.mock("@server/services/registry/auth.js", () => ({
   fetchRegistryToken: vi.fn().mockResolvedValue(null),
@@ -14,7 +15,7 @@ const { GenericRegistryProvider } = await import("@server/services/registry/gene
 
 const ref = { registry: "registry.example.com", repository: "owner/my-app", tag: "v1.0.0" };
 
-describe("GenericRegistryProvider.getRepositoryTags", () => {
+describe("GenericRegistryProvider.scanRepositoryTags", () => {
   let provider: InstanceType<typeof GenericRegistryProvider>;
 
   beforeEach(() => {
@@ -29,7 +30,10 @@ describe("GenericRegistryProvider.getRepositoryTags", () => {
       data: { tags: ["v1.0.0", "v1.1.0", "v2.0.0"] },
     });
 
-    expect(await provider.getRepositoryTags(ref, "")).toEqual(["v1.0.0", "v1.1.0", "v2.0.0"]);
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: ["v1.0.0", "v1.1.0", "v2.0.0"],
+      complete: true,
+    });
     expect(mockAxios.get).toHaveBeenCalledOnce();
     expect(mockAxios.get).toHaveBeenCalledWith(
       expect.stringContaining("/v2/owner/my-app/tags/list"),
@@ -50,9 +54,9 @@ describe("GenericRegistryProvider.getRepositoryTags", () => {
         data: { tags: ["v2.0.0"] },
       });
 
-    const tags = await provider.getRepositoryTags(ref, "");
+    const result = await provider.scanRepositoryTags(ref, "");
 
-    expect(tags).toEqual(["v1.0.0", "v1.1.0", "v2.0.0"]);
+    expect(result).toEqual({ tags: ["v1.0.0", "v1.1.0", "v2.0.0"], complete: true });
     expect(mockAxios.get).toHaveBeenCalledTimes(2);
     // Second call must use the path from the Link header
     expect(mockAxios.get).toHaveBeenNthCalledWith(
@@ -69,7 +73,7 @@ describe("GenericRegistryProvider.getRepositoryTags", () => {
 
     mockAxios.get.mockResolvedValueOnce({ status: 200, headers: {}, data: { tags: ["v1.0.0"] } });
 
-    await provider.getRepositoryTags(ref, "");
+    await provider.scanRepositoryTags(ref, "");
 
     expect(mockAxios.get).toHaveBeenCalledWith(
       expect.any(String),
@@ -86,12 +90,20 @@ describe("GenericRegistryProvider.getRepositoryTags", () => {
       })
       .mockResolvedValueOnce({ status: 401, headers: {}, data: {} });
 
-    expect(await provider.getRepositoryTags(ref, "")).toEqual(["v1.0.0"]);
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: ["v1.0.0"],
+      complete: false,
+      failed: true,
+    });
   });
 
   it("returns an empty array when the first request returns a non-200 status", async () => {
     mockAxios.get.mockResolvedValueOnce({ status: 404, headers: {}, data: {} });
 
-    expect(await provider.getRepositoryTags(ref, "")).toEqual([]);
+    expect(await provider.scanRepositoryTags(ref, "")).toEqual({
+      tags: [],
+      complete: false,
+      failed: true,
+    });
   });
 });

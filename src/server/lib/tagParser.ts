@@ -28,6 +28,10 @@ export class TagParser {
     return norm(a) === norm(b);
   }
 
+  static sameFamily(a: ParsedTag, b: ParsedTag): boolean {
+    return TagParser.prefixMatches(a.prefix, b.prefix) && a.suffix === b.suffix;
+  }
+
   static compareSemVer(a: ParsedTag, b: ParsedTag): number;
   static compareSemVer(a: string, b: string): number;
   static compareSemVer(a: ParsedTag | string, b: ParsedTag | string): number {

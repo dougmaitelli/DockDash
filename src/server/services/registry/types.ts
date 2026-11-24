@@ -15,6 +15,12 @@ export interface ImageRef {
   tag: string;
 }
 
+export interface TagScanResult {
+  tags: string[];
+  complete: boolean;
+  failed?: boolean;
+}
+
 export interface RegistryProvider {
-  getRepositoryTags(ref: ImageRef, prefix: string): Promise<string[]>;
+  scanRepositoryTags(ref: ImageRef, prefix: string): Promise<TagScanResult>;
 }

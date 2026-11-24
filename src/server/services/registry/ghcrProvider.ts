@@ -1,112 +1,70 @@
-import axios from "axios";
-
 import { config } from "../../lib/config.js";
-import { httpErrorSummary } from "../../lib/httpRequest.js";
+import { HttpFailureCode, HttpOperationError } from "../../lib/httpRequest.js";
 import { logger } from "../../lib/logService.js";
 import { GenericRegistryProvider } from "./genericProvider.js";
-import type { ImageRef } from "./types.js";
-import { REQUEST_TIMEOUT } from "./types.js";
+import { scanTagPages } from "./tagScan.js";
+import type { ImageRef, TagScanResult } from "./types.js";
 
 export class GhcrProvider extends GenericRegistryProvider {
   /**
-   * Uses the GitHub Packages REST API when a token is available — it groups all
-   * tags for a manifest into one version entry and returns versions newest-first,
-   * so recent release tags appear in the first few pages regardless of how many
-   * git-hash tags exist.
-   *
-   * Falls back to the generic Registry v2 pagination when no token is configured.
+   * GitHub Packages groups tags by manifest and returns recent versions first.
+   * This is not semantic-version ordering: older release branches can be rebuilt.
+   * Fall back to Registry v2 when no token is configured or Packages fails.
    */
-  async getRepositoryTags(ref: ImageRef, prefix: string): Promise<string[]> {
-    if (config.githubToken) {
-      logger.debug(`Registry [ghcr]: using GitHub Packages API for ${ref.repository}`);
+  override async scanRepositoryTags(ref: ImageRef, prefix: string): Promise<TagScanResult> {
+    if (!config.githubToken) return super.scanRepositoryTags(ref, prefix);
 
-      try {
-        const tags = await this.getTagsViaGitHubApi(ref.repository);
-
-        if (tags !== null) return tags;
-      } catch (err) {
-        logger.warn(
-          `GitHub Packages API: failed to fetch tags for ${ref.repository} — ${httpErrorSummary(err)}`,
-        );
-      }
-
-      // Both endpoints failed (or the request threw) — fall back to Registry API v2.
-      logger.warn(
-        `GitHub Packages API: could not resolve ${ref.repository}, falling back to registry API`,
-      );
-
-      return super.getRepositoryTags(ref, prefix);
-    }
-
-    logger.debug(
-      `Registry [ghcr]: no token, falling back to generic registry API for ${ref.repository}`,
-    );
-
-    return super.getRepositoryTags(ref, prefix);
-  }
-
-  private async getTagsViaGitHubApi(repository: string): Promise<string[] | null> {
-    const [owner, ...rest] = repository.split("/");
+    const [owner, ...rest] = ref.repository.split("/");
     // Slashes in the package name must be percent-encoded for the GitHub API.
     const packageName = encodeURIComponent(rest.join("/"));
-
     const headers = {
       Authorization: `Bearer ${config.githubToken}`,
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
     };
+    const ownerTypes = ["orgs", "users"];
 
-    type GhVersion = { metadata?: { container?: { tags?: string[] } } };
+    for (const ownerType of ownerTypes) {
+      const result = await scanTagPages(
+        `https://api.github.com/${ownerType}/${owner}/packages/container/${packageName}/versions?per_page=100&page=1`,
+        headers,
+        (data, _headers, url) => {
+          const versions = data as { metadata?: { container?: { tags?: string[] } } }[];
 
-    const fetchPages = async (ownerType: "orgs" | "users"): Promise<string[] | null> => {
-      const base = `https://api.github.com/${ownerType}/${owner}/packages/container/${packageName}/versions`;
-      const allTags: string[] = [];
-      const MAX_PAGES = 100; // 100 × 100 = 10 000 versions
+          if (
+            !Array.isArray(versions) ||
+            !versions.every((version) => {
+              const tags = version?.metadata?.container?.tags;
 
-      let page = 1;
+              return (
+                version &&
+                typeof version === "object" &&
+                (tags === undefined ||
+                  (Array.isArray(tags) && tags.every((tag) => typeof tag === "string")))
+              );
+            })
+          )
+            throw new HttpOperationError(HttpFailureCode.INVALID_RESPONSE);
 
-      for (; page <= MAX_PAGES; page++) {
-        logger.debug(
-          `Registry [ghcr]: fetching page ${page} via GitHub Packages API (${ownerType}) for ${repository}`,
-        );
+          const next = new URL(url);
 
-        const resp = await axios.get<GhVersion[]>(base, {
-          headers,
-          params: { per_page: 100, page },
-          timeout: REQUEST_TIMEOUT,
-          validateStatus: (s) => s < 500,
-        });
+          next.searchParams.set("page", String(Number(url.searchParams.get("page")) + 1));
 
-        if (resp.status === 404) return null; // Wrong owner type
-
-        if (resp.status !== 200) {
-          logger.warn(`GitHub Packages API: ${base} returned HTTP ${resp.status}`);
-
-          return null;
-        }
-
-        for (const version of resp.data) {
-          allTags.push(...(version.metadata?.container?.tags ?? []));
-        }
-
-        if (resp.data.length < 100) break; // Last page
-      }
-
-      logger.debug(
-        `Registry [ghcr]: fetched ${page} page(s) via GitHub Packages API for ${repository}, ${allTags.length} tags`,
+          return {
+            tags: versions.flatMap((version) => version.metadata?.container?.tags ?? []),
+            next: versions.length === 100 ? next.toString() : undefined,
+          };
+        },
+        100, // Existing Packages API safety limit (100 versions per page).
       );
 
-      return allTags;
-    };
+      if (!result.failed) return result;
+    }
 
-    const orgTags = await fetchPages("orgs");
+    logger.warn(
+      `GitHub Packages API: could not resolve ${ref.repository}, falling back to registry API`,
+    );
 
-    if (orgTags !== null) return orgTags;
-
-    const userTags = await fetchPages("users");
-
-    if (userTags !== null) return userTags;
-
-    return null;
+    return super.scanRepositoryTags(ref, prefix);
   }
 }

@@ -1,13 +1,13 @@
 import axios from "axios";
 
 import { logger } from "../../lib/logService.js";
-import type { ImageRef, RegistryProvider } from "./types.js";
+import type { ImageRef, RegistryProvider, TagScanResult } from "./types.js";
 import { REQUEST_TIMEOUT } from "./types.js";
 
 const DOCKER_HUB_API_BASE = "https://hub.docker.com/v2/repositories";
 
 export class DockerHubProvider implements RegistryProvider {
-  async getRepositoryTags(ref: ImageRef, prefix: string): Promise<string[]> {
+  async scanRepositoryTags(ref: ImageRef, prefix: string): Promise<TagScanResult> {
     return this.getDockerHubTags(ref.repository, prefix);
   }
 
@@ -18,7 +18,7 @@ export class DockerHubProvider implements RegistryProvider {
    * for repos with more than 100 matching tags we fetch both the first page (for
    * the total count) and the last page (newest pushes) and combine them.
    */
-  private async getDockerHubTags(repository: string, prefix: string): Promise<string[]> {
+  private async getDockerHubTags(repository: string, prefix: string): Promise<TagScanResult> {
     const nameParam = prefix ? `&name=${encodeURIComponent(prefix)}` : "";
     const baseUrl = `${DOCKER_HUB_API_BASE}/${repository}/tags?page_size=100${nameParam}`;
 
@@ -27,7 +27,7 @@ export class DockerHubProvider implements RegistryProvider {
       validateStatus: (s) => s < 500,
     });
 
-    if (firstResp.status !== 200) return [];
+    if (firstResp.status !== 200) return { tags: [], complete: false, failed: true };
 
     const count: number = (firstResp.data?.count as number) ?? 0;
     const firstTags =
@@ -36,7 +36,7 @@ export class DockerHubProvider implements RegistryProvider {
     logger.debug(`Registry [dockerhub]: ${count} total tags for ${repository}, prefix="${prefix}"`);
 
     // If everything fits in one page we're done.
-    if (count <= 100) return firstTags;
+    if (count <= 100) return { tags: firstTags, complete: true };
 
     // Fetch the last page: the Hub API returns ascending by last_updated, so the
     // last page holds the most-recently-pushed tags — the ones most likely to
@@ -52,11 +52,11 @@ export class DockerHubProvider implements RegistryProvider {
       validateStatus: (s) => s < 500,
     });
 
-    if (lastResp.status !== 200) return firstTags;
+    if (lastResp.status !== 200) return { tags: firstTags, complete: false, failed: true };
 
     const lastTags = (lastResp.data?.results as Array<{ name: string }>)?.map((r) => r.name) ?? [];
 
     // Combine both ends so we see both the historical range and the newest pushes.
-    return [...new Set([...firstTags, ...lastTags])];
+    return { tags: [...new Set([...firstTags, ...lastTags])], complete: lastPage === 2 };
   }
 }

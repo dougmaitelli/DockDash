@@ -1,59 +1,33 @@
-import axios from "axios";
-
-import { logger } from "../../lib/logService.js";
+import { HttpFailureCode, HttpOperationError } from "../../lib/httpRequest.js";
 import { fetchRegistryToken } from "./auth.js";
-import type { ImageRef, RegistryProvider } from "./types.js";
-import { REQUEST_TIMEOUT } from "./types.js";
+import { scanTagPages } from "./tagScan.js";
+import type { ImageRef, RegistryProvider, TagScanResult } from "./types.js";
 
 export class GenericRegistryProvider implements RegistryProvider {
-  // 50 pages × 1 000 tags covers repos that bury version tags behind tens of
-  // thousands of git-hash tags (e.g. GHCR without a token).
-  protected static readonly MAX_PAGES = 50;
-
-  async getRepositoryTags(ref: ImageRef, _prefix: string): Promise<string[]> {
+  async scanRepositoryTags(ref: ImageRef, _prefix: string): Promise<TagScanResult> {
     const token = await fetchRegistryToken(ref.registry, ref.repository);
     const headers: Record<string, string> = {};
 
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const allTags: string[] = [];
-    let path = `/v2/${ref.repository}/tags/list?n=1000`;
-    let page = 0;
+    // Follow Registry v2 Link cursors rather than assuming any tag ordering.
+    return scanTagPages(
+      `https://${ref.registry}/v2/${ref.repository}/tags/list?n=1000`,
+      headers,
+      (data, responseHeaders) => {
+        const tags = (data as { tags?: unknown } | null)?.tags;
 
-    for (; page < GenericRegistryProvider.MAX_PAGES; page++) {
-      logger.debug(
-        `Registry [generic]: fetching page ${page + 1} for ${ref.registry}/${ref.repository}`,
-      );
+        if (
+          tags !== null &&
+          (!Array.isArray(tags) || !tags.every((tag) => typeof tag === "string"))
+        ) {
+          throw new HttpOperationError(HttpFailureCode.INVALID_RESPONSE);
+        }
 
-      const resp = await axios.get(`https://${ref.registry}${path}`, {
-        headers,
-        timeout: REQUEST_TIMEOUT,
-        validateStatus: (s) => s < 500,
-      });
+        const link = responseHeaders.link as string | undefined;
 
-      if (resp.status !== 200) {
-        logger.warn(
-          `Registry: tags list for ${ref.registry}/${ref.repository} returned HTTP ${resp.status}`,
-        );
-
-        break;
-      }
-
-      allTags.push(...((resp.data?.tags as string[]) ?? []));
-
-      // Follow Link header to next page: </v2/repo/tags/list?last=xxx&n=1000>; rel="next"
-      const linkHeader = resp.headers["link"] as string | undefined;
-      const nextMatch = linkHeader?.match(/<([^>]+)>;\s*rel="next"/);
-
-      if (!nextMatch) break;
-
-      path = nextMatch[1];
-    }
-
-    logger.debug(
-      `Registry [generic]: fetched ${page + 1} page(s), ${allTags.length} tags for ${ref.registry}/${ref.repository}`,
+        return { tags: tags ?? [], next: link?.match(/<([^>]+)>;\s*rel="next"/)?.[1] };
+      },
     );
-
-    return allTags;
   }
 }

@@ -67,7 +67,7 @@ export class UpdateCheckerService extends ConcurrentService {
       if (parsed) {
         const allTags = await registryClient.getRepositoryTags(ref, parsed.prefix);
 
-        if (allTags.length === 0) return null; // Can't determine — preserve existing status
+        if (!allTags?.length) return null; // Can't determine — preserve existing status
 
         let highest = parsed;
         let highestTag: string | undefined;
@@ -77,11 +77,7 @@ export class UpdateCheckerService extends ConcurrentService {
 
           if (!candidate) continue;
 
-          if (
-            !TagParser.prefixMatches(candidate.prefix, parsed.prefix) ||
-            candidate.suffix !== parsed.suffix
-          )
-            continue;
+          if (!TagParser.sameFamily(candidate, parsed)) continue;
 
           const cmp = TagParser.compareSemVer(candidate, highest);
 

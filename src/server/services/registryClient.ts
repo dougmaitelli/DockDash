@@ -5,6 +5,7 @@ import { httpErrorSummary } from "../lib/httpRequest.js";
 import { logger } from "../lib/logService.js";
 import { fetchRegistryToken } from "./registry/auth.js";
 import { getProvider, Registry } from "./registry/providers.js";
+import { containsUpdate } from "./registry/tagScan.js";
 import type { ImageRef } from "./registry/types.js";
 import { MANIFEST_ACCEPT, REQUEST_TIMEOUT } from "./registry/types.js";
 
@@ -99,18 +100,22 @@ export class RegistryClient {
   }
 
   /**
-   * Returns tags for the given repository relevant to the given tag prefix.
-   * Delegates to the appropriate provider based on the registry hostname.
+   * A complete lookup may be empty. A capped lookup is usable only when it
+   * proves an update exists; null means unknown (failure or inconclusive cap).
    */
-  async getRepositoryTags(ref: ImageRef, prefix = ""): Promise<string[]> {
+  async getRepositoryTags(ref: ImageRef, prefix = ""): Promise<string[] | null> {
     try {
-      return await getProvider(ref.registry).getRepositoryTags(ref, prefix);
+      const result = await getProvider(ref.registry).scanRepositoryTags(ref, prefix);
+
+      if (result.failed || (!result.complete && !containsUpdate(result.tags, ref.tag))) return null;
+
+      return result.tags;
     } catch (err) {
       logger.warn(
         `Registry: failed to fetch tags for ${ref.registry}/${ref.repository} — ${httpErrorSummary(err)}`,
       );
 
-      return [];
+      return null;
     }
   }
 }
