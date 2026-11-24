@@ -138,7 +138,7 @@ describe("ChangelogService", () => {
 
       if (!result.available) throw new Error("Expected available changelog");
 
-      expect(result.release.version).toBe("v1.0.0");
+      expect(result.release?.version).toBe("v1.0.0");
     });
 
     it("resolves from a GHCR image name when no OCI label is present", async () => {
@@ -197,7 +197,7 @@ describe("ChangelogService", () => {
 
       if (!result.available) throw new Error("Expected available changelog");
 
-      expect(result.release.version).toBe("v1.0.0");
+      expect(result.release?.version).toBe("v1.0.0");
       expect(mockAxios.get).toHaveBeenCalledTimes(2);
       // Verify the second attempt used the "v"-prefixed tag in the URL
       expect(mockAxios.get).toHaveBeenNthCalledWith(
@@ -227,7 +227,7 @@ describe("ChangelogService", () => {
 
       if (!result.available) throw new Error("Expected available changelog");
 
-      expect(result.release.version).toBe("1.4");
+      expect(result.release?.version).toBe("1.4");
       expect(mockAxios.get).toHaveBeenNthCalledWith(
         1,
         expect.stringContaining("/tags/1.4.0"),
@@ -258,7 +258,7 @@ describe("ChangelogService", () => {
 
       if (!result.available) throw new Error("Expected available changelog");
 
-      expect(result.release.version).toBe("1.2");
+      expect(result.release?.version).toBe("1.2");
       expect(mockAxios.get).toHaveBeenCalledTimes(5);
     });
 
@@ -281,6 +281,31 @@ describe("ChangelogService", () => {
   });
 
   describe("release ranges", () => {
+    it.each([true, false])(
+      "keeps intermediate notes across tag conventions (target present: %s)",
+      async (targetPresent) => {
+        const svc = makeService({
+          metadata: {
+            image: "owner/proxy",
+            imageTag: "v0.5.0",
+            latestVersion: "3.4",
+            hasUpdate: true,
+          },
+        });
+        const tags = ["v3.4-rc1", ...(targetPresent ? ["v3.4"] : []), "v0.6.0", "v0.5.0"];
+
+        mockAxios.get.mockResolvedValueOnce({ data: tags.map(mockGithubRelease) });
+        const result = await changelogService.fetchChangelog(svc);
+
+        if (!result.available) throw new Error("Expected available changelog");
+
+        expect(result.releases.map((entry) => entry.version)).toEqual(
+          targetPresent ? ["v3.4", "v0.6.0"] : ["v0.6.0"],
+        );
+        expect(result.release?.version).toBe(targetPresent ? "v3.4" : undefined);
+      },
+    );
+
     it("returns every release newer than the current version through the latest version", async () => {
       const svc = makeService({
         metadata: {

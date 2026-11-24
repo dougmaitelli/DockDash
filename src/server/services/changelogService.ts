@@ -76,8 +76,7 @@ export class ChangelogService {
     return null;
   }
 
-  private async fetchRelease(repo: string, tag: string): Promise<ChangelogRelease | null> {
-    const headers = this.authHeaders();
+  private releaseTagCandidates(tag: string): Set<string> {
     const seen = new Set<string>();
     const addWithVVariant = (t: string) => {
       seen.add(t);
@@ -103,7 +102,12 @@ export class ChangelogService {
       }
     }
 
-    const candidates = [...seen];
+    return seen;
+  }
+
+  private async fetchRelease(repo: string, tag: string): Promise<ChangelogRelease | null> {
+    const headers = this.authHeaders();
+    const candidates = this.releaseTagCandidates(tag);
 
     for (const candidate of candidates) {
       try {
@@ -169,6 +173,7 @@ export class ChangelogService {
 
     const releases: ChangelogRelease[] = [];
     const seenVersions = new Set<string>();
+    const targetTags = this.releaseTagCandidates(latestTag);
 
     // GitHub returns releases newest first. Continue until a page is not full so ranges
     // spanning more than one API page still include every intervening release.
@@ -190,7 +195,9 @@ export class ChangelogService {
 
           if (TagParser.compareSemVer(parsed, current) <= 0) continue;
 
-          if (TagParser.compareSemVer(parsed, latest) > 0) continue;
+          const comparison = TagParser.compareSemVer(parsed, latest);
+
+          if (comparison > 0 || (comparison === 0 && !targetTags.has(tag))) continue;
 
           // A repository can publish multiple variants for one numeric version. Prefer the
           // first one returned by GitHub and show each version only once.
@@ -271,7 +278,9 @@ export class ChangelogService {
       };
     }
 
-    const result: ChangelogResponse = { available: true, release: releases[0], releases };
+    const targetTags = this.releaseTagCandidates(tag);
+    const release = releases.find((entry) => targetTags.has(entry.version));
+    const result: ChangelogResponse = { available: true, ...(release && { release }), releases };
 
     cache.set(cacheKey, result);
 

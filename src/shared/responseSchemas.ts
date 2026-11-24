@@ -182,7 +182,8 @@ export const changelogResponseSchema = z.discriminatedUnion("available", [
   z
     .object({
       available: z.literal(true),
-      release: changelogReleaseResponseSchema,
+      // Intermediate release notes may exist without a GitHub release for the target image tag.
+      release: changelogReleaseResponseSchema.optional(),
       releases: z.array(changelogReleaseResponseSchema),
     })
     .strip(),
