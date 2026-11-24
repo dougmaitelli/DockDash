@@ -157,7 +157,7 @@ describe("GhcrProvider.scanRepositoryTags", () => {
     );
   });
 
-  it("caps Packages traversal at 100 pages without treating the cap as failure or completion", async () => {
+  it("caps Packages traversal at 50 pages without treating the cap as failure or completion", async () => {
     mockConfig.githubToken = "ghp_token";
     mockAxios.get.mockResolvedValue({
       status: 200,
@@ -167,7 +167,7 @@ describe("GhcrProvider.scanRepositoryTags", () => {
       tags: ["nightly"],
       complete: false,
     });
-    expect(mockAxios.get).toHaveBeenCalledTimes(100);
+    expect(mockAxios.get).toHaveBeenCalledTimes(50);
   });
 
   it("does not fall back for a successful empty Packages response", async () => {

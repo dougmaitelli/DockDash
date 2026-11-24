@@ -55,7 +55,6 @@ export class GhcrProvider extends GenericRegistryProvider {
             next: versions.length === 100 ? next.toString() : undefined,
           };
         },
-        100, // Existing Packages API safety limit (100 versions per page).
       );
 
       if (!result.failed) return result;

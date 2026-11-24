@@ -6,6 +6,8 @@ import { TagParser } from "../../lib/tagParser.js";
 import type { TagScanResult } from "./types.js";
 import { REQUEST_TIMEOUT } from "./types.js";
 
+const MAX_PAGES = 50;
+
 interface Page {
   tags: string[];
   next?: string;
@@ -31,14 +33,13 @@ export async function scanTagPages(
   firstUrl: string,
   headers: Record<string, string>,
   parsePage: (data: unknown, headers: Record<string, unknown>, url: URL) => Page,
-  maxPages = 50,
 ): Promise<TagScanResult> {
   const first = new URL(firstUrl);
   const visited = new Set<string>();
   let cursor = first.toString();
   const tags = new Set<string>();
 
-  for (let page = 1; page <= maxPages; page++) {
+  for (let page = 1; page <= MAX_PAGES; page++) {
     try {
       logger.debug(`Registry scan: ${first.host}${first.pathname}, page ${page}`);
 
@@ -82,5 +83,6 @@ export async function scanTagPages(
     }
   }
 
+  logger.debug(`Registry scan: reached ${MAX_PAGES}-page limit for ${first.host}${first.pathname}`);
   return { tags: [...tags], complete: false };
 }
