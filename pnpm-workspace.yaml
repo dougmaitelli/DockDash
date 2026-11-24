@@ -4,5 +4,9 @@ allowBuilds:
   esbuild: true
   protobufjs: true
   ssh2: true
+# drizzle-kit's legacy ESM loader still pins esbuild 0.18; scope the
+# security update to that loader rather than overriding Vite's esbuild.
+overrides:
+  "@esbuild-kit/core-utils@3.3.2>esbuild": "^0.25.12"
 packages:
   - e2e
